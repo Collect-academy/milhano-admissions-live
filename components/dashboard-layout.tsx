@@ -1,6 +1,12 @@
 import type { ReactNode } from "react";
+import { LogOut } from "lucide-react";
 
+import { logout } from "@/app/login/actions";
 import { AppNav } from "@/components/app-nav";
+import {
+  isSupabaseAuthConfigured,
+  requireCurrentAppUser,
+} from "@/lib/auth";
 
 type Props = {
   eyebrow: string;
@@ -10,13 +16,22 @@ type Props = {
   children: ReactNode;
 };
 
-export function DashboardLayout({
+const roleLabels = {
+  advisor: "Asesora",
+  admin: "Admin",
+  viewer: "Dirección",
+} as const;
+
+export async function DashboardLayout({
   eyebrow,
   title,
   subtitle,
   statusLabel,
   children,
 }: Props) {
+  const user = await requireCurrentAppUser();
+  const individualAuth = isSupabaseAuthConfigured();
+
   return (
     <main className="dashboard-shell">
       <div className="navigation-row">
@@ -28,6 +43,20 @@ export function DashboardLayout({
           </div>
         </div>
         <AppNav />
+        <div className="session-controls">
+          <div className="session-user">
+            <strong>{user.displayName}</strong>
+            <span>{roleLabels[user.role]}</span>
+          </div>
+          {individualAuth ? (
+            <form action={logout}>
+              <button aria-label="Cerrar sesión" type="submit">
+                <LogOut size={16} />
+                Salir
+              </button>
+            </form>
+          ) : null}
+        </div>
       </div>
 
       <header className="topbar">

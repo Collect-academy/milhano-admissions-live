@@ -1165,3 +1165,187 @@ tbody tr:hover {
     grid-column: 1 / -1;
   }
 }
+
+
+/* ==========================================================
+   Supabase Auth V5
+========================================================== */
+
+.session-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.session-user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+
+.session-user strong {
+  color: var(--green-dark);
+  font-size: 0.72rem;
+}
+
+.session-user span {
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.session-controls button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  padding: 7px 10px;
+  color: var(--green-dark);
+  font-size: 0.66rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    radial-gradient(circle at 15% 12%, rgba(205, 164, 52, 0.12), transparent 34%),
+    linear-gradient(145deg, #f7f6ef, #eef4f0);
+}
+
+.login-card {
+  width: min(440px, 100%);
+  border: 1px solid rgba(20, 70, 52, 0.14);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 30px;
+  box-shadow: 0 24px 70px rgba(18, 57, 43, 0.13);
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+.login-brand div {
+  display: flex;
+  flex-direction: column;
+}
+
+.login-brand strong {
+  color: var(--green-dark);
+}
+
+.login-brand div span {
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.login-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  color: var(--green-dark);
+}
+
+.login-heading h1 {
+  margin: 2px 0 6px;
+  font-size: 2rem;
+}
+
+.login-heading p:last-child {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.login-form {
+  display: grid;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.login-form label span {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.login-form input {
+  min-height: 46px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  outline: none;
+  background: var(--surface-soft);
+  padding: 10px 12px;
+  color: var(--text);
+}
+
+.login-form input:focus {
+  border-color: rgba(23, 107, 82, 0.58);
+  box-shadow: 0 0 0 3px rgba(23, 107, 82, 0.08);
+}
+
+.login-form button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--green-dark);
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.login-error,
+.login-notice {
+  margin-top: 18px;
+  border-radius: 11px;
+  padding: 11px 13px;
+  font-size: 0.73rem;
+  line-height: 1.5;
+}
+
+.login-error {
+  border: 1px solid rgba(167, 53, 53, 0.18);
+  background: rgba(167, 53, 53, 0.07);
+  color: #842f2f;
+}
+
+.login-notice {
+  border: 1px solid rgba(198, 150, 25, 0.22);
+  background: rgba(229, 190, 80, 0.12);
+  color: #725710;
+}
+
+.login-footer {
+  margin: 24px 0 0;
+  color: var(--muted);
+  font-size: 0.62rem;
+  text-align: center;
+}
+
+@media (max-width: 1050px) {
+  .navigation-row {
+    flex-wrap: wrap;
+  }
+
+  .session-controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

@@ -127,3 +127,14 @@ Semántica:
 - WhatsApp y Llamadas: actividad ocurrida dentro del periodo.
 - EOD: snapshots y sincronizaciones ocurridos dentro del periodo.
 - Las cards del Pipeline muestran el stage actual de la cohorte captada.
+
+
+## Dashboard V5 — Supabase Auth
+
+- Login individual por correo y contraseña.
+- Sesión SSR mediante cookies con `@supabase/ssr`.
+- Validación contra `milhano_app_users`.
+- Acceso bloqueado para usuarios inactivos o no vinculados.
+- Nombre y rol visibles en la navegación.
+- Cierre de sesión.
+- Fallback temporal a Basic Auth si las variables públicas aún no existen.

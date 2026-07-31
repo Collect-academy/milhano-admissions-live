@@ -1,0 +1,20 @@
+MILHANO ADMISSIONS LIVE | DASHBOARD V5 AUTH
+
+SEGURIDAD
+- Login individual con Supabase Auth.
+- Sesiones SSR con cookies.
+- Validación de usuario activo en milhano_app_users.
+- Nombre y rol en la navegación.
+- Logout.
+
+MIGRACIÓN SIN CAÍDA
+- Si faltan NEXT_PUBLIC_SUPABASE_URL o
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, continúa Basic Auth.
+- Cuando ambas variables existan, el dashboard cambia al login individual.
+
+ANTES DE ACTIVAR LOGIN INDIVIDUAL
+1. Ejecutar MILHANO_06_SUPABASE_AUTH_ROLES.sql.
+2. Crear usuarios en Supabase Authentication > Users.
+3. Confirmar que sus correos coinciden con milhano_app_users.email.
+4. Agregar las dos variables NEXT_PUBLIC_* en Vercel.
+5. Redeploy.

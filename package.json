@@ -15,7 +15,8 @@
     "react": "latest",
     "react-dom": "latest",
     "recharts": "latest",
-    "server-only": "latest"
+    "server-only": "latest",
+    "@supabase/ssr": "^0.12.3"
   },
   "devDependencies": {
     "@types/node": "latest",
