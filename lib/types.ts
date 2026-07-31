@@ -69,6 +69,131 @@ export type StaleOpportunity = {
   source: string | null;
 };
 
+export type WhatsAppDaily = {
+  activity_date: string;
+  total_messages: number;
+  inbound_messages: number;
+  outbound_messages: number;
+  manual_outbound_messages: number;
+  automated_outbound_messages: number;
+  failed_outbound_messages: number;
+  active_conversations: number;
+  manually_attended_conversations: number;
+  unique_contacts: number;
+  admissions_related_messages: number;
+  general_or_unclassified_messages: number;
+  messages_per_active_conversation: number | null;
+  manual_messages_per_attended_conversation: number | null;
+};
+
+export type WhatsAppSummary = {
+  total_messages: number;
+  inbound_messages: number;
+  outbound_messages: number;
+  manual_outbound_messages: number;
+  automated_outbound_messages: number;
+  active_conversations: number;
+  unique_contacts: number;
+  admissions_related_messages: number;
+  general_or_unclassified_messages: number;
+  first_message_at: string | null;
+  last_message_at: string | null;
+};
+
+export type CallDaily = {
+  activity_date: string;
+  total_call_attempts: number;
+  outbound_attempts: number;
+  inbound_calls: number;
+  probable_return_calls: number;
+  ghl_connected_calls: number;
+  meaningful_3min_plus_calls: number;
+  no_answer_calls: number;
+  voicemail_calls: number;
+  busy_calls: number;
+  failed_or_canceled_calls: number;
+  unique_contacts_called: number;
+  total_duration_seconds: number;
+  average_duration_seconds: number | null;
+  ghl_pickup_rate_pct: number | null;
+  meaningful_3min_pickup_rate_pct: number | null;
+};
+
+export type CallDailyUser = {
+  activity_date: string;
+  ghl_user_id: string | null;
+  app_user_id: string | null;
+  advisor_name: string;
+  total_call_attempts: number;
+  outbound_attempts: number;
+  inbound_calls: number;
+  ghl_connected_calls: number;
+  meaningful_3min_plus_calls: number;
+  unique_contacts: number;
+  total_duration_seconds: number;
+  meaningful_3min_pickup_rate_pct: number | null;
+};
+
+export type CallOutcome = {
+  event_id: string;
+  ghl_message_id: string | null;
+  ghl_contact_id: string | null;
+  ghl_opportunity_id: string | null;
+  ghl_user_id: string | null;
+  direction: string;
+  call_status: string | null;
+  call_duration_seconds: number;
+  is_connected_raw: boolean;
+  is_meaningful_conversation: boolean;
+  call_disposition: string | null;
+  call_timestamp: string;
+  from_stage: string | null;
+  to_stage: string | null;
+  stage_event_timestamp: string | null;
+  observed_outcome_24h: string;
+  outcome_source: string;
+};
+
+export type EodDashboardRow = {
+  submission_id: string;
+  app_user_id: string;
+  display_name: string;
+  eod_date: string;
+  window_start: string;
+  window_end: string;
+  submission_status: string;
+  metric_key: string;
+  label: string;
+  display_order: number;
+  system_value: number;
+  declared_value: number | null;
+  difference: number | null;
+  user_confirmed: boolean;
+  reconciliation_status: string;
+};
+
+export type EodTeamSnapshot = {
+  eod_date: string;
+  window_start: string;
+  window_end: string;
+  metrics: Record<string, number>;
+  generated_at: string;
+  updated_at: string;
+};
+
+export type SyncRun = {
+  id: string;
+  sync_type: string;
+  status: string;
+  records_read: number;
+  records_inserted: number;
+  records_updated: number;
+  records_failed: number;
+  started_at: string;
+  finished_at: string | null;
+  details: Record<string, unknown> | null;
+};
+
 export type DashboardData = {
   pipeline: PipelineSummary[];
   funnel: FunnelSummary[];
@@ -77,4 +202,25 @@ export type DashboardData = {
   owners: PerformanceRow[];
   exits: ExitSummary[];
   stale: StaleOpportunity[];
+  latestWhatsapp: WhatsAppDaily | null;
+  latestCalls: CallDaily | null;
+  latestEod: EodTeamSnapshot | null;
+};
+
+export type WhatsAppDashboardData = {
+  daily: WhatsAppDaily[];
+  summary: WhatsAppSummary | null;
+  latestEod: EodTeamSnapshot | null;
+};
+
+export type CallsDashboardData = {
+  daily: CallDaily[];
+  byUser: CallDailyUser[];
+  outcomes: CallOutcome[];
+};
+
+export type EodData = {
+  rows: EodDashboardRow[];
+  snapshots: EodTeamSnapshot[];
+  syncRuns: SyncRun[];
 };

@@ -2,13 +2,24 @@ import "server-only";
 
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import type {
+  CallDaily,
+  CallDailyUser,
+  CallOutcome,
+  CallsDashboardData,
   DailyKpi,
   DashboardData,
+  EodDashboardRow,
+  EodData,
+  EodTeamSnapshot,
   ExitSummary,
   FunnelSummary,
   PerformanceRow,
   PipelineSummary,
   StaleOpportunity,
+  SyncRun,
+  WhatsAppDaily,
+  WhatsAppDashboardData,
+  WhatsAppSummary,
 } from "@/lib/types";
 
 function normalizeNumbers<T extends Record<string, unknown>>(
@@ -33,6 +44,15 @@ function normalizeNumbers<T extends Record<string, unknown>>(
   });
 }
 
+function assertResult(
+  result: { error: { message: string } | null },
+  label: string,
+): void {
+  if (result.error) {
+    throw new Error(`${label}: ${result.error.message}`);
+  }
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   const supabase = createSupabaseAdmin();
 
@@ -44,6 +64,9 @@ export async function getDashboardData(): Promise<DashboardData> {
     ownersResult,
     exitsResult,
     staleResult,
+    whatsappResult,
+    callsResult,
+    eodResult,
   ] = await Promise.all([
     supabase
       .from("vw_milhano_pipeline_summary_current")
@@ -80,22 +103,38 @@ export async function getDashboardData(): Promise<DashboardData> {
       .eq("status", "open")
       .order("days_since_update", { ascending: false, nullsFirst: false })
       .limit(15),
+    supabase
+      .from("vw_milhano_whatsapp_daily")
+      .select("*")
+      .order("activity_date", { ascending: false })
+      .limit(1),
+    supabase
+      .from("vw_milhano_calls_daily")
+      .select("*")
+      .order("activity_date", { ascending: false })
+      .limit(1),
+    supabase
+      .from("milhano_eod_team_snapshots")
+      .select("*")
+      .order("eod_date", { ascending: false })
+      .limit(1),
   ]);
 
-  const results = [
-    pipelineResult,
-    funnelResult,
-    dailyResult,
-    sourcesResult,
-    ownersResult,
-    exitsResult,
-    staleResult,
-  ];
+  const namedResults = [
+    [pipelineResult, "Pipeline"],
+    [funnelResult, "Funnel"],
+    [dailyResult, "Actividad diaria"],
+    [sourcesResult, "Fuentes"],
+    [ownersResult, "Asesoras"],
+    [exitsResult, "Salidas"],
+    [staleResult, "Inactividad"],
+    [whatsappResult, "WhatsApp"],
+    [callsResult, "Llamadas"],
+    [eodResult, "EOD"],
+  ] as const;
 
-  const failed = results.find((result) => result.error);
-
-  if (failed?.error) {
-    throw new Error(`Error consultando Supabase: ${failed.error.message}`);
+  for (const [result, label] of namedResults) {
+    assertResult(result, `Error consultando ${label}`);
   }
 
   return {
@@ -120,5 +159,126 @@ export async function getDashboardData(): Promise<DashboardData> {
     stale: normalizeNumbers(
       staleResult.data,
     ) as unknown as StaleOpportunity[],
+    latestWhatsapp:
+      (normalizeNumbers(
+        whatsappResult.data,
+      ) as unknown as WhatsAppDaily[])[0] ?? null,
+    latestCalls:
+      (normalizeNumbers(callsResult.data) as unknown as CallDaily[])[0] ?? null,
+    latestEod: (eodResult.data as EodTeamSnapshot[] | null)?.[0] ?? null,
+  };
+}
+
+export async function getWhatsAppDashboardData(): Promise<WhatsAppDashboardData> {
+  const supabase = createSupabaseAdmin();
+
+  const [dailyResult, summaryResult, eodResult] = await Promise.all([
+    supabase
+      .from("vw_milhano_whatsapp_daily")
+      .select("*")
+      .order("activity_date", { ascending: false })
+      .limit(90),
+    supabase.from("vw_milhano_whatsapp_channel_summary").select("*").limit(1),
+    supabase
+      .from("milhano_eod_team_snapshots")
+      .select("*")
+      .order("eod_date", { ascending: false })
+      .limit(1),
+  ]);
+
+  assertResult(dailyResult, "Error consultando WhatsApp diario");
+  assertResult(summaryResult, "Error consultando resumen de WhatsApp");
+  assertResult(eodResult, "Error consultando EOD de WhatsApp");
+
+  return {
+    daily: (
+      normalizeNumbers(dailyResult.data) as unknown as WhatsAppDaily[]
+    ).reverse(),
+    summary:
+      (normalizeNumbers(
+        summaryResult.data,
+      ) as unknown as WhatsAppSummary[])[0] ?? null,
+    latestEod: (eodResult.data as EodTeamSnapshot[] | null)?.[0] ?? null,
+  };
+}
+
+export async function getCallsDashboardData(): Promise<CallsDashboardData> {
+  const supabase = createSupabaseAdmin();
+
+  const [dailyResult, byUserResult, outcomesResult] = await Promise.all([
+    supabase
+      .from("vw_milhano_calls_daily")
+      .select("*")
+      .order("activity_date", { ascending: false })
+      .limit(90),
+    supabase
+      .from("vw_milhano_calls_daily_user")
+      .select("*")
+      .order("activity_date", { ascending: false })
+      .limit(180),
+    supabase
+      .from("vw_milhano_call_outcome_bridge")
+      .select("*")
+      .order("call_timestamp", { ascending: false })
+      .limit(100),
+  ]);
+
+  assertResult(dailyResult, "Error consultando llamadas diarias");
+  assertResult(byUserResult, "Error consultando llamadas por asesora");
+  assertResult(outcomesResult, "Error consultando outcomes de llamadas");
+
+  return {
+    daily: (
+      normalizeNumbers(dailyResult.data) as unknown as CallDaily[]
+    ).reverse(),
+    byUser: normalizeNumbers(
+      byUserResult.data,
+    ) as unknown as CallDailyUser[],
+    outcomes: normalizeNumbers(
+      outcomesResult.data,
+    ) as unknown as CallOutcome[],
+  };
+}
+
+export async function getEodData(): Promise<EodData> {
+  const supabase = createSupabaseAdmin();
+
+  const [rowsResult, snapshotsResult, syncRunsResult] = await Promise.all([
+    supabase
+      .from("vw_milhano_eod_dashboard")
+      .select("*")
+      .order("eod_date", { ascending: false })
+      .order("display_name")
+      .order("display_order")
+      .limit(300),
+    supabase
+      .from("milhano_eod_team_snapshots")
+      .select("*")
+      .order("eod_date", { ascending: false })
+      .limit(30),
+    supabase
+      .from("milhano_sync_runs")
+      .select("*")
+      .in("sync_type", [
+        "eod_snapshot",
+        "message_reconciliation",
+        "full_reconciliation",
+      ])
+      .order("started_at", { ascending: false })
+      .limit(20),
+  ]);
+
+  assertResult(rowsResult, "Error consultando EOD individual");
+  assertResult(snapshotsResult, "Error consultando EOD de equipo");
+  assertResult(syncRunsResult, "Error consultando sincronizaciones");
+
+  return {
+    rows: normalizeNumbers(
+      rowsResult.data,
+    ) as unknown as EodDashboardRow[],
+    snapshots: snapshotsResult.data as EodTeamSnapshot[],
+    syncRuns: normalizeNumbers(
+      syncRunsResult.data,
+    ) as unknown as SyncRun[],
   };
 }

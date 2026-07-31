@@ -1,25 +1,19 @@
 import {
-  ArrowDownRight,
-  CircleCheckBig,
   Clock3,
   GraduationCap,
+  MessageCircleMore,
+  PhoneCall,
   Route,
   Users,
 } from "lucide-react";
 
 import { DashboardCharts } from "@/components/dashboard-charts";
+import { DashboardLayout } from "@/components/dashboard-layout";
 import { KpiCard } from "@/components/kpi-card";
+import { dateLabel, number, percent } from "@/lib/format";
 import { getDashboardData } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
-
-function number(value: number): string {
-  return value.toLocaleString("es-MX");
-}
-
-function percent(value: number | null): string {
-  return value === null ? "—" : `${Number(value).toFixed(1)}%`;
-}
 
 function stageCount(
   pipeline: Awaited<ReturnType<typeof getDashboardData>>["pipeline"],
@@ -49,27 +43,19 @@ export default async function DashboardPage() {
   const currentFit = stageCount(data.pipeline, "Fit");
   const currentTour = stageCount(data.pipeline, "School Tour agendado");
   const currentPassday = stageCount(data.pipeline, "Pasadía agendada");
-
   const latestMetricDate =
+    data.latestEod?.eod_date ??
+    data.latestWhatsapp?.activity_date ??
     data.daily.at(-1)?.metric_date ??
     new Intl.DateTimeFormat("en-CA").format(new Date());
 
   return (
-    <main className="dashboard-shell">
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">Milhano · Admisiones</p>
-          <h1>Pipeline & Growth Dashboard</h1>
-          <p className="subtitle">
-            Estado operativo actual y cascada histórica de leads.
-          </p>
-        </div>
-        <div className="data-badge">
-          <span className="status-dot" />
-          Datos hasta {latestMetricDate}
-        </div>
-      </header>
-
+    <DashboardLayout
+      eyebrow="Milhano · Admisiones"
+      title="Pipeline & Growth Dashboard"
+      subtitle="Estado operativo del pipeline, actividad del equipo y canales institucionales."
+      statusLabel={`Datos hasta ${dateLabel(latestMetricDate)}`}
+    >
       <section className="kpi-grid" aria-label="Indicadores principales">
         <KpiCard
           label="Opportunities"
@@ -96,17 +82,40 @@ export default async function DashboardPage() {
           icon={GraduationCap}
         />
         <KpiCard
-          label="Salidas actuales"
-          value={number(noFitAndLost)}
-          helper="No fit + Lost"
-          icon={ArrowDownRight}
+          label="WhatsApp último día"
+          value={number(data.latestWhatsapp?.total_messages)}
+          helper={`${number(data.latestWhatsapp?.active_conversations)} conversaciones`}
+          icon={MessageCircleMore}
         />
         <KpiCard
-          label="Semilla validada"
-          value="OK"
-          helper="Snapshot + eventos históricos"
-          icon={CircleCheckBig}
+          label="Llamadas registradas"
+          value={number(data.latestCalls?.total_call_attempts)}
+          helper={`${number(data.latestCalls?.outbound_attempts)} intentos outbound`}
+          icon={PhoneCall}
         />
+      </section>
+
+      <section className="insight-strip">
+        <div>
+          <span className="insight-label">Salidas actuales</span>
+          <strong>{number(noFitAndLost)}</strong>
+          <span>No fit + Lost</span>
+        </div>
+        <div>
+          <span className="insight-label">Sincronización</span>
+          <strong className="text-success">Activa</strong>
+          <span>GHL → n8n → Supabase</span>
+        </div>
+        <div>
+          <span className="insight-label">EOD</span>
+          <strong>{data.latestEod ? "Generado" : "Pendiente"}</strong>
+          <span>{data.latestEod ? dateLabel(data.latestEod.eod_date) : "Sin snapshot"}</span>
+        </div>
+        <div>
+          <span className="insight-label">Base histórica</span>
+          <strong>Validada</strong>
+          <span>Snapshot + eventos</span>
+        </div>
       </section>
 
       <section className="panel">
@@ -124,7 +133,9 @@ export default async function DashboardPage() {
           {data.pipeline.map((stage) => (
             <article className="stage-card" key={stage.stage_name}>
               <div className="stage-topline">
-                <span className={`stage-chip stage-${stage.stage_group.toLowerCase()}`}>
+                <span
+                  className={`stage-chip stage-${stage.stage_group.toLowerCase()}`}
+                >
                   {stage.stage_group}
                 </span>
                 <strong>{number(stage.opportunity_count)}</strong>
@@ -165,7 +176,7 @@ export default async function DashboardPage() {
               </thead>
               <tbody>
                 {data.sources.map((row) => (
-                  <tr key={row.source}>
+                  <tr key={row.source ?? "sin-fuente"}>
                     <td>{row.source ?? "Sin fuente"}</td>
                     <td>{number(row.leads)}</td>
                     <td>{number(row.fits)}</td>
@@ -199,7 +210,7 @@ export default async function DashboardPage() {
               </thead>
               <tbody>
                 {data.owners.map((row) => (
-                  <tr key={row.operational_owner}>
+                  <tr key={row.operational_owner ?? "sin-asignar"}>
                     <td>{row.operational_owner ?? "Sin asignar"}</td>
                     <td>{number(row.leads)}</td>
                     <td>{number(row.fits)}</td>
@@ -272,9 +283,7 @@ export default async function DashboardPage() {
                     <td>
                       <strong>{row.opportunity_name}</strong>
                       {row.student_name ? (
-                        <span className="secondary-cell">
-                          {row.student_name}
-                        </span>
+                        <span className="secondary-cell">{row.student_name}</span>
                       ) : null}
                     </td>
                     <td>{row.current_stage}</td>
@@ -287,11 +296,6 @@ export default async function DashboardPage() {
           </div>
         </section>
       </div>
-
-      <footer className="footer">
-        <span>Milhano Operations Dashboard · MVP V1</span>
-        <span>Fuente: Supabase + semilla histórica de GHL</span>
-      </footer>
-    </main>
+    </DashboardLayout>
   );
 }

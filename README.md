@@ -1,12 +1,19 @@
-# Milhano Dashboard MVP
+# Milhano Admissions Live
 
-Dashboard de admisiones construido con Next.js, Supabase y Recharts.
+Dashboard operativo de admisiones construido con Next.js, Supabase y Recharts.
+
+## Secciones
+
+- `/` — Resumen, pipeline, funnel, fuentes, asesoras e inactividad.
+- `/whatsapp` — Volumen institucional completo, manual vs automático y admisiones vs atención general.
+- `/llamadas` — Intentos, inbound, pickup, duración y movimientos observados después de la llamada.
+- `/eod` — Snapshot diario individual, métricas compartidas y salud de sincronizaciones.
 
 ## Requisitos
 
-- Node.js LTS
-- Proyecto de Supabase con la semilla cargada
-- Vistas `vw_milhano_*` creadas
+- Node.js LTS.
+- Proyecto de Supabase con la semilla y los módulos Live Sync, WhatsApp, Calls y EOD cargados.
+- Variables server-side de Supabase.
 
 ## Instalación local
 
@@ -17,11 +24,13 @@ npm install
 Copia el archivo de variables:
 
 **Windows PowerShell**
+
 ```powershell
 Copy-Item .env.example .env.local
 ```
 
 **macOS/Linux**
+
 ```bash
 cp .env.example .env.local
 ```
@@ -35,29 +44,13 @@ DASHBOARD_USERNAME=milhano
 DASHBOARD_PASSWORD=una-clave-larga
 ```
 
-Obtén la URL y la Secret key desde Supabase:
-
-- `Connect`
-- o `Settings > API Keys`
-
-La Secret key sólo se usa en el servidor. No la renombres con el prefijo
-`NEXT_PUBLIC_`.
-
 Ejecuta:
 
 ```bash
 npm run dev
 ```
 
-Abre:
-
-```text
-http://localhost:3000
-```
-
-El navegador solicitará el usuario y contraseña configurados.
-
-## Build de validación
+## Build
 
 ```bash
 npm run build
@@ -65,22 +58,20 @@ npm run build
 
 ## Despliegue en Vercel
 
-1. Sube este proyecto a un repositorio privado de GitHub.
-2. Importa el repositorio desde Vercel.
-3. Añade las cuatro variables de `.env.local` en:
-   `Project Settings > Environment Variables`.
-4. Deploy.
-5. No subas `.env.local` a GitHub.
+1. Sube los cambios al repositorio privado conectado a Vercel.
+2. Conserva en Vercel las cuatro variables de entorno.
+3. Vercel desplegará automáticamente la rama conectada.
 
-## Seguridad V1
+## Seguridad actual
 
-- RLS permanece activado en Supabase.
-- La lectura se realiza server-side con `SUPABASE_SECRET_KEY`.
-- La clave no se incluye en el bundle del navegador.
-- `proxy.ts` protege el dashboard con autenticación básica.
-- En V2 puede sustituirse por Supabase Auth con usuarios individuales.
+- Las consultas se ejecutan server-side con `SUPABASE_SECRET_KEY`.
+- La llave no se envía al navegador.
+- `proxy.ts` protege todas las rutas con Basic Auth.
+- El EOD es de lectura hasta habilitar Supabase Auth individual.
 
-## Vistas consumidas
+## Fuentes principales
+
+Pipeline:
 
 - `vw_milhano_pipeline_summary_current`
 - `vw_milhano_funnel_summary_standard`
@@ -89,3 +80,20 @@ npm run build
 - `vw_milhano_owner_performance`
 - `vw_milhano_exit_summary`
 - `vw_milhano_pipeline_current`
+
+WhatsApp:
+
+- `vw_milhano_whatsapp_daily`
+- `vw_milhano_whatsapp_channel_summary`
+
+Calls:
+
+- `vw_milhano_calls_daily`
+- `vw_milhano_calls_daily_user`
+- `vw_milhano_call_outcome_bridge`
+
+EOD:
+
+- `vw_milhano_eod_dashboard`
+- `milhano_eod_team_snapshots`
+- `milhano_sync_runs`
