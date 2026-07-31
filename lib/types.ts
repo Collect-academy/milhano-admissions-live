@@ -162,13 +162,23 @@ export type EodDashboardRow = {
   window_start: string;
   window_end: string;
   submission_status: string;
+  submission_comments: string | null;
+  system_snapshot_generated_at: string | null;
+  validated_at: string | null;
+  submitted_at: string | null;
+  validated_by_app_user_id: string | null;
   metric_key: string;
   label: string;
+  description: string | null;
   display_order: number;
+  is_system_only: boolean;
+  requires_user_confirmation: boolean;
+  blocks_submission_on_mismatch: boolean;
   system_value: number;
   declared_value: number | null;
   difference: number | null;
   user_confirmed: boolean;
+  discrepancy_note: string | null;
   reconciliation_status: string;
 };
 

@@ -1,0 +1,22 @@
+MILHANO ADMISSIONS LIVE | DASHBOARD V8
+
+EOD EDITABLE
+
+- Guardar borrador.
+- Capturar valor declarado.
+- Confirmar métricas manuales.
+- Añadir nota por diferencia.
+- Añadir comentario general.
+- Enviar cierre.
+- Bloquear automáticamente cuando una métrica crítica no coincide.
+- Validar una diferencia desde una cuenta admin.
+- Auditoría de cada acción.
+
+PERMISOS DE ESCRITURA
+
+- Advisor: edita únicamente su propio EOD.
+- Admin: puede editar cualquier EOD y validar diferencias.
+- Viewer: sólo lectura.
+
+Esto no limita la visibilidad del dashboard ni separa opportunities.
+Sólo protege quién puede enviar el cierre de otra persona.

@@ -1493,3 +1493,290 @@ tbody tr:hover {
     flex-direction: column;
   }
 }
+
+
+/* ==========================================================
+   Editable EOD V8
+========================================================== */
+
+.eod-feedback {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.eod-feedback > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.eod-feedback strong {
+  font-size: 0.78rem;
+}
+
+.eod-feedback span {
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.eod-feedback-good {
+  border-color: rgba(23, 107, 82, 0.25);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.eod-feedback-warning {
+  border-color: rgba(191, 132, 33, 0.28);
+  background: var(--gold-soft);
+  color: #775817;
+}
+
+.eod-feedback-error {
+  border-color: rgba(180, 55, 55, 0.28);
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.advisor-grid-editable {
+  grid-template-columns: 1fr;
+}
+
+.eod-advisor-card {
+  padding: 18px;
+}
+
+.eod-timestamp {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.63rem;
+}
+
+.eod-form {
+  display: grid;
+  gap: 14px;
+}
+
+.eod-metric-list {
+  display: grid;
+  gap: 8px;
+}
+
+.eod-metric-row {
+  display: grid;
+  grid-template-columns:
+    minmax(210px, 1.6fr)
+    minmax(80px, 0.45fr)
+    minmax(100px, 0.55fr)
+    minmax(90px, 0.45fr)
+    minmax(180px, 1fr)
+    minmax(105px, 0.55fr);
+  gap: 10px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  padding: 11px;
+}
+
+.eod-metric-copy,
+.eod-system-value,
+.eod-number-field,
+.eod-note-field,
+.eod-comments-field,
+.eod-admin-validation label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eod-metric-copy strong {
+  font-size: 0.72rem;
+}
+
+.eod-metric-copy span,
+.eod-system-value span,
+.eod-number-field span,
+.eod-note-field span,
+.eod-comments-field span,
+.eod-admin-validation label span {
+  color: var(--muted);
+  font-size: 0.58rem;
+  line-height: 1.35;
+}
+
+.eod-system-value strong {
+  font-size: 1rem;
+}
+
+.eod-number-field input,
+.eod-note-field input,
+.eod-comments-field textarea,
+.eod-admin-validation textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+  background: var(--surface-soft);
+  padding: 8px 9px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.68rem;
+}
+
+.eod-number-field input {
+  min-height: 38px;
+}
+
+.eod-note-field input {
+  min-height: 38px;
+}
+
+.eod-number-field input:focus,
+.eod-note-field input:focus,
+.eod-comments-field textarea:focus,
+.eod-admin-validation textarea:focus {
+  border-color: rgba(23, 107, 82, 0.55);
+  box-shadow: 0 0 0 3px rgba(23, 107, 82, 0.08);
+}
+
+.eod-number-field input:disabled,
+.eod-note-field input:disabled,
+.eod-comments-field textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.eod-confirm-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--green-dark);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.eod-confirm-field input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green-dark);
+}
+
+.eod-system-only {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.65rem;
+}
+
+.eod-row-status {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.eod-row-status small {
+  color: var(--red);
+  font-size: 0.58rem;
+}
+
+.eod-comments-field textarea {
+  resize: vertical;
+}
+
+.eod-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+.eod-form-actions button,
+.eod-validate-button {
+  border: 0;
+}
+
+.eod-readonly-note {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.eod-admin-validation {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 14px;
+  border: 1px solid rgba(180, 55, 55, 0.24);
+  border-radius: 12px;
+  background: var(--red-soft);
+  padding: 12px;
+}
+
+.eod-validate-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 10px;
+  background: var(--red);
+  padding: 9px 13px;
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+@media (max-width: 1250px) {
+  .eod-metric-row {
+    grid-template-columns:
+      minmax(210px, 1.6fr)
+      minmax(80px, 0.5fr)
+      minmax(100px, 0.6fr)
+      minmax(90px, 0.5fr);
+  }
+
+  .eod-note-field,
+  .eod-row-status {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .eod-metric-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .eod-metric-copy,
+  .eod-note-field,
+  .eod-row-status {
+    grid-column: 1 / -1;
+  }
+
+  .eod-form-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .eod-admin-validation {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .eod-metric-row {
+    grid-template-columns: 1fr;
+  }
+
+  .eod-metric-copy,
+  .eod-note-field,
+  .eod-row-status {
+    grid-column: auto;
+  }
+}
