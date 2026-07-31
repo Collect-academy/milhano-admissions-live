@@ -7,8 +7,14 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { EmptyState } from "@/components/empty-state";
 import { KpiCard } from "@/components/kpi-card";
+import {
+  dateRangeParams,
+  dateRangeQuery,
+  resolveDateRange,
+} from "@/lib/date-range";
 import { getPipelineOperationalData } from "@/lib/data";
 import { dateLabel, number } from "@/lib/format";
 import type { PipelineFilters } from "@/lib/types";
@@ -34,6 +40,9 @@ function buildFilters(params: SearchParams): PipelineFilters {
     source: first(params.source),
     status: first(params.status),
     inactivity: first(params.inactivity),
+    range: first(params.range),
+    from: first(params.from),
+    to: first(params.to),
     page: Number(first(params.page) ?? 1),
   };
 }
@@ -77,7 +86,11 @@ export default async function PipelinePage({
 }) {
   const params = await searchParams;
   const filters = buildFilters(params);
-  const data = await getPipelineOperationalData(filters);
+  const range = resolveDateRange(params);
+  const data = await getPipelineOperationalData(
+    filters,
+    range,
+  );
 
   const open = data.rows.filter(
     (row) => row.status.toLowerCase() === "open",
@@ -97,13 +110,26 @@ export default async function PipelinePage({
       eyebrow="Operación"
       title="Pipeline Detail"
       subtitle="Búsqueda, filtros y exportación de las opportunities sincronizadas desde GHL."
-      statusLabel={`${number(data.totalFiltered)} resultados`}
+      statusLabel={`${number(data.totalFiltered)} resultados · ${range.label}`}
     >
+      <DateRangeFilter
+        basePath="/pipeline"
+        preserve={{
+          q: filters.q,
+          stage: filters.stage,
+          owner: filters.owner,
+          source: filters.source,
+          status: filters.status,
+          inactivity: filters.inactivity,
+        }}
+        range={range}
+      />
+
       <section className="kpi-grid pipeline-kpi-grid">
         <KpiCard
           label="Resultados filtrados"
           value={number(data.totalFiltered)}
-          helper={`${number(data.totalRows)} opportunities totales`}
+          helper={`${number(data.totalRows)} captadas en ${range.label}`}
           icon={Filter}
         />
         <KpiCard
@@ -139,6 +165,16 @@ export default async function PipelinePage({
         </div>
 
         <form className="filter-grid" method="get">
+          {Object.entries(dateRangeParams(range)).map(
+            ([key, value]) => (
+              <input
+                key={key}
+                name={key}
+                type="hidden"
+                value={value}
+              />
+            ),
+          )}
           <label className="filter-field filter-search">
             <span>Buscar</span>
             <input
@@ -216,7 +252,10 @@ export default async function PipelinePage({
             <button className="primary-button" type="submit">
               Aplicar
             </button>
-            <Link className="secondary-button" href="/pipeline">
+            <Link
+              className="secondary-button"
+              href={`/pipeline?${dateRangeQuery(range)}`}
+            >
               Limpiar
             </Link>
           </div>
@@ -232,7 +271,7 @@ export default async function PipelinePage({
             </h2>
           </div>
           <p className="panel-note">
-            Los filtros se aplican a la réplica actual de Supabase.
+            El periodo usa la fecha original del lead o, si falta, la fecha de creación.
           </p>
         </div>
 

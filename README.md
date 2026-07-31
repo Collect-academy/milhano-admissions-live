@@ -107,3 +107,23 @@ EOD:
 - Búsqueda por nombre, alumno, teléfono, email y grado.
 - Exportación CSV respetando los filtros activos.
 - Avance del backfill histórico visible en `/whatsapp`.
+
+
+## Dashboard V4 — filtros temporales
+
+Todas las áreas operativas soportan:
+
+- Hoy.
+- Últimos 7 días.
+- Últimos 30 días.
+- Este mes.
+- Mes pasado.
+- Este año.
+- Rango personalizado.
+
+Semántica:
+
+- Resumen y Pipeline: cohorte definida por la fecha original/entrada del lead.
+- WhatsApp y Llamadas: actividad ocurrida dentro del periodo.
+- EOD: snapshots y sincronizaciones ocurridos dentro del periodo.
+- Las cards del Pipeline muestran el stage actual de la cohorte captada.

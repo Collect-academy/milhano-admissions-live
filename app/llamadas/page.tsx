@@ -7,20 +7,43 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { CallActivityChart, PickupRateChart } from "@/components/call-charts";
+import {
+  CallActivityChart,
+  PickupRateChart,
+} from "@/components/call-charts";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { EmptyState } from "@/components/empty-state";
 import { KpiCard } from "@/components/kpi-card";
+import { resolveDateRange } from "@/lib/date-range";
 import { getCallsDashboardData } from "@/lib/data";
-import { dateLabel, dateTimeLabel, duration, number, percent } from "@/lib/format";
+import {
+  dateLabel,
+  dateTimeLabel,
+  duration,
+  number,
+  percent,
+} from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
+type SearchParams = Record<
+  string,
+  string | string[] | undefined
+>;
+
 function sum(
-  rows: Awaited<ReturnType<typeof getCallsDashboardData>>["daily"],
-  key: keyof Awaited<ReturnType<typeof getCallsDashboardData>>["daily"][number],
+  rows: Awaited<
+    ReturnType<typeof getCallsDashboardData>
+  >["daily"],
+  key: keyof Awaited<
+    ReturnType<typeof getCallsDashboardData>
+  >["daily"][number],
 ): number {
-  return rows.reduce((total, row) => total + Number(row[key] ?? 0), 0);
+  return rows.reduce(
+    (total, row) => total + Number(row[key] ?? 0),
+    0,
+  );
 }
 
 const outcomeLabels: Record<string, string> = {
@@ -36,13 +59,22 @@ const outcomeLabels: Record<string, string> = {
   no_stage_change_within_24h: "Sin movimiento en 24 h",
 };
 
-export default async function CallsPage() {
-  const data = await getCallsDashboardData();
-  const recent = data.daily.slice(-30);
-  const latest = data.daily.at(-1) ?? null;
-  const outbound = sum(recent, "outbound_attempts");
-  const meaningful = sum(recent, "meaningful_3min_plus_calls");
-  const meaningfulRate = outbound > 0 ? (meaningful / outbound) * 100 : null;
+export default async function CallsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const range = resolveDateRange(params);
+  const data = await getCallsDashboardData(range);
+  const selected = data.daily;
+  const outbound = sum(selected, "outbound_attempts");
+  const meaningful = sum(
+    selected,
+    "meaningful_3min_plus_calls",
+  );
+  const meaningfulRate =
+    outbound > 0 ? (meaningful / outbound) * 100 : null;
 
   const advisorTotals = new Map<
     string,
@@ -69,7 +101,8 @@ export default async function CallsPage() {
     current.outbound += row.outbound_attempts;
     current.inbound += row.inbound_calls;
     current.connected += row.ghl_connected_calls;
-    current.meaningful += row.meaningful_3min_plus_calls;
+    current.meaningful +=
+      row.meaningful_3min_plus_calls;
     current.contacts += row.unique_contacts;
     current.duration += row.total_duration_seconds;
     advisorTotals.set(row.advisor_name, current);
@@ -79,7 +112,8 @@ export default async function CallsPage() {
   for (const row of data.outcomes) {
     outcomeTotals.set(
       row.observed_outcome_24h,
-      (outcomeTotals.get(row.observed_outcome_24h) ?? 0) + 1,
+      (outcomeTotals.get(row.observed_outcome_24h) ?? 0) +
+        1,
     );
   }
 
@@ -87,92 +121,112 @@ export default async function CallsPage() {
     <DashboardLayout
       eyebrow="Actividad telefónica"
       title="Call Operations"
-      subtitle="Intentos, llamadas entrantes, pickup y movimientos observados después de la llamada."
-      statusLabel={`Última actividad ${dateLabel(latest?.activity_date)}`}
+      subtitle="Intentos, inbound, pickup y movimientos observados después de la llamada."
+      statusLabel={`Periodo ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
+      <DateRangeFilter
+        basePath="/llamadas"
+        range={range}
+      />
+
       <section className="scope-banner">
         <PhoneCall size={19} />
         <div>
-          <strong>Cobertura actual: llamadas registradas dentro de GHL</strong>
+          <strong>
+            Cobertura: llamadas registradas dentro de GHL
+          </strong>
           <span>
-            Las llamadas realizadas desde otras líneas no aparecen en estos indicadores.
+            Las realizadas desde otras líneas no aparecen.
           </span>
         </div>
       </section>
 
       <section className="kpi-grid">
         <KpiCard
-          label="Intentos outbound · 30 días"
+          label={`Intentos outbound · ${range.label}`}
           value={number(outbound)}
           helper="Contestados o no"
           icon={PhoneOutgoing}
         />
         <KpiCard
           label="Inbound"
-          value={number(sum(recent, "inbound_calls"))}
-          helper={`${number(sum(recent, "probable_return_calls"))} probables devoluciones`}
+          value={number(sum(selected, "inbound_calls"))}
+          helper={`${number(
+            sum(selected, "probable_return_calls"),
+          )} probables devoluciones`}
           icon={PhoneIncoming}
         />
         <KpiCard
           label="Connected según GHL"
-          value={number(sum(recent, "ghl_connected_calls"))}
+          value={number(
+            sum(selected, "ghl_connected_calls"),
+          )}
           helper="Estado raw de la plataforma"
           icon={Headphones}
         />
         <KpiCard
           label="Conversaciones 3+ min"
           value={number(meaningful)}
-          helper={`${percent(meaningfulRate)} de intentos outbound`}
+          helper={`${percent(
+            meaningfulRate,
+          )} de intentos outbound`}
           icon={Timer}
         />
         <KpiCard
-          label="Contactos únicos"
-          value={number(sum(recent, "unique_contacts_called"))}
-          helper="Suma diaria; puede repetir entre días"
+          label="Contactos"
+          value={number(
+            sum(selected, "unique_contacts_called"),
+          )}
+          helper="Suma diaria; puede repetir"
           icon={UsersRound}
         />
         <KpiCard
           label="Tiempo registrado"
-          value={duration(sum(recent, "total_duration_seconds"))}
+          value={duration(
+            sum(selected, "total_duration_seconds"),
+          )}
           helper="Duración reportada por GHL"
           icon={PhoneCall}
         />
       </section>
 
-      {data.daily.length ? (
+      {selected.length ? (
         <div className="two-column">
           <section className="panel">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">Últimos 30 días</p>
+                <p className="eyebrow">{range.label}</p>
                 <h2>Intentos y conversaciones</h2>
               </div>
             </div>
-            <CallActivityChart data={data.daily} />
+            <CallActivityChart data={selected} />
           </section>
 
           <section className="panel">
             <div className="panel-heading">
               <div>
-                <p className="eyebrow">Calidad de conexión</p>
+                <p className="eyebrow">{range.label}</p>
                 <h2>Dos lecturas de pickup</h2>
               </div>
               <p className="panel-note">
-                GHL connected se conserva; 3+ minutos funciona como proxy operativo.
+                GHL connected se conserva; 3+ minutos es el
+                proxy operativo.
               </p>
             </div>
-            <PickupRateChart data={data.daily} />
+            <PickupRateChart data={selected} />
           </section>
         </div>
       ) : (
-        <EmptyState message="Todavía no hay suficiente actividad de llamadas en GHL." />
+        <EmptyState message="No hay llamadas registradas en el periodo seleccionado." />
       )}
 
       <div className="two-column">
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Equipo</p>
+              <p className="eyebrow">
+                Equipo · {range.label}
+              </p>
               <h2>Actividad atribuida por asesora</h2>
             </div>
           </div>
@@ -189,16 +243,18 @@ export default async function CallsPage() {
                 </tr>
               </thead>
               <tbody>
-                {[...advisorTotals.entries()].map(([advisor, values]) => (
-                  <tr key={advisor}>
-                    <td>{advisor}</td>
-                    <td>{number(values.outbound)}</td>
-                    <td>{number(values.inbound)}</td>
-                    <td>{number(values.connected)}</td>
-                    <td>{number(values.meaningful)}</td>
-                    <td>{duration(values.duration)}</td>
-                  </tr>
-                ))}
+                {[...advisorTotals.entries()].map(
+                  ([advisor, values]) => (
+                    <tr key={advisor}>
+                      <td>{advisor}</td>
+                      <td>{number(values.outbound)}</td>
+                      <td>{number(values.inbound)}</td>
+                      <td>{number(values.connected)}</td>
+                      <td>{number(values.meaningful)}</td>
+                      <td>{duration(values.duration)}</td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>
@@ -207,11 +263,13 @@ export default async function CallsPage() {
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Proceso observado</p>
+              <p className="eyebrow">
+                Proceso · {range.label}
+              </p>
               <h2>Primer movimiento hasta 24 h después</h2>
             </div>
             <p className="panel-note">
-              Correlación temporal; no afirma que la llamada causó el movimiento.
+              Correlación temporal; no afirma causalidad.
             </p>
           </div>
           <div className="outcome-list">
@@ -219,12 +277,14 @@ export default async function CallsPage() {
               .sort((a, b) => b[1] - a[1])
               .map(([outcome, count]) => (
                 <div className="outcome-row" key={outcome}>
-                  <span>{outcomeLabels[outcome] ?? outcome}</span>
+                  <span>
+                    {outcomeLabels[outcome] ?? outcome}
+                  </span>
                   <strong>{number(count)}</strong>
                 </div>
               ))}
             {!outcomeTotals.size ? (
-              <EmptyState message="Todavía no hay outcomes observados." />
+              <EmptyState message="No hay outcomes observados en el periodo." />
             ) : null}
           </div>
         </section>
@@ -233,7 +293,7 @@ export default async function CallsPage() {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Últimos registros</p>
+            <p className="eyebrow">{range.label}</p>
             <h2>Llamadas y movimiento posterior</h2>
           </div>
         </div>
@@ -251,16 +311,23 @@ export default async function CallsPage() {
               </tr>
             </thead>
             <tbody>
-              {data.outcomes.slice(0, 25).map((row) => (
+              {data.outcomes.map((row) => (
                 <tr key={row.event_id}>
                   <td>{dateTimeLabel(row.call_timestamp)}</td>
                   <td>{row.direction}</td>
                   <td>{row.call_status ?? "—"}</td>
-                  <td>{duration(row.call_duration_seconds)}</td>
-                  <td>{row.is_meaningful_conversation ? "Sí" : "No"}</td>
                   <td>
-                    {outcomeLabels[row.observed_outcome_24h] ??
-                      row.observed_outcome_24h}
+                    {duration(row.call_duration_seconds)}
+                  </td>
+                  <td>
+                    {row.is_meaningful_conversation
+                      ? "Sí"
+                      : "No"}
+                  </td>
+                  <td>
+                    {outcomeLabels[
+                      row.observed_outcome_24h
+                    ] ?? row.observed_outcome_24h}
                   </td>
                   <td>{row.to_stage ?? "—"}</td>
                 </tr>

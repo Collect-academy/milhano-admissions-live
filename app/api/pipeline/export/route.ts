@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 
+import { resolveDateRange } from "@/lib/date-range";
 import { getPipelineOperationalData } from "@/lib/data";
 import type { PipelineFilters } from "@/lib/types";
 
@@ -20,9 +21,19 @@ export async function GET(request: NextRequest) {
     source: params.get("source") ?? undefined,
     status: params.get("status") ?? undefined,
     inactivity: params.get("inactivity") ?? undefined,
+    range: params.get("range") ?? undefined,
+    from: params.get("from") ?? undefined,
+    to: params.get("to") ?? undefined,
   };
 
-  const data = await getPipelineOperationalData(filters, false);
+  const range = resolveDateRange(
+    Object.fromEntries(params.entries()),
+  );
+  const data = await getPipelineOperationalData(
+    filters,
+    range,
+    false,
+  );
 
   const headers = [
     "Opportunity ID",
@@ -39,6 +50,7 @@ export async function GET(request: NextRequest) {
     "Nivel",
     "Ciclo",
     "Prioridad",
+    "Fecha original del lead",
     "Creado",
     "Actualizado",
     "Días sin actualizar",
@@ -59,6 +71,7 @@ export async function GET(request: NextRequest) {
     row.level,
     row.school_cycle,
     row.priority,
+    row.original_lead_date,
     row.created_at,
     row.updated_at,
     row.days_since_update,

@@ -23,12 +23,10 @@ function shortDate(value: string): string {
 }
 
 export function CallActivityChart({ data }: { data: CallDaily[] }) {
-  const recent = data.slice(-30);
-
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={recent} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
+        <BarChart data={data} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="activity_date"
@@ -64,12 +62,10 @@ export function CallActivityChart({ data }: { data: CallDaily[] }) {
 }
 
 export function PickupRateChart({ data }: { data: CallDaily[] }) {
-  const recent = data.slice(-30);
-
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={recent} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
+        <LineChart data={data} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="activity_date"

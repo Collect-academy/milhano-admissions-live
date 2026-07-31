@@ -18,6 +18,7 @@ import type { DailyKpi, FunnelSummary } from "@/lib/types";
 type Props = {
   funnel: FunnelSummary[];
   daily: DailyKpi[];
+  rangeLabel: string;
 };
 
 function shortDate(value: string): string {
@@ -62,13 +63,11 @@ export function FunnelChart({ data }: { data: FunnelSummary[] }) {
 }
 
 export function DailyActivityChart({ data }: { data: DailyKpi[] }) {
-  const recent = data.slice(-45);
-
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
-          data={recent}
+          data={data}
           margin={{ top: 8, right: 18, left: -12, bottom: 0 }}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -117,13 +116,17 @@ export function DailyActivityChart({ data }: { data: DailyKpi[] }) {
   );
 }
 
-export function DashboardCharts({ funnel, daily }: Props) {
+export function DashboardCharts({
+  funnel,
+  daily,
+  rangeLabel,
+}: Props) {
   return (
     <>
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Conversión histórica</p>
+            <p className="eyebrow">Cohorte · {rangeLabel}</p>
             <h2>Cascada estándar</h2>
           </div>
           <p className="panel-note">
@@ -136,7 +139,7 @@ export function DashboardCharts({ funnel, daily }: Props) {
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Últimos 45 días</p>
+            <p className="eyebrow">{rangeLabel}</p>
             <h2>Actividad diaria</h2>
           </div>
           <p className="panel-note">

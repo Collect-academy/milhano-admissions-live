@@ -194,6 +194,18 @@ export type SyncRun = {
   details: Record<string, unknown> | null;
 };
 
+export type DashboardPeriodSummary = {
+  new_leads: number;
+  fits: number;
+  tours_scheduled: number;
+  tours_attended: number;
+  enrolled: number;
+  whatsapp_messages: number;
+  whatsapp_conversations_daily_sum: number;
+  call_attempts: number;
+  outbound_call_attempts: number;
+};
+
 export type DashboardData = {
   pipeline: PipelineSummary[];
   funnel: FunnelSummary[];
@@ -205,6 +217,7 @@ export type DashboardData = {
   latestWhatsapp: WhatsAppDaily | null;
   latestCalls: CallDaily | null;
   latestEod: EodTeamSnapshot | null;
+  period: DashboardPeriodSummary;
 };
 
 export type WhatsAppDashboardData = {
@@ -239,6 +252,7 @@ export type PipelineOpportunity = {
   status: string;
   operational_owner: string;
   created_at: string | null;
+  original_lead_date: string | null;
   updated_at: string | null;
   days_since_update: number | null;
   inactivity_bucket: string | null;
@@ -255,6 +269,9 @@ export type PipelineFilters = {
   source?: string;
   status?: string;
   inactivity?: string;
+  range?: string;
+  from?: string;
+  to?: string;
   page?: number;
 };
 

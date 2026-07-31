@@ -22,12 +22,10 @@ function shortDate(value: string): string {
 }
 
 export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
-  const recent = data.slice(-30);
-
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={recent} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
+        <ComposedChart data={data} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="activity_date"
@@ -73,12 +71,10 @@ export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
 }
 
 export function WhatsAppClassificationChart({ data }: { data: WhatsAppDaily[] }) {
-  const recent = data.slice(-30);
-
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={recent} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
+        <ComposedChart data={data} margin={{ top: 8, right: 16, left: -12, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis
             dataKey="activity_date"

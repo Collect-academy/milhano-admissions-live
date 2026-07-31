@@ -1,0 +1,46 @@
+MILHANO ADMISSIONS LIVE | DASHBOARD V4
+
+NUEVO FILTRO GLOBAL DE FECHAS
+
+- Hoy
+- Últimos 7 días
+- Últimos 30 días
+- Este mes
+- Mes pasado
+- Este año
+- Personalizado
+
+RUTAS ACTUALIZADAS
+
+/
+- KPIs del periodo.
+- Funnel de la cohorte captada.
+- Fuente y asesora de la cohorte.
+- Salidas ocurridas en el periodo.
+- Stage actual de leads captados en el periodo.
+
+/pipeline
+- Filtra por fecha original del lead o created_at.
+- Conserva filtros de etapa, owner, source, status e inactividad.
+- El CSV respeta fechas y filtros.
+
+/whatsapp
+- KPIs, gráficas y tabla dentro del periodo.
+- El acumulado total y el progreso del backfill permanecen visibles.
+
+/llamadas
+- KPIs, asesora, outcomes y registros dentro del periodo.
+
+/eod
+- Snapshots y sincronizaciones dentro del periodo.
+
+NO REQUIERE
+
+- SQL nuevo.
+- Variables de entorno nuevas.
+- Cambios en n8n.
+
+DESPLIEGUE
+
+Subir el contenido extraído de este parche a GitHub main y reemplazar
+los archivos existentes. Vercel desplegará automáticamente.

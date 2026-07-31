@@ -8,8 +8,10 @@ import {
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { DateRangeFilter } from "@/components/date-range-filter";
 import { EmptyState } from "@/components/empty-state";
 import { KpiCard } from "@/components/kpi-card";
+import { resolveDateRange } from "@/lib/date-range";
 import { getEodData } from "@/lib/data";
 import { dateLabel, dateTimeLabel, number } from "@/lib/format";
 
@@ -45,8 +47,19 @@ function statusClass(status: string): string {
   return "status-pending";
 }
 
-export default async function EodPage() {
-  const data = await getEodData();
+type SearchParams = Record<
+  string,
+  string | string[] | undefined
+>;
+
+export default async function EodPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const range = resolveDateRange(params);
+  const data = await getEodData(range);
   const latestSnapshot = data.snapshots[0] ?? null;
   const latestDate =
     latestSnapshot?.eod_date ?? data.rows[0]?.eod_date ?? null;
@@ -81,8 +94,10 @@ export default async function EodPage() {
       eyebrow="Cierre operativo"
       title="End of Day"
       subtitle="Snapshot individual por asesora y volumen compartido del canal institucional."
-      statusLabel={`Cierre ${dateLabel(latestDate)}`}
+      statusLabel={`Periodo ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
+      <DateRangeFilter basePath="/eod" range={range} />
+
       <section className="scope-banner">
         <Clock4 size={19} />
         <div>
@@ -230,7 +245,7 @@ export default async function EodPage() {
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Histórico</p>
-              <h2>Últimos cierres de equipo</h2>
+              <h2>Cierres dentro de {range.label}</h2>
             </div>
           </div>
           <div className="table-scroll">
@@ -245,7 +260,7 @@ export default async function EodPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.snapshots.slice(0, 14).map((snapshot) => (
+                {data.snapshots.map((snapshot) => (
                   <tr key={snapshot.eod_date}>
                     <td>{dateLabel(snapshot.eod_date)}</td>
                     <td>{number(snapshot.metrics.whatsapp_total_messages)}</td>
@@ -289,7 +304,7 @@ export default async function EodPage() {
                 </tr>
               </thead>
               <tbody>
-                {data.syncRuns.slice(0, 12).map((run) => (
+                {data.syncRuns.map((run) => (
                   <tr key={run.id}>
                     <td>{run.sync_type}</td>
                     <td>
