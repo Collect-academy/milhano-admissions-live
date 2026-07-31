@@ -1349,3 +1349,147 @@ tbody tr:hover {
     justify-content: flex-end;
   }
 }
+
+
+/* ==========================================================
+   Monitoring V7
+========================================================== */
+
+.system-health-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.system-health-link strong {
+  white-space: nowrap;
+}
+
+.system-health-good {
+  border-color: rgba(23, 107, 82, 0.25);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.system-health-warning {
+  border-color: rgba(191, 132, 33, 0.3);
+  background: rgba(255, 246, 222, 0.9);
+  color: #805812;
+}
+
+.system-health-error,
+.system-banner-error {
+  border-color: rgba(180, 55, 55, 0.28);
+  background: rgba(255, 235, 235, 0.95);
+  color: #8d2828;
+}
+
+.health-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.health-component-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.health-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.health-card-heading strong {
+  font-size: 0.78rem;
+}
+
+.health-card-meta {
+  display: grid;
+  gap: 7px;
+  padding: 13px 0;
+  color: var(--muted);
+  font-size: 0.67rem;
+}
+
+.health-card-meta div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.health-component-card details {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.health-component-card summary {
+  color: var(--green-dark);
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.health-component-card pre {
+  max-height: 220px;
+  overflow: auto;
+  margin-top: 9px;
+  border-radius: 9px;
+  background: #15231f;
+  padding: 10px;
+  color: #eef6f2;
+  font-size: 0.58rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inline-json {
+  display: inline-block;
+  max-width: 440px;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.61rem;
+  line-height: 1.45;
+}
+
+.monitoring-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 16px;
+  border-radius: 11px;
+  background: var(--green-soft);
+  padding: 11px 12px;
+  color: var(--green-dark);
+  font-size: 0.68rem;
+}
+
+@media (max-width: 1100px) {
+  .health-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 650px) {
+  .health-card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .system-health-link {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

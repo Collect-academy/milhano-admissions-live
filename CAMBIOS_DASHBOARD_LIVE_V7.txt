@@ -1,0 +1,38 @@
+MILHANO ADMISSIONS LIVE | DASHBOARD V7
+
+NUEVA RUTA
+
+/sistema
+
+MONITOREO
+
+- WhatsApp live sync.
+- Calls live sync.
+- Backfill histórico de WhatsApp.
+- Snapshot EOD.
+- Freshness de opportunities.
+
+VALIDACIÓN DE DATOS
+
+- Opportunities sin Contact ID.
+- Opportunities en stages desconocidos.
+- Stage events huérfanos.
+- Llamadas sin usuario.
+- WhatsApp compartido sin atribución individual.
+- Variantes raw de Cinthia.
+
+RESUMEN
+
+La página principal muestra una barra visible:
+
+- Sistema actualizado.
+- Sistema requiere revisión.
+- Sistema con errores.
+
+CARGA
+
+- Un workflow cada 30 minutos.
+- Una RPC.
+- Sin requests a GHL.
+- Sin loops de n8n.
+- Pocos upserts.

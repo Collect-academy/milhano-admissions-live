@@ -9,6 +9,7 @@ const links = [
   { href: "/whatsapp", label: "WhatsApp" },
   { href: "/llamadas", label: "Llamadas" },
   { href: "/eod", label: "EOD" },
+  { href: "/sistema", label: "Sistema" },
 ];
 
 export function AppNav() {

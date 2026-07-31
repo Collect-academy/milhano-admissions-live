@@ -18,6 +18,7 @@ import {
   resolveDateRange,
 } from "@/lib/date-range";
 import { getDashboardData } from "@/lib/data";
+import { getSystemHealthData } from "@/lib/system-health";
 import { dateLabel, number, percent } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,10 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const range = resolveDateRange(params);
-  const data = await getDashboardData(range);
+  const [data, health] = await Promise.all([
+    getDashboardData(range),
+    getSystemHealthData(),
+  ]);
 
   const totalOpportunities = data.pipeline.reduce(
     (sum, row) => sum + row.opportunity_count,
@@ -81,6 +85,26 @@ export default async function DashboardPage({
       subtitle="Cohortes, actividad, pipeline actual y canales institucionales."
       statusLabel={`Periodo ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
+      <Link
+        className={
+          health.overallStatus === "healthy"
+            ? "system-health-link system-health-good"
+            : health.overallStatus === "error"
+              ? "system-health-link system-health-error"
+              : "system-health-link system-health-warning"
+        }
+        href="/sistema"
+      >
+        <span>
+          {health.overallStatus === "healthy"
+            ? "Sistema actualizado"
+            : health.overallStatus === "error"
+              ? "Sistema con errores"
+              : "Sistema requiere revisión"}
+        </span>
+        <strong>Ver monitoreo →</strong>
+      </Link>
+
       <DateRangeFilter basePath="/" range={range} />
 
       <section
