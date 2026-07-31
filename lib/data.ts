@@ -1,5 +1,6 @@
 import "server-only";
 
+import { canonicalAdvisorName } from "@/lib/identity";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import {
   dateInRange,
@@ -126,10 +127,10 @@ function assertResult(
 }
 
 function ownerName(row: OpportunityRow): string {
-  return (
+  return canonicalAdvisorName(
     row.assigned_user?.trim() ||
-    row.historical_advisor?.trim() ||
-    "Sin asignar"
+      row.historical_advisor?.trim() ||
+      "Sin asignar",
   );
 }
 
@@ -599,9 +600,16 @@ export async function getCallsDashboardData(
     daily: normalizeNumbers(
       dailyResult.data,
     ) as unknown as CallDaily[],
-    byUser: normalizeNumbers(
-      byUserResult.data,
-    ) as unknown as CallDailyUser[],
+    byUser: (
+      normalizeNumbers(
+        byUserResult.data,
+      ) as unknown as CallDailyUser[]
+    ).map((row) => ({
+      ...row,
+      advisor_name: canonicalAdvisorName(
+        row.advisor_name,
+      ),
+    })),
     outcomes: normalizeNumbers(
       outcomesResult.data,
     ) as unknown as CallOutcome[],
@@ -709,12 +717,19 @@ export async function getPipelineOperationalData(
     normalizeNumbers(
       result.data,
     ) as unknown as PipelineOpportunity[]
-  ).filter((row) =>
-    dateInRange(
-      row.original_lead_date || row.created_at,
-      range,
-    ),
-  );
+  )
+    .filter((row) =>
+      dateInRange(
+        row.original_lead_date || row.created_at,
+        range,
+      ),
+    )
+    .map((row) => ({
+      ...row,
+      operational_owner: canonicalAdvisorName(
+        row.operational_owner,
+      ),
+    }));
 
   const query = normalizeFilter(filters.q);
   const stage = normalizeFilter(filters.stage);

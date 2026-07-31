@@ -1,0 +1,35 @@
+MILHANO ADMISSIONS LIVE | V6 — IDENTITY ONLY
+
+DECISIÓN OPERATIVA
+
+No se aplican permisos individuales por asesora.
+
+Pathi y Cinthia pueden tocar una misma opportunity, por lo que el
+dashboard continúa mostrando el resultado del equipo completo.
+
+ÚNICO CAMBIO
+
+Cinthia
+Cinthia Esquivel
+
+se muestran como:
+
+Cinthia Esquivel
+
+APLICA EN
+
+- Rendimiento por asesora del Resumen.
+- Filtro de asesora del Pipeline.
+- Columna de owner del Pipeline.
+- Exportación CSV.
+- Tablas de llamadas por asesora.
+
+NO MODIFICA
+
+- Datos históricos de Supabase.
+- Owners en GHL.
+- Roles o permisos.
+- Acceso de usuarios.
+- n8n.
+- EOD.
+- WhatsApp.
