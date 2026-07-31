@@ -14,9 +14,13 @@ import type {
   ExitSummary,
   FunnelSummary,
   PerformanceRow,
+  PipelineFilters,
+  PipelineOperationalData,
+  PipelineOpportunity,
   PipelineSummary,
   StaleOpportunity,
   SyncRun,
+  WhatsAppBackfillStatus,
   WhatsAppDaily,
   WhatsAppDashboardData,
   WhatsAppSummary,
@@ -172,23 +176,29 @@ export async function getDashboardData(): Promise<DashboardData> {
 export async function getWhatsAppDashboardData(): Promise<WhatsAppDashboardData> {
   const supabase = createSupabaseAdmin();
 
-  const [dailyResult, summaryResult, eodResult] = await Promise.all([
-    supabase
-      .from("vw_milhano_whatsapp_daily")
-      .select("*")
-      .order("activity_date", { ascending: false })
-      .limit(90),
-    supabase.from("vw_milhano_whatsapp_channel_summary").select("*").limit(1),
-    supabase
-      .from("milhano_eod_team_snapshots")
-      .select("*")
-      .order("eod_date", { ascending: false })
-      .limit(1),
-  ]);
+  const [dailyResult, summaryResult, eodResult, backfillResult] =
+    await Promise.all([
+      supabase
+        .from("vw_milhano_whatsapp_daily")
+        .select("*")
+        .order("activity_date", { ascending: false })
+        .limit(365),
+      supabase.from("vw_milhano_whatsapp_channel_summary").select("*").limit(1),
+      supabase
+        .from("milhano_eod_team_snapshots")
+        .select("*")
+        .order("eod_date", { ascending: false })
+        .limit(1),
+      supabase
+        .from("vw_milhano_whatsapp_backfill_status")
+        .select("*")
+        .limit(1),
+    ]);
 
   assertResult(dailyResult, "Error consultando WhatsApp diario");
   assertResult(summaryResult, "Error consultando resumen de WhatsApp");
   assertResult(eodResult, "Error consultando EOD de WhatsApp");
+  assertResult(backfillResult, "Error consultando backfill de WhatsApp");
 
   return {
     daily: (
@@ -199,6 +209,10 @@ export async function getWhatsAppDashboardData(): Promise<WhatsAppDashboardData>
         summaryResult.data,
       ) as unknown as WhatsAppSummary[])[0] ?? null,
     latestEod: (eodResult.data as EodTeamSnapshot[] | null)?.[0] ?? null,
+    backfill:
+      (normalizeNumbers(
+        backfillResult.data,
+      ) as unknown as WhatsAppBackfillStatus[])[0] ?? null,
   };
 }
 
@@ -280,5 +294,135 @@ export async function getEodData(): Promise<EodData> {
     syncRuns: normalizeNumbers(
       syncRunsResult.data,
     ) as unknown as SyncRun[],
+  };
+}
+
+
+const PIPELINE_PAGE_SIZE = 50;
+
+function uniqueSorted(values: Array<string | null | undefined>): string[] {
+  return [...new Set(values.filter((value): value is string => Boolean(value)))]
+    .sort((a, b) => a.localeCompare(b, "es"));
+}
+
+function normalizeFilter(value: string | undefined): string {
+  return value?.trim().toLocaleLowerCase("es") ?? "";
+}
+
+export async function getPipelineOperationalData(
+  filters: PipelineFilters = {},
+  paginate = true,
+): Promise<PipelineOperationalData> {
+  const supabase = createSupabaseAdmin();
+
+  const result = await supabase
+    .from("vw_milhano_pipeline_current")
+    .select(
+      "ghl_opportunity_id, opportunity_name, contact_name, student_name, phone, email, source, current_stage, status, operational_owner, created_at, updated_at, days_since_update, inactivity_bucket, grade_interest, level, school_cycle, priority",
+    )
+    .order("stage_display_order")
+    .order("days_since_update", { ascending: false, nullsFirst: false })
+    .limit(1000);
+
+  assertResult(result, "Error consultando detalle del pipeline");
+
+  const allRows = normalizeNumbers(
+    result.data,
+  ) as unknown as PipelineOpportunity[];
+
+  const query = normalizeFilter(filters.q);
+  const stage = normalizeFilter(filters.stage);
+  const owner = normalizeFilter(filters.owner);
+  const source = normalizeFilter(filters.source);
+  const status = normalizeFilter(filters.status);
+  const inactivity = normalizeFilter(filters.inactivity);
+
+  const filteredRows = allRows.filter((row) => {
+    if (
+      stage &&
+      normalizeFilter(row.current_stage) !== stage
+    ) {
+      return false;
+    }
+
+    if (
+      owner &&
+      normalizeFilter(row.operational_owner) !== owner
+    ) {
+      return false;
+    }
+
+    if (
+      source &&
+      normalizeFilter(row.source ?? "Sin fuente") !== source
+    ) {
+      return false;
+    }
+
+    if (
+      status &&
+      normalizeFilter(row.status) !== status
+    ) {
+      return false;
+    }
+
+    if (
+      inactivity &&
+      normalizeFilter(row.inactivity_bucket ?? "Sin fecha") !== inactivity
+    ) {
+      return false;
+    }
+
+    if (query) {
+      const searchable = [
+        row.opportunity_name,
+        row.contact_name,
+        row.student_name,
+        row.phone,
+        row.email,
+        row.source,
+        row.current_stage,
+        row.operational_owner,
+        row.grade_interest,
+        row.level,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLocaleLowerCase("es");
+
+      if (!searchable.includes(query)) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const requestedPage = Math.max(1, Number(filters.page ?? 1) || 1);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredRows.length / PIPELINE_PAGE_SIZE),
+  );
+  const page = Math.min(requestedPage, totalPages);
+  const start = (page - 1) * PIPELINE_PAGE_SIZE;
+
+  return {
+    rows: paginate
+      ? filteredRows.slice(start, start + PIPELINE_PAGE_SIZE)
+      : filteredRows,
+    totalFiltered: filteredRows.length,
+    totalRows: allRows.length,
+    page,
+    pageSize: paginate ? PIPELINE_PAGE_SIZE : filteredRows.length,
+    totalPages,
+    stages: uniqueSorted(allRows.map((row) => row.current_stage)),
+    owners: uniqueSorted(allRows.map((row) => row.operational_owner)),
+    sources: uniqueSorted(
+      allRows.map((row) => row.source ?? "Sin fuente"),
+    ),
+    statuses: uniqueSorted(allRows.map((row) => row.status)),
+    inactivityBuckets: uniqueSorted(
+      allRows.map((row) => row.inactivity_bucket ?? "Sin fecha"),
+    ),
   };
 }

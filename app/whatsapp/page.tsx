@@ -34,6 +34,9 @@ export default async function WhatsAppPage() {
   const recentGeneral = sum(recent, "general_or_unclassified_messages");
   const recentAdmissions = sum(recent, "admissions_related_messages");
   const generalShare = recentTotal > 0 ? (recentGeneral / recentTotal) * 100 : null;
+  const backfill = data.backfill;
+  const backfillRunning = backfill?.status === "running";
+  const backfillCompleted = backfill?.status === "completed";
 
   return (
     <DashboardLayout
@@ -42,6 +45,33 @@ export default async function WhatsAppPage() {
       subtitle="Volumen completo del número institucional: atención general, admisiones y automatizaciones."
       statusLabel={`Última actividad ${dateLabel(latest?.activity_date)}`}
     >
+      {backfill ? (
+        <section
+          className={
+            backfillCompleted
+              ? "scope-banner scope-banner-success"
+              : "scope-banner"
+          }
+        >
+          <MessageCircleMore size={19} />
+          <div>
+            <strong>
+              Historial de WhatsApp:{" "}
+              {backfillCompleted
+                ? "completado"
+                : backfillRunning
+                  ? `${percent(backfill.progress_pct)} cargado`
+                  : backfill.status}
+            </strong>
+            <span>
+              {number(backfill.records_seen)} de{" "}
+              {number(backfill.total_reported)} mensajes recorridos ·{" "}
+              {number(backfill.pages_processed)} páginas
+            </span>
+          </div>
+        </section>
+      ) : null}
+
       <section className="kpi-grid">
         <KpiCard
           label="Mensajes · 30 días"

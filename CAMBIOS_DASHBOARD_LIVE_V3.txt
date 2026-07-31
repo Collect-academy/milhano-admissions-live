@@ -1,0 +1,29 @@
+MILHANO ADMISSIONS LIVE | DASHBOARD V3
+
+NUEVA RUTA
+
+/pipeline
+
+FUNCIONES
+
+- Búsqueda por opportunity, contacto, alumno, teléfono y email.
+- Filtros por etapa, asesora, fuente, status e inactividad.
+- Paginación de 50 registros.
+- Exportación CSV respetando los filtros.
+- Cada tarjeta de etapa del resumen abre el detalle filtrado.
+
+WHATSAPP
+
+- Muestra el avance del backfill histórico:
+  páginas, mensajes recorridos, total reportado y porcentaje.
+
+NO CAMBIA
+
+- EOD sigue siendo de lectura.
+- No se requieren variables nuevas.
+- No se requiere SQL adicional, siempre que el módulo 05 ya esté instalado.
+
+DESPLIEGUE
+
+Subir el contenido de este parche al repositorio en GitHub y reemplazar
+los archivos existentes. Vercel desplegará main automáticamente.

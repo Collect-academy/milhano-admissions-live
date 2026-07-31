@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   Clock3,
   GraduationCap,
@@ -131,7 +133,11 @@ export default async function DashboardPage() {
 
         <div className="pipeline-grid">
           {data.pipeline.map((stage) => (
-            <article className="stage-card" key={stage.stage_name}>
+            <Link
+              className="stage-card stage-card-link"
+              href={`/pipeline?stage=${encodeURIComponent(stage.stage_name)}`}
+              key={stage.stage_name}
+            >
               <div className="stage-topline">
                 <span
                   className={`stage-chip stage-${stage.stage_group.toLowerCase()}`}
@@ -145,7 +151,7 @@ export default async function DashboardPage() {
                 <span>{number(stage.open_count)} abiertas</span>
                 <span>{number(stage.open_8_plus_days)} con 8+ días</span>
               </div>
-            </article>
+            </Link>
           ))}
         </div>
       </section>

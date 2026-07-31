@@ -211,6 +211,7 @@ export type WhatsAppDashboardData = {
   daily: WhatsAppDaily[];
   summary: WhatsAppSummary | null;
   latestEod: EodTeamSnapshot | null;
+  backfill: WhatsAppBackfillStatus | null;
 };
 
 export type CallsDashboardData = {
@@ -223,4 +224,62 @@ export type EodData = {
   rows: EodDashboardRow[];
   snapshots: EodTeamSnapshot[];
   syncRuns: SyncRun[];
+};
+
+
+export type PipelineOpportunity = {
+  ghl_opportunity_id: string;
+  opportunity_name: string;
+  contact_name: string | null;
+  student_name: string | null;
+  phone: string | null;
+  email: string | null;
+  source: string | null;
+  current_stage: string;
+  status: string;
+  operational_owner: string;
+  created_at: string | null;
+  updated_at: string | null;
+  days_since_update: number | null;
+  inactivity_bucket: string | null;
+  grade_interest: string | null;
+  level: string | null;
+  school_cycle: string | null;
+  priority: string | null;
+};
+
+export type PipelineFilters = {
+  q?: string;
+  stage?: string;
+  owner?: string;
+  source?: string;
+  status?: string;
+  inactivity?: string;
+  page?: number;
+};
+
+export type PipelineOperationalData = {
+  rows: PipelineOpportunity[];
+  totalFiltered: number;
+  totalRows: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  stages: string[];
+  owners: string[];
+  sources: string[];
+  statuses: string[];
+  inactivityBuckets: string[];
+};
+
+export type WhatsAppBackfillStatus = {
+  status: string;
+  pages_processed: number;
+  records_seen: number;
+  records_processed: number;
+  total_reported: number | null;
+  progress_pct: number | null;
+  started_at: string | null;
+  last_page_at: string | null;
+  completed_at: string | null;
 };

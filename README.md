@@ -5,6 +5,7 @@ Dashboard operativo de admisiones construido con Next.js, Supabase y Recharts.
 ## Secciones
 
 - `/` — Resumen, pipeline, funnel, fuentes, asesoras e inactividad.
+- `/pipeline` — Detalle operativo, filtros, búsqueda y exportación CSV.
 - `/whatsapp` — Volumen institucional completo, manual vs automático y admisiones vs atención general.
 - `/llamadas` — Intentos, inbound, pickup, duración y movimientos observados después de la llamada.
 - `/eod` — Snapshot diario individual, métricas compartidas y salud de sincronizaciones.
@@ -97,3 +98,12 @@ EOD:
 - `vw_milhano_eod_dashboard`
 - `milhano_eod_team_snapshots`
 - `milhano_sync_runs`
+
+
+## Dashboard V3
+
+- Drill-down del pipeline desde cada stage del resumen.
+- Filtros por etapa, asesora, fuente, status e inactividad.
+- Búsqueda por nombre, alumno, teléfono, email y grado.
+- Exportación CSV respetando los filtros activos.
+- Avance del backfill histórico visible en `/whatsapp`.
