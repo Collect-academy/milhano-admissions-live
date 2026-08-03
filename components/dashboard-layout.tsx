@@ -17,9 +17,9 @@ type Props = {
 };
 
 const roleLabels = {
-  advisor: "Asesora",
+  advisor: "Advisor",
   admin: "Admin",
-  viewer: "Dirección",
+  viewer: "Leadership",
 } as const;
 
 export async function DashboardLayout({
@@ -50,9 +50,12 @@ export async function DashboardLayout({
           </div>
           {individualAuth ? (
             <form action={logout}>
-              <button aria-label="Cerrar sesión" type="submit">
+              <button
+                aria-label="Sign out"
+                type="submit"
+              >
                 <LogOut size={16} />
-                Salir
+                Sign Out
               </button>
             </form>
           ) : null}
@@ -75,7 +78,7 @@ export async function DashboardLayout({
 
       <footer className="footer">
         <span>Milhano Operations Dashboard · Live</span>
-        <span>Fuente: GHL → n8n → Supabase</span>
+        <span>Source: GHL → n8n → Supabase</span>
       </footer>
     </main>
   );

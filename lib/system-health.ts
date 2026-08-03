@@ -75,13 +75,13 @@ export async function getSystemHealthData(): Promise<SystemHealthData> {
 
   if (healthResult.error) {
     throw new Error(
-      `Error leyendo salud del sistema: ${healthResult.error.message}`,
+      `Unable to read system health: ${healthResult.error.message}`,
     );
   }
 
   if (qualityResult.error) {
     throw new Error(
-      `Error leyendo calidad de datos: ${qualityResult.error.message}`,
+      `Unable to read data quality: ${qualityResult.error.message}`,
     );
   }
 

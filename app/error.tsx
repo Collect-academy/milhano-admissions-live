@@ -11,10 +11,10 @@ export default function ErrorPage({
     <main className="error-page">
       <div className="error-card">
         <p className="eyebrow">Milhano Dashboard</p>
-        <h1>No se pudo cargar la información</h1>
+        <h1>Unable to load the information</h1>
         <p>{error.message}</p>
         <button type="button" onClick={reset}>
-          Reintentar
+          Try Again
         </button>
       </div>
     </main>

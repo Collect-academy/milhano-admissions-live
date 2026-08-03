@@ -2,7 +2,6 @@ import Link from "next/link";
 import { CalendarRange } from "lucide-react";
 
 import {
-  dateRangeParams,
   type DateRange,
   type DateRangeKey,
 } from "@/lib/date-range";
@@ -11,12 +10,12 @@ const presets: Array<{
   key: DateRangeKey;
   label: string;
 }> = [
-  { key: "today", label: "Hoy" },
-  { key: "last_7_days", label: "7 días" },
-  { key: "last_30_days", label: "30 días" },
-  { key: "this_month", label: "Este mes" },
-  { key: "last_month", label: "Mes pasado" },
-  { key: "this_year", label: "Este año" },
+  { key: "today", label: "Today" },
+  { key: "last_7_days", label: "7 Days" },
+  { key: "last_30_days", label: "30 Days" },
+  { key: "this_month", label: "This Month" },
+  { key: "last_month", label: "Last Month" },
+  { key: "this_year", label: "This Year" },
 ];
 
 type Props = {
@@ -63,7 +62,7 @@ export function DateRangeFilter({
       <div className="date-filter-heading">
         <CalendarRange size={18} />
         <div>
-          <strong>Periodo: {range.label}</strong>
+          <strong>Period: {range.label}</strong>
           <span>
             {range.start} → {range.end}
           </span>
@@ -86,7 +85,11 @@ export function DateRangeFilter({
         ))}
       </div>
 
-      <form action={basePath} className="custom-date-form" method="get">
+      <form
+        action={basePath}
+        className="custom-date-form"
+        method="get"
+      >
         {hiddenPreserve.map(([key, value]) => (
           <input
             key={key}
@@ -97,7 +100,7 @@ export function DateRangeFilter({
         ))}
         <input name="range" type="hidden" value="custom" />
         <label>
-          <span>Desde</span>
+          <span>From</span>
           <input
             defaultValue={range.start}
             max={range.end}
@@ -107,7 +110,7 @@ export function DateRangeFilter({
           />
         </label>
         <label>
-          <span>Hasta</span>
+          <span>To</span>
           <input
             defaultValue={range.end}
             min={range.start}
@@ -116,8 +119,11 @@ export function DateRangeFilter({
             type="date"
           />
         </label>
-        <button className="date-custom-button" type="submit">
-          Personalizado
+        <button
+          className="date-custom-button"
+          type="submit"
+        >
+          Custom
         </button>
       </form>
     </section>

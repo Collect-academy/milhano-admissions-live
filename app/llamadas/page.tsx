@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/empty-state";
 import { KpiCard } from "@/components/kpi-card";
 import { resolveDateRange } from "@/lib/date-range";
 import { getCallsDashboardData } from "@/lib/data";
+import { stageLabel } from "@/lib/terminology";
 import {
   dateLabel,
   dateTimeLabel,
@@ -48,15 +49,15 @@ function sum(
 
 const outcomeLabels: Record<string, string> = {
   fit: "Fit",
-  no_fit: "No fit",
+  no_fit: "No Fit",
   school_tour: "School Tour",
-  pasadia: "Pasadía",
-  follow_up_or_indecision: "Seguimiento / indecisión",
+  pasadia: "Trial Day",
+  follow_up_or_indecision: "Follow-up / Indecision",
   lost: "Lost",
-  evaluation: "Evaluación",
-  enrollment: "Inscripción",
-  other_stage_change: "Otro movimiento",
-  no_stage_change_within_24h: "Sin movimiento en 24 h",
+  evaluation: "Evaluation",
+  enrollment: "Enrollment",
+  other_stage_change: "Other Movement",
+  no_stage_change_within_24h: "No Movement within 24 Hours",
 };
 
 export default async function CallsPage({
@@ -119,10 +120,10 @@ export default async function CallsPage({
 
   return (
     <DashboardLayout
-      eyebrow="Actividad telefónica"
+      eyebrow="Call Activity"
       title="Call Operations"
-      subtitle="Intentos, inbound, pickup y movimientos observados después de la llamada."
-      statusLabel={`Periodo ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
+      subtitle="Dials, inbound calls, pickup and observed movements after the call."
+      statusLabel={`Period ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
       <DateRangeFilter
         basePath="/llamadas"
@@ -133,19 +134,19 @@ export default async function CallsPage({
         <PhoneCall size={19} />
         <div>
           <strong>
-            Cobertura: llamadas registradas dentro de GHL
+            Coverage: calls registered in GHL
           </strong>
           <span>
-            Las realizadas desde otras líneas no aparecen.
+            Calls made from other lines are not included.
           </span>
         </div>
       </section>
 
       <section className="kpi-grid">
         <KpiCard
-          label={`Intentos outbound · ${range.label}`}
+          label={`Number of Dials · ${range.label}`}
           value={number(outbound)}
-          helper="Contestados o no"
+          helper="Answered or unanswered"
           icon={PhoneOutgoing}
         />
         <KpiCard
@@ -153,39 +154,39 @@ export default async function CallsPage({
           value={number(sum(selected, "inbound_calls"))}
           helper={`${number(
             sum(selected, "probable_return_calls"),
-          )} probables devoluciones`}
+          )} probable return calls`}
           icon={PhoneIncoming}
         />
         <KpiCard
-          label="Connected según GHL"
+          label="Connected Calls (GHL)"
           value={number(
             sum(selected, "ghl_connected_calls"),
           )}
-          helper="Estado raw de la plataforma"
+          helper="Raw platform classification"
           icon={Headphones}
         />
         <KpiCard
-          label="Conversaciones 3+ min"
+          label="Meaningful Conversations"
           value={number(meaningful)}
           helper={`${percent(
             meaningfulRate,
-          )} de intentos outbound`}
+          )} of outbound dials`}
           icon={Timer}
         />
         <KpiCard
-          label="Contactos"
+          label="Unique Contacted Leads"
           value={number(
             sum(selected, "unique_contacts_called"),
           )}
-          helper="Suma diaria; puede repetir"
+          helper="Daily sum; leads may repeat across days"
           icon={UsersRound}
         />
         <KpiCard
-          label="Tiempo registrado"
+          label="Recorded Call Time"
           value={duration(
             sum(selected, "total_duration_seconds"),
           )}
-          helper="Duración reportada por GHL"
+          helper="Duration reported by GHL"
           icon={PhoneCall}
         />
       </section>
@@ -196,7 +197,7 @@ export default async function CallsPage({
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">{range.label}</p>
-                <h2>Intentos y conversaciones</h2>
+                <h2>Dials and Conversations</h2>
               </div>
             </div>
             <CallActivityChart data={selected} />
@@ -206,18 +207,18 @@ export default async function CallsPage({
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">{range.label}</p>
-                <h2>Dos lecturas de pickup</h2>
+                <h2>Two Pickup Readings</h2>
               </div>
               <p className="panel-note">
-                GHL connected se conserva; 3+ minutos es el
-                proxy operativo.
+                GHL connected is preserved; 3+ minutes is the
+                operational proxy.
               </p>
             </div>
             <PickupRateChart data={selected} />
           </section>
         </div>
       ) : (
-        <EmptyState message="No hay llamadas registradas en el periodo seleccionado." />
+        <EmptyState message="No GHL calls exist in the selected period." />
       )}
 
       <div className="two-column">
@@ -225,21 +226,21 @@ export default async function CallsPage({
           <div className="panel-heading">
             <div>
               <p className="eyebrow">
-                Equipo · {range.label}
+                Team · {range.label}
               </p>
-              <h2>Actividad atribuida por asesora</h2>
+              <h2>Activity by Advisor</h2>
             </div>
           </div>
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>Asesora</th>
+                  <th>Advisor</th>
                   <th>Outbound</th>
                   <th>Inbound</th>
                   <th>Connected</th>
                   <th>3+ min</th>
-                  <th>Tiempo</th>
+                  <th>Time</th>
                 </tr>
               </thead>
               <tbody>
@@ -264,12 +265,12 @@ export default async function CallsPage({
           <div className="panel-heading">
             <div>
               <p className="eyebrow">
-                Proceso · {range.label}
+                Process · {range.label}
               </p>
-              <h2>Primer movimiento hasta 24 h después</h2>
+              <h2>First Movement within 24 Hours</h2>
             </div>
             <p className="panel-note">
-              Correlación temporal; no afirma causalidad.
+              Temporal relationship; it does not claim causality.
             </p>
           </div>
           <div className="outcome-list">
@@ -284,7 +285,7 @@ export default async function CallsPage({
                 </div>
               ))}
             {!outcomeTotals.size ? (
-              <EmptyState message="No hay outcomes observados en el periodo." />
+              <EmptyState message="No observed outcomes exist in the selected period." />
             ) : null}
           </div>
         </section>
@@ -294,20 +295,20 @@ export default async function CallsPage({
         <div className="panel-heading">
           <div>
             <p className="eyebrow">{range.label}</p>
-            <h2>Llamadas y movimiento posterior</h2>
+            <h2>Calls and Subsequent Movement</h2>
           </div>
         </div>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Dirección</th>
+                <th>Date</th>
+                <th>Direction</th>
                 <th>Status</th>
-                <th>Duración</th>
+                <th>Duration</th>
                 <th>3+ min</th>
-                <th>Outcome observado</th>
-                <th>Stage posterior</th>
+                <th>Observed Outcome</th>
+                <th>Subsequent Stage</th>
               </tr>
             </thead>
             <tbody>
@@ -321,7 +322,7 @@ export default async function CallsPage({
                   </td>
                   <td>
                     {row.is_meaningful_conversation
-                      ? "Sí"
+                      ? "Yes"
                       : "No"}
                   </td>
                   <td>
@@ -329,7 +330,7 @@ export default async function CallsPage({
                       row.observed_outcome_24h
                     ] ?? row.observed_outcome_24h}
                   </td>
-                  <td>{row.to_stage ?? "—"}</td>
+                  <td>{stageLabel(row.to_stage)}</td>
                 </tr>
               ))}
             </tbody>

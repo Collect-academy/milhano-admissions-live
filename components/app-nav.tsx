@@ -4,19 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { href: "/", label: "Resumen" },
+  { href: "/", label: "Summary" },
   { href: "/pipeline", label: "Pipeline" },
   { href: "/whatsapp", label: "WhatsApp" },
-  { href: "/llamadas", label: "Llamadas" },
+  { href: "/llamadas", label: "Calls" },
   { href: "/eod", label: "EOD" },
-  { href: "/sistema", label: "Sistema" },
+  { href: "/sistema", label: "System" },
 ];
 
 export function AppNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="app-nav" aria-label="Secciones del dashboard">
+    <nav
+      aria-label="Dashboard sections"
+      className="app-nav"
+    >
       {links.map((link) => {
         const active =
           link.href === "/"
@@ -25,7 +28,11 @@ export function AppNav() {
 
         return (
           <Link
-            className={active ? "nav-link nav-link-active" : "nav-link"}
+            className={
+              active
+                ? "nav-link nav-link-active"
+                : "nav-link"
+            }
             href={link.href}
             key={link.href}
           >

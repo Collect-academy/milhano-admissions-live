@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
 
 function basicUnauthorized(): NextResponse {
-  return new NextResponse("Autenticación requerida.", {
+  return new NextResponse("Authentication required.", {
     status: 401,
     headers: {
       "WWW-Authenticate":
@@ -17,7 +17,7 @@ function basicAuthFallback(request: NextRequest): NextResponse {
 
   if (!expectedUser || !expectedPassword) {
     return new NextResponse(
-      "Faltan las variables de autenticación del dashboard.",
+      "Dashboard authentication environment variables are missing.",
       { status: 500 },
     );
   }

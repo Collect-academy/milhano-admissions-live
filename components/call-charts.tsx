@@ -16,7 +16,7 @@ import {
 import type { CallDaily } from "@/lib/types";
 
 function shortDate(value: string): string {
-  return new Intl.DateTimeFormat("es-MX", {
+  return new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
     month: "short",
   }).format(new Date(`${value}T12:00:00`));
@@ -39,19 +39,19 @@ export function CallActivityChart({ data }: { data: CallDaily[] }) {
           <Legend />
           <Bar
             dataKey="outbound_attempts"
-            name="Intentos outbound"
+            name="Number of Dials"
             fill="var(--green)"
             radius={[5, 5, 0, 0]}
           />
           <Bar
             dataKey="inbound_calls"
-            name="Inbound"
+            name="Inbound Calls"
             fill="var(--blue)"
             radius={[5, 5, 0, 0]}
           />
           <Bar
             dataKey="meaningful_3min_plus_calls"
-            name="3+ minutos"
+            name="Meaningful Conversations"
             fill="var(--gold)"
             radius={[5, 5, 0, 0]}
           />
@@ -79,7 +79,7 @@ export function PickupRateChart({ data }: { data: CallDaily[] }) {
           <Line
             type="monotone"
             dataKey="ghl_pickup_rate_pct"
-            name="Pickup GHL"
+            name="GHL Connected Rate"
             stroke="var(--blue)"
             strokeWidth={2}
             dot={false}
@@ -87,7 +87,7 @@ export function PickupRateChart({ data }: { data: CallDaily[] }) {
           <Line
             type="monotone"
             dataKey="meaningful_3min_pickup_rate_pct"
-            name="Pickup 3+ min"
+            name="Meaningful Conversation Rate"
             stroke="var(--green)"
             strokeWidth={2}
             dot={false}

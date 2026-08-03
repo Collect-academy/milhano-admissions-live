@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 
 import { resolveDateRange } from "@/lib/date-range";
 import { getPipelineOperationalData } from "@/lib/data";
+import { stageLabel, ownerLabel } from "@/lib/terminology";
 import type { PipelineFilters } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,6 @@ function csvCell(value: unknown): string {
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-
   const filters: PipelineFilters = {
     q: params.get("q") ?? undefined,
     stage: params.get("stage") ?? undefined,
@@ -26,34 +26,28 @@ export async function GET(request: NextRequest) {
     to: params.get("to") ?? undefined,
   };
 
-  const range = resolveDateRange(
-    Object.fromEntries(params.entries()),
-  );
-  const data = await getPipelineOperationalData(
-    filters,
-    range,
-    false,
-  );
+  const range = resolveDateRange(Object.fromEntries(params.entries()));
+  const data = await getPipelineOperationalData(filters, range, false);
 
   const headers = [
     "Opportunity ID",
     "Opportunity",
-    "Contacto",
-    "Alumno",
-    "Teléfono",
+    "Contact",
+    "Student",
+    "Phone",
     "Email",
-    "Etapa",
+    "Current Stage",
     "Status",
-    "Asesora",
-    "Fuente",
-    "Grado de interés",
-    "Nivel",
-    "Ciclo",
-    "Prioridad",
-    "Fecha original del lead",
-    "Creado",
-    "Actualizado",
-    "Días sin actualizar",
+    "Owner",
+    "Source",
+    "Grade Interest",
+    "Level",
+    "School Cycle",
+    "Priority",
+    "Original Lead Date",
+    "Created",
+    "Updated",
+    "Days Since Update",
   ];
 
   const rows = data.rows.map((row) => [
@@ -63,9 +57,9 @@ export async function GET(request: NextRequest) {
     row.student_name,
     row.phone,
     row.email,
-    row.current_stage,
+    stageLabel(row.current_stage),
     row.status,
-    row.operational_owner,
+    ownerLabel(row.operational_owner),
     row.source,
     row.grade_interest,
     row.level,
@@ -89,8 +83,7 @@ export async function GET(request: NextRequest) {
   return new Response(`\uFEFF${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition":
-        `attachment; filename="milhano-pipeline-${date}.csv"`,
+      "Content-Disposition": `attachment; filename="milhano-pipeline-${date}.csv"`,
       "Cache-Control": "no-store",
     },
   });

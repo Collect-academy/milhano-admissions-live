@@ -138,3 +138,83 @@ Semántica:
 - Nombre y rol visibles en la navegación.
 - Cierre de sesión.
 - Fallback temporal a Basic Auth si las variables públicas aún no existen.
+
+
+
+MILHANO ADMISSIONS LIVE | V9 MONA RELEASE
+
+GOAL
+
+Use one English nomenclature across Summary, Pipeline, Calls, EOD,
+scorecards and lead drill-downs.
+
+UNIFIED OPERATIONAL CASCADE
+
+1. New Leads
+2. Number of Dials
+3. Unique Contacted Leads
+4. Meaningful Conversations
+5. School Tours Booked
+6. School Tours Today
+7. School Tours Attended
+8. Trial Days Booked
+9. Trial Days Showed
+10. Closed
+
+The same cascade appears in:
+- Summary
+- Pipeline
+- EOD
+
+Every cascade scorecard is clickable.
+
+CLICK PATH
+
+Scorecard
+→ Lead List
+→ Lead Details
+→ School Tour attendance
+→ Objection
+→ School Tour notes
+→ Stage history
+→ Recent calls
+
+SCHOOL TOUR DATA
+
+A structured Supabase layer was added because the current database only
+had general historical comments and stage-event notes.
+
+Existing data is seeded safely:
+- Legacy explicit School Tour date events populate Scheduled For.
+- School Tour Attended events populate Showed / Attended At.
+- Historical comments remain visible as legacy context.
+- Historical comments are not rewritten or automatically classified
+  as objections.
+
+EOD
+
+A new team metric is included:
+
+Trial Day+ / Closed
+
+It counts each lead once per EOD window when it enters any of:
+- Trial Day Booked
+- Trial Day Showed
+- Feedback
+- Under Evaluation
+- Enrollment in Progress
+- Closed
+
+PERMISSIONS
+
+- Admin and Advisor can edit School Tour details.
+- Leadership / Viewer can review but cannot edit.
+- Dashboard visibility remains team-wide.
+- No per-advisor opportunity scoping was introduced.
+
+NO NEW N8N WORKFLOW
+
+This release uses:
+- One Supabase SQL migration.
+- One dashboard deployment.
+- Existing Opportunity, Calls, WhatsApp and EOD workflows.

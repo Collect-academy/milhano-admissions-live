@@ -1,8 +1,11 @@
 import { redirect } from "next/navigation";
 import { LockKeyhole } from "lucide-react";
 
-import { getCurrentAppUser, isSupabaseAuthConfigured } from "@/lib/auth";
 import { login } from "@/app/login/actions";
+import {
+  getCurrentAppUser,
+  isSupabaseAuthConfigured,
+} from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +15,12 @@ type SearchParams = Promise<{
 }>;
 
 const errorMessages: Record<string, string> = {
-  invalid: "El correo o la contraseña no son correctos.",
-  missing: "Escribe tu correo y contraseña.",
+  invalid: "The email or password is incorrect.",
+  missing: "Enter your email and password.",
   access:
-    "La cuenta inició sesión, pero todavía no está vinculada a un usuario activo del dashboard.",
+    "The account signed in, but it is not linked to an active dashboard user.",
   "not-configured":
-    "Supabase Auth todavía no está configurado en Vercel.",
+    "Supabase Auth is not configured in Vercel.",
 };
 
 export default async function LoginPage({
@@ -33,7 +36,8 @@ export default async function LoginPage({
   }
 
   const next =
-    params.next?.startsWith("/") && !params.next.startsWith("//")
+    params.next?.startsWith("/") &&
+    !params.next.startsWith("//")
       ? params.next
       : "/";
 
@@ -51,10 +55,11 @@ export default async function LoginPage({
         <div className="login-heading">
           <LockKeyhole size={24} />
           <div>
-            <p className="eyebrow">Acceso privado</p>
-            <h1>Iniciar sesión</h1>
+            <p className="eyebrow">Private access</p>
+            <h1>Sign In</h1>
             <p>
-              Usa la cuenta individual creada para el dashboard.
+              Use the individual account created for the
+              dashboard.
             </p>
           </div>
         </div>
@@ -62,32 +67,32 @@ export default async function LoginPage({
         {params.error ? (
           <div className="login-error">
             {errorMessages[params.error] ??
-              "No fue posible iniciar sesión."}
+              "Unable to sign in."}
           </div>
         ) : null}
 
         {!isSupabaseAuthConfigured() ? (
           <div className="login-notice">
-            El proyecto continúa protegido por la contraseña básica
-            hasta configurar las variables públicas de Supabase.
+            The project remains protected by Basic Auth until
+            the public Supabase variables are configured.
           </div>
         ) : (
           <form action={login} className="login-form">
             <input name="next" type="hidden" value={next} />
 
             <label>
-              <span>Correo</span>
+              <span>Email</span>
               <input
                 autoComplete="email"
                 name="email"
-                placeholder="nombre@coldem.edu.mx"
+                placeholder="name@coldem.edu.mx"
                 required
                 type="email"
               />
             </label>
 
             <label>
-              <span>Contraseña</span>
+              <span>Password</span>
               <input
                 autoComplete="current-password"
                 minLength={8}
@@ -97,12 +102,14 @@ export default async function LoginPage({
               />
             </label>
 
-            <button type="submit">Entrar al dashboard</button>
+            <button type="submit">
+              Enter Dashboard
+            </button>
           </form>
         )}
 
         <p className="login-footer">
-          Fuente operativa: GHL → n8n → Supabase
+          Operational source: GHL → n8n → Supabase
         </p>
       </section>
     </main>

@@ -41,7 +41,7 @@ function errorMessage(error: unknown): string {
     return String(error.message).slice(0, 240);
   }
 
-  return "No se pudo guardar el cierre.";
+  return "Unable to save the EOD.";
 }
 
 async function actorAppUserId(
@@ -62,7 +62,7 @@ async function actorAppUserId(
 
   if (result.error || !result.data) {
     throw new Error(
-      "No existe una cuenta admin activa para registrar la acción.",
+      "No active admin account exists to register this action.",
     );
   }
 
@@ -86,7 +86,7 @@ export async function saveEodSubmission(
   if (!submissionId) {
     redirect(
       redirectQuery(formData, {
-        error: "Submission EOD no encontrada.",
+        error: "EOD submission not found.",
       }),
     );
   }
@@ -161,7 +161,7 @@ export async function validateEodSubmission(
   if (!submissionId) {
     redirect(
       redirectQuery(formData, {
-        error: "Submission EOD no encontrada.",
+        error: "EOD submission not found.",
       }),
     );
   }

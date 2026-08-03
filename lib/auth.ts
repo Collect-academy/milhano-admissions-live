@@ -74,7 +74,7 @@ export async function requireCurrentAppUser(): Promise<CurrentAppUser> {
 
   if (!user) {
     redirect("/login?error=access");
-    throw new Error("Acceso no autorizado.");
+    throw new Error("Unauthorized access.");
   }
 
   return user;

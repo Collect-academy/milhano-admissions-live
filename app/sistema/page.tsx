@@ -18,13 +18,13 @@ import { getSystemHealthData } from "@/lib/system-health";
 export const dynamic = "force-dynamic";
 
 const statusLabels = {
-  healthy: "Saludable",
-  warning: "Atención",
+  healthy: "Healthy",
+  warning: "Warning",
   error: "Error",
-  pending: "Pendiente",
-  unknown: "Desconocido",
-  pass: "Correcto",
-  info: "Informativo",
+  pending: "Pending",
+  unknown: "Unknown",
+  pass: "Pass",
+  info: "Info",
 };
 
 function statusClass(status: string): string {
@@ -40,17 +40,17 @@ function statusClass(status: string): string {
 }
 
 function ageLabel(minutes: number | null): string {
-  if (minutes === null) return "Sin ejecución";
+  if (minutes === null) return "No execution";
 
   if (minutes < 60) {
     return `${Math.round(minutes)} min`;
   }
 
   if (minutes < 1440) {
-    return `${Math.round(minutes / 60)} h`;
+    return `${Math.round(minutes / 60)} hr`;
   }
 
-  return `${Math.round(minutes / 1440)} días`;
+  return `${Math.round(minutes / 1440)} days`;
 }
 
 export default async function SystemPage() {
@@ -78,10 +78,10 @@ export default async function SystemPage() {
 
   return (
     <DashboardLayout
-      eyebrow="Confiabilidad"
+      eyebrow="Reliability"
       title="System Health"
-      subtitle="Freshness de sincronizaciones y controles básicos de calidad de datos."
-      statusLabel={`Estado general: ${
+      subtitle="Synchronization freshness and basic data-quality checks."
+      statusLabel={`Overall Status: ${
         statusLabels[data.overallStatus]
       }`}
     >
@@ -104,39 +104,39 @@ export default async function SystemPage() {
         <div>
           <strong>
             {data.overallStatus === "healthy"
-              ? "Los componentes monitoreados están dentro de sus ventanas esperadas."
+              ? "Monitored components are within their expected windows."
               : data.overallStatus === "error"
-                ? "Hay al menos un componente o control de datos en error."
-                : "Hay componentes pendientes o que requieren revisión."}
+                ? "At least one component or data check is in error."
+                : "Some components are pending or require review."}
           </strong>
           <span>
-            Este monitor detecta datos atrasados; no sustituye la
-            conciliación de GHL.
+            This monitor detects stale data; it does not replace
+            GHL reconciliation.
           </span>
         </div>
       </section>
 
       <section className="kpi-grid pipeline-kpi-grid">
         <KpiCard
-          label="Componentes saludables"
+          label="Healthy Components"
           value={number(healthy)}
-          helper={`${number(data.health.length)} monitoreados`}
+          helper={`${number(data.health.length)} monitored`}
           icon={CheckCircle2}
         />
         <KpiCard
-          label="Advertencias"
+          label="Warnings"
           value={number(warning)}
-          helper="Requieren observación"
+          helper="Require observation"
           icon={AlertTriangle}
         />
         <KpiCard
-          label="Errores"
+          label="Errors"
           value={number(errors)}
-          helper="Requieren acción"
+          helper="Require action"
           icon={XCircle}
         />
         <KpiCard
-          label="Issues de datos"
+          label="Data Issues"
           value={number(qualityIssues)}
           helper="Warnings + errors"
           icon={DatabaseZap}
@@ -147,10 +147,10 @@ export default async function SystemPage() {
         <div className="panel-heading">
           <div>
             <p className="eyebrow">Freshness</p>
-            <h2>Componentes operativos</h2>
+            <h2>Operational Components</h2>
           </div>
           <p className="panel-note">
-            WhatsApp y Calls deberían actualizarse cada 15 minutos.
+            WhatsApp and Calls should update every 15 minutes.
           </p>
         </div>
 
@@ -172,20 +172,20 @@ export default async function SystemPage() {
                   <div>
                     <Clock3 size={15} />
                     <span>
-                      Último éxito:{" "}
+                      Last Success:{" "}
                       {dateTimeLabel(row.last_success_at)}
                     </span>
                   </div>
                   <div>
                     <CircleHelp size={15} />
                     <span>
-                      Antigüedad: {ageLabel(row.age_minutes)}
+                      Age: {ageLabel(row.age_minutes)}
                     </span>
                   </div>
                 </div>
 
                 <details>
-                  <summary>Detalles técnicos</summary>
+                  <summary>Technical Details</summary>
                   <pre>
                     {JSON.stringify(row.details, null, 2)}
                   </pre>
@@ -194,18 +194,18 @@ export default async function SystemPage() {
             ))}
           </div>
         ) : (
-          <EmptyState message="Todavía no se han generado controles de salud." />
+          <EmptyState message="No health checks have been generated yet." />
         )}
       </section>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Validación</p>
-            <h2>Calidad de datos</h2>
+            <p className="eyebrow">Validation</p>
+            <h2>Data Quality</h2>
           </div>
           <p className="panel-note">
-            Los controles informativos no invalidan los KPIs.
+            Informational checks do not invalidate KPIs.
           </p>
         </div>
 
@@ -213,11 +213,11 @@ export default async function SystemPage() {
           <table>
             <thead>
               <tr>
-                <th>Control</th>
+                <th>Check</th>
                 <th>Status</th>
-                <th>Registros</th>
-                <th>Impacto / contexto</th>
-                <th>Revisado</th>
+                <th>Records</th>
+                <th>Impact / Context</th>
+                <th>Checked</th>
               </tr>
             </thead>
             <tbody>
@@ -245,9 +245,9 @@ export default async function SystemPage() {
         <section className="monitoring-note">
           <Info size={18} />
           <p>
-            Los mensajes manuales del WhatsApp compartido sin
-            usuario son esperados. El volumen de equipo sigue siendo
-            válido aunque no exista atribución individual.
+            Manual messages from the shared WhatsApp channel without
+            a user are expected. Team volume remains
+            valid even without individual attribution.
           </p>
         </section>
       </section>

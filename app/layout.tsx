@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Milhano | Admisiones",
-  description: "Dashboard de admisiones y pipeline de Milhano",
+  title: "Milhano | Admissions",
+  description:
+    "Milhano admissions and pipeline dashboard",
 };
 
 export default function RootLayout({
@@ -13,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body>{children}</body>
     </html>
   );

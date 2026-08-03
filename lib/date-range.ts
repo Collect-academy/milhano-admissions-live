@@ -80,7 +80,7 @@ function isIsoDate(value: string | undefined): value is string {
 }
 
 function formatRangeLabel(start: string, end: string): string {
-  const formatter = new Intl.DateTimeFormat("es-MX", {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -113,17 +113,17 @@ export function resolveDateRange(
 
   let start = today;
   let end = today;
-  let label = "Hoy";
+  let label = "Today";
 
   if (key === "last_7_days") {
     start = addDays(today, -6);
-    label = "Últimos 7 días";
+    label = "Last 7 Days";
   } else if (key === "last_30_days") {
     start = addDays(today, -29);
-    label = "Últimos 30 días";
+    label = "Last 30 Days";
   } else if (key === "this_month") {
     start = utcDate(now.year, now.month, 1);
-    label = "Este mes";
+    label = "This Month";
   } else if (key === "last_month") {
     const firstThisMonth = utcDate(now.year, now.month, 1);
     end = addDays(firstThisMonth, -1);
@@ -132,10 +132,10 @@ export function resolveDateRange(
       end.getUTCMonth() + 1,
       1,
     );
-    label = "Mes pasado";
+    label = "Last Month";
   } else if (key === "this_year") {
     start = utcDate(now.year, 1, 1);
-    label = "Este año";
+    label = "This Year";
   } else if (key === "custom") {
     const customStart = first(params.from);
     const customEnd = first(params.to);
@@ -159,11 +159,11 @@ export function resolveDateRange(
     }
 
     start = utcDate(now.year, now.month, 1);
-    label = "Este mes";
+    label = "This Month";
   }
 
   return {
-    key: key === "custom" && label === "Este mes"
+    key: key === "custom" && label === "This Month"
       ? "this_month"
       : key,
     start: isoDate(start),

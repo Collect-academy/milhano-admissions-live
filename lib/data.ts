@@ -318,8 +318,8 @@ function buildExitSummary(
       event.to_stage === "No fit"
         ? opportunity?.no_fit_reason
         : opportunity?.lost_reason;
-    const exitFrom = event.from_stage || "Etapa no reconstruida";
-    const exitReason = reason?.trim() || "Sin motivo especificado";
+    const exitFrom = event.from_stage || "Stage Not Reconstructed";
+    const exitReason = reason?.trim() || "No Reason Specified";
     const key = `${event.to_stage}|${exitFrom}|${exitReason}`;
     const existing = groups.get(key);
 
@@ -401,9 +401,9 @@ export async function getDashboardData(
   const results = [
     [opportunitiesResult, "Opportunities"],
     [eventsResult, "Eventos de stage"],
-    [dailyResult, "Actividad diaria"],
+    [dailyResult, "Daily Activity"],
     [whatsappResult, "WhatsApp"],
-    [callsResult, "Llamadas"],
+    [callsResult, "Calls"],
     [eodResult, "EOD"],
   ] as const;
 
@@ -539,10 +539,10 @@ export async function getWhatsAppDashboardData(
         .limit(1),
     ]);
 
-  assertResult(dailyResult, "Error consultando WhatsApp diario");
-  assertResult(summaryResult, "Error consultando resumen de WhatsApp");
-  assertResult(eodResult, "Error consultando EOD de WhatsApp");
-  assertResult(backfillResult, "Error consultando backfill de WhatsApp");
+  assertResult(dailyResult, "Unable to query daily WhatsApp");
+  assertResult(summaryResult, "Unable to query WhatsApp summary");
+  assertResult(eodResult, "Unable to query WhatsApp EOD");
+  assertResult(backfillResult, "Unable to query WhatsApp backfill");
 
   return {
     daily: normalizeNumbers(
@@ -592,9 +592,9 @@ export async function getCallsDashboardData(
         .limit(1000),
     ]);
 
-  assertResult(dailyResult, "Error consultando llamadas diarias");
-  assertResult(byUserResult, "Error consultando llamadas por asesora");
-  assertResult(outcomesResult, "Error consultando outcomes de llamadas");
+  assertResult(dailyResult, "Unable to query daily calls");
+  assertResult(byUserResult, "Unable to query calls by advisor");
+  assertResult(outcomesResult, "Unable to query call outcomes");
 
   return {
     daily: normalizeNumbers(
@@ -656,9 +656,9 @@ export async function getEodData(
         .limit(200),
     ]);
 
-  assertResult(rowsResult, "Error consultando EOD individual");
-  assertResult(snapshotsResult, "Error consultando EOD de equipo");
-  assertResult(syncRunsResult, "Error consultando sincronizaciones");
+  assertResult(rowsResult, "Unable to query individual EOD");
+  assertResult(snapshotsResult, "Unable to query team EOD");
+  assertResult(syncRunsResult, "Unable to query synchronization runs");
 
   return {
     rows: normalizeNumbers(
@@ -711,7 +711,7 @@ export async function getPipelineOperationalData(
     })
     .limit(2000);
 
-  assertResult(result, "Error consultando detalle del pipeline");
+  assertResult(result, "Unable to query pipeline details");
 
   const allRows = (
     normalizeNumbers(

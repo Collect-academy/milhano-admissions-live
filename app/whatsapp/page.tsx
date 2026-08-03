@@ -75,10 +75,10 @@ export default async function WhatsAppPage({
 
   return (
     <DashboardLayout
-      eyebrow="Canal institucional"
+      eyebrow="Institutional Channel"
       title="WhatsApp Operations"
-      subtitle="Volumen del número institucional: atención general, admisiones y automatizaciones."
-      statusLabel={`Periodo ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
+      subtitle="Institutional number volume: general service, admissions and automations."
+      statusLabel={`Period ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
       <DateRangeFilter
         basePath="/whatsapp"
@@ -96,19 +96,19 @@ export default async function WhatsAppPage({
           <MessageCircleMore size={19} />
           <div>
             <strong>
-              Historial de WhatsApp:{" "}
+              WhatsApp History:{" "}
               {backfillCompleted
-                ? "completado"
+                ? "completed"
                 : backfillRunning
                   ? `${percent(
                       backfill.progress_pct,
-                    )} cargado`
+                    )} loaded`
                   : backfill.status}
             </strong>
             <span>
               {number(backfill.records_seen)} de{" "}
-              {number(backfill.total_reported)} mensajes ·{" "}
-              {number(backfill.pages_processed)} páginas
+              {number(backfill.total_reported)} messages ·{" "}
+              {number(backfill.pages_processed)} pages
             </span>
           </div>
         </section>
@@ -116,45 +116,45 @@ export default async function WhatsAppPage({
 
       <section className="kpi-grid">
         <KpiCard
-          label={`Mensajes · ${range.label}`}
+          label={`Messages · ${range.label}`}
           value={number(selectedTotal)}
           helper="Inbound + outbound"
           icon={MessageCircleMore}
         />
         <KpiCard
-          label="Entrantes"
+          label="Inbound"
           value={number(sum(selected, "inbound_messages"))}
-          helper="Demanda recibida"
+          helper="Received demand"
           icon={Inbox}
         />
         <KpiCard
-          label="Salientes manuales"
+          label="Manual Outbound"
           value={number(
             sum(selected, "manual_outbound_messages"),
           )}
-          helper="Canal compartido"
+          helper="Shared channel"
           icon={Send}
         />
         <KpiCard
-          label="Automáticos"
+          label="Automated"
           value={number(
             sum(selected, "automated_outbound_messages"),
           )}
-          helper="Enviados por workflows"
+          helper="Sent by workflows"
           icon={Bot}
         />
         <KpiCard
-          label="Conversaciones"
+          label="Conversations"
           value={number(
             sum(selected, "active_conversations"),
           )}
-          helper="Suma diaria; puede repetir entre días"
+          helper="Daily sum; contacts may repeat across days"
           icon={MessagesSquare}
         />
         <KpiCard
-          label="Contactos"
+          label="Contacts"
           value={number(sum(selected, "unique_contacts"))}
-          helper="Suma diaria; puede repetir entre días"
+          helper="Daily sum; contacts may repeat across days"
           icon={ContactRound}
         />
       </section>
@@ -162,26 +162,26 @@ export default async function WhatsAppPage({
       <section className="decision-banner">
         <div>
           <p className="eyebrow">
-            Señal operativa · {range.label}
+            Operational Signal · {range.label}
           </p>
           <h2>
-            El número institucional absorbe atención más allá
-            de admisiones
+            The institutional number handles service beyond
+            admissions
           </h2>
           <p>
-            {percent(generalShare)} de los mensajes del periodo
-            están clasificados como atención general o sin
+            {percent(generalShare)} of period messages
+            are classified as general service or have no
             opportunity.
           </p>
         </div>
         <div className="decision-stats">
           <div>
             <strong>{number(selectedAdmissions)}</strong>
-            <span>Con opportunity</span>
+            <span>With Opportunity</span>
           </div>
           <div>
             <strong>{number(selectedGeneral)}</strong>
-            <span>General / sin clasificar</span>
+            <span>General / Unclassified</span>
           </div>
         </div>
       </section>
@@ -192,11 +192,11 @@ export default async function WhatsAppPage({
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">{range.label}</p>
-                <h2>Mensajes y conversaciones</h2>
+                <h2>Messages and Conversations</h2>
               </div>
               <p className="panel-note">
-                Manual refleja trabajo humano del canal, no
-                una asesora específica.
+                Manual activity reflects human work on the channel, not
+                a specific advisor.
               </p>
             </div>
             <WhatsAppActivityChart data={selected} />
@@ -206,42 +206,42 @@ export default async function WhatsAppPage({
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">{range.label}</p>
-                <h2>Admisiones vs atención general</h2>
+                <h2>Admissions vs General Service</h2>
               </div>
               <p className="panel-note">
-                “Con opportunity” es relación operativa, no
-                clasificación semántica.
+                “With Opportunity” is an operational relationship,
+                not a semantic classification.
               </p>
             </div>
             <WhatsAppClassificationChart data={selected} />
           </section>
         </div>
       ) : (
-        <EmptyState message="No hay actividad de WhatsApp en el periodo seleccionado." />
+        <EmptyState message="No WhatsApp activity exists in the selected period." />
       )}
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Detalle diario</p>
+            <p className="eyebrow">Daily Detail</p>
             <h2>{range.label}</h2>
           </div>
           <p className="panel-note">
-            Cada Message ID se contabiliza una sola vez.
+            Each Message ID is counted once.
           </p>
         </div>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
+                <th>Date</th>
                 <th>Total</th>
                 <th>Inbound</th>
-                <th>Manual outbound</th>
-                <th>Automático</th>
-                <th>Conversaciones</th>
-                <th>Atendidas</th>
-                <th>Msg / conversación</th>
+                <th>Manual Outbound</th>
+                <th>Automated</th>
+                <th>Conversations</th>
+                <th>Handled</th>
+                <th>Messages / Conversation</th>
               </tr>
             </thead>
             <tbody>
@@ -277,8 +277,8 @@ export default async function WhatsAppPage({
       <section className="panel compact-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Cobertura total cargada</p>
-            <h2>Acumulado disponible en Supabase</h2>
+            <p className="eyebrow">Loaded Historical Coverage</p>
+            <h2>Available Total in Supabase</h2>
           </div>
         </div>
         <div className="summary-row">
@@ -286,7 +286,7 @@ export default async function WhatsAppPage({
             <strong>
               {number(data.summary?.total_messages)}
             </strong>
-            <span>mensajes</span>
+            <span>messages</span>
           </div>
           <div>
             <strong>
@@ -304,7 +304,7 @@ export default async function WhatsAppPage({
             <strong>
               {dateLabel(data.summary?.first_message_at)}
             </strong>
-            <span>primer registro</span>
+            <span>first record</span>
           </div>
         </div>
       </section>

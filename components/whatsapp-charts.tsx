@@ -15,7 +15,7 @@ import {
 import type { WhatsAppDaily } from "@/lib/types";
 
 function shortDate(value: string): string {
-  return new Intl.DateTimeFormat("es-MX", {
+  return new Intl.DateTimeFormat("en-CA", {
     day: "2-digit",
     month: "short",
   }).format(new Date(`${value}T12:00:00`));
@@ -36,7 +36,7 @@ export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
           <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
           <Tooltip
             labelFormatter={(label) =>
-              new Intl.DateTimeFormat("es-MX", {
+              new Intl.DateTimeFormat("en-CA", {
                 dateStyle: "long",
               }).format(new Date(`${label}T12:00:00`))
             }
@@ -44,14 +44,14 @@ export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
           <Legend />
           <Bar
             dataKey="inbound_messages"
-            name="Entrantes"
+            name="Inbound"
             stackId="messages"
             fill="var(--blue)"
             radius={[0, 0, 0, 0]}
           />
           <Bar
             dataKey="manual_outbound_messages"
-            name="Salientes manuales"
+            name="Manual Outbound"
             stackId="messages"
             fill="var(--green)"
             radius={[5, 5, 0, 0]}
@@ -59,7 +59,7 @@ export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
           <Line
             type="monotone"
             dataKey="active_conversations"
-            name="Conversaciones"
+            name="Conversations"
             stroke="var(--gold)"
             strokeWidth={2}
             dot={false}
@@ -87,13 +87,13 @@ export function WhatsAppClassificationChart({ data }: { data: WhatsAppDaily[] })
           <Legend />
           <Bar
             dataKey="admissions_related_messages"
-            name="Con opportunity"
+            name="With Opportunity"
             stackId="classification"
             fill="var(--green)"
           />
           <Bar
             dataKey="general_or_unclassified_messages"
-            name="General / sin clasificar"
+            name="General / Unclassified"
             stackId="classification"
             fill="var(--gold)"
             radius={[5, 5, 0, 0]}

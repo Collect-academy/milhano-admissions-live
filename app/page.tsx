@@ -1,25 +1,30 @@
 import Link from "next/link";
-
 import {
+  Activity,
+  AlertTriangle,
   Clock3,
   GraduationCap,
   MessageCircleMore,
   PhoneCall,
-  Route,
-  Users,
 } from "lucide-react";
 
 import { DashboardCharts } from "@/components/dashboard-charts";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { KpiCard } from "@/components/kpi-card";
+import { OperationalCascade } from "@/components/operational-cascade";
+import { getOperationalCascade } from "@/lib/cascade";
 import {
   dateRangeQuery,
   resolveDateRange,
 } from "@/lib/date-range";
 import { getDashboardData } from "@/lib/data";
-import { getSystemHealthData } from "@/lib/system-health";
 import { dateLabel, number, percent } from "@/lib/format";
+import { getSystemHealthData } from "@/lib/system-health";
+import {
+  ownerLabel,
+  stageLabel,
+} from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
 
@@ -28,18 +33,6 @@ type SearchParams = Record<
   string | string[] | undefined
 >;
 
-function stageCount(
-  pipeline: Awaited<
-    ReturnType<typeof getDashboardData>
-  >["pipeline"],
-  name: string,
-): number {
-  return (
-    pipeline.find((row) => row.stage_name === name)
-      ?.opportunity_count ?? 0
-  );
-}
-
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -47,43 +40,28 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const range = resolveDateRange(params);
-  const [data, health] = await Promise.all([
+
+  const [data, health, cascade] = await Promise.all([
     getDashboardData(range),
     getSystemHealthData(),
+    getOperationalCascade(range),
   ]);
 
-  const totalOpportunities = data.pipeline.reduce(
-    (sum, row) => sum + row.opportunity_count,
-    0,
-  );
-  const active = data.pipeline.reduce(
-    (sum, row) => sum + row.open_count,
-    0,
-  );
-  const noFitAndLost =
-    stageCount(data.pipeline, "No fit") +
-    stageCount(data.pipeline, "Lost / Sin continuidad");
-  const leadToEnrolled =
+  const leadToClosed =
     data.funnel.find(
       (row) => row.stage_name === "Inscrito",
     )?.conversion_from_lead_pct ?? null;
-  const currentFit = stageCount(data.pipeline, "Fit");
-  const currentTour = stageCount(
-    data.pipeline,
-    "School Tour agendado",
-  );
-  const currentPassday = stageCount(
-    data.pipeline,
-    "Pasadía agendada",
-  );
+
   const rangeQuery = dateRangeQuery(range);
 
   return (
     <DashboardLayout
-      eyebrow="Milhano · Admisiones"
-      title="Pipeline & Growth Dashboard"
-      subtitle="Cohortes, actividad, pipeline actual y canales institucionales."
-      statusLabel={`Periodo ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
+      eyebrow="Milhano · Admissions"
+      statusLabel={`Period ${dateLabel(
+        range.start,
+      )} – ${dateLabel(range.end)}`}
+      subtitle="Unified admissions performance, activity and operational follow-up."
+      title="Admissions Summary"
     >
       <Link
         className={
@@ -97,104 +75,80 @@ export default async function DashboardPage({
       >
         <span>
           {health.overallStatus === "healthy"
-            ? "Sistema actualizado"
+            ? "System is up to date"
             : health.overallStatus === "error"
-              ? "Sistema con errores"
-              : "Sistema requiere revisión"}
+              ? "System has errors"
+              : "System requires review"}
         </span>
-        <strong>Ver monitoreo →</strong>
+        <strong>View monitoring →</strong>
       </Link>
 
       <DateRangeFilter basePath="/" range={range} />
 
+      <OperationalCascade
+        metrics={cascade}
+        range={range}
+      />
+
       <section
+        aria-label="Period indicators"
         className="kpi-grid"
-        aria-label="Indicadores del periodo"
       >
         <KpiCard
-          label="Leads del periodo"
-          value={number(data.period.new_leads)}
           helper={range.label}
-          icon={Users}
+          icon={Activity}
+          label="New Leads"
+          value={number(data.period.new_leads)}
         />
         <KpiCard
-          label="Fit del periodo"
-          value={number(data.period.fits)}
-          helper="Entradas registradas a Fit"
-          icon={Route}
-        />
-        <KpiCard
-          label="Tours agendados"
-          value={number(data.period.tours_scheduled)}
-          helper={`${number(data.period.tours_attended)} atendidos`}
+          helper="School Tour stage entries"
           icon={Clock3}
+          label="School Tours Booked"
+          value={number(data.period.tours_scheduled)}
         />
         <KpiCard
-          label="Inscritos"
-          value={number(data.period.enrolled)}
-          helper={`${percent(leadToEnrolled)} de la cohorte`}
-          icon={GraduationCap}
-        />
-        <KpiCard
-          label="WhatsApp"
-          value={number(data.period.whatsapp_messages)}
           helper={`${number(
-            data.period.whatsapp_conversations_daily_sum,
-          )} conversaciones/día acumuladas`}
-          icon={MessageCircleMore}
+            data.period.tours_attended,
+          )} attended`}
+          icon={GraduationCap}
+          label="School Tours Attended"
+          value={number(data.period.tours_attended)}
         />
         <KpiCard
-          label="Llamadas registradas"
-          value={number(data.period.call_attempts)}
+          helper={`${percent(
+            leadToClosed,
+          )} lead-to-closed`}
+          icon={GraduationCap}
+          label="Closed"
+          value={number(data.period.enrolled)}
+        />
+        <KpiCard
+          helper="Shared institutional channel"
+          icon={MessageCircleMore}
+          label="WhatsApp Messages"
+          value={number(data.period.whatsapp_messages)}
+        />
+        <KpiCard
           helper={`${number(
             data.period.outbound_call_attempts,
-          )} intentos outbound`}
+          )} outbound attempts`}
           icon={PhoneCall}
+          label="Number of Dials"
+          value={number(data.period.call_attempts)}
         />
-      </section>
-
-      <section className="insight-strip">
-        <div>
-          <span className="insight-label">
-            Cohorte seleccionada
-          </span>
-          <strong>{number(totalOpportunities)}</strong>
-          <span>Opportunities captadas</span>
-        </div>
-        <div>
-          <span className="insight-label">
-            Activas actualmente
-          </span>
-          <strong>{number(active)}</strong>
-          <span>De la cohorte seleccionada</span>
-        </div>
-        <div>
-          <span className="insight-label">Etapas clave</span>
-          <strong>
-            {number(
-              currentFit + currentTour + currentPassday,
-            )}
-          </strong>
-          <span>Fit, tour o pasadía agendada</span>
-        </div>
-        <div>
-          <span className="insight-label">Salidas actuales</span>
-          <strong>{number(noFitAndLost)}</strong>
-          <span>No fit + Lost</span>
-        </div>
       </section>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
             <p className="eyebrow">
-              Cohorte · {range.label}
+              Current operational position
             </p>
-            <h2>Stage actual de los leads captados</h2>
+            <h2>Current GHL Stages</h2>
           </div>
           <p className="panel-note">
-            El periodo selecciona la fecha de entrada del lead; las
-            cards muestran dónde se encuentra actualmente.
+            These cards show the current CRM stage. The unified
+            cascade above measures period activity.
           </p>
         </div>
 
@@ -208,20 +162,21 @@ export default async function DashboardPage({
               key={stage.stage_name}
             >
               <div className="stage-topline">
-                <span
-                  className={`stage-chip stage-${stage.stage_group.toLowerCase()}`}
-                >
-                  {stage.stage_group}
+                <span className="stage-chip stage-hito">
+                  Current Stage
                 </span>
                 <strong>
                   {number(stage.opportunity_count)}
                 </strong>
               </div>
-              <h3>{stage.stage_name}</h3>
+              <h3>{stageLabel(stage.stage_name)}</h3>
               <div className="stage-meta">
-                <span>{number(stage.open_count)} abiertas</span>
                 <span>
-                  {number(stage.open_8_plus_days)} con 8+ días
+                  {number(stage.open_count)} open
+                </span>
+                <span>
+                  {number(stage.open_8_plus_days)} with 8+
+                  days
                 </span>
               </div>
             </Link>
@@ -229,22 +184,19 @@ export default async function DashboardPage({
         </div>
       </section>
 
-      <div className="two-column">
-        <DashboardCharts
-          daily={data.daily}
-          funnel={data.funnel}
-          rangeLabel={range.label}
-        />
-      </div>
+      <DashboardCharts
+        daily={data.daily}
+        rangeLabel={range.label}
+      />
 
       <div className="two-column">
         <section className="panel">
           <div className="panel-heading">
             <div>
               <p className="eyebrow">
-                Cohorte · {range.label}
+                Cohort · {range.label}
               </p>
-              <h2>Rendimiento por fuente</h2>
+              <h2>Performance by Source</h2>
             </div>
           </div>
 
@@ -252,19 +204,23 @@ export default async function DashboardPage({
             <table>
               <thead>
                 <tr>
-                  <th>Fuente</th>
-                  <th>Leads</th>
-                  <th>Fit</th>
-                  <th>Inscritos</th>
-                  <th>Lead → inscrito</th>
+                  <th>Source</th>
+                  <th>New Leads</th>
+                  <th>School Tours Booked</th>
+                  <th>School Tours Attended</th>
+                  <th>Closed</th>
+                  <th>Lead → Closed</th>
                 </tr>
               </thead>
               <tbody>
                 {data.sources.map((row) => (
-                  <tr key={row.source ?? "sin-fuente"}>
-                    <td>{row.source ?? "Sin fuente"}</td>
+                  <tr key={row.source ?? "no-source"}>
+                    <td>{row.source ?? "No Source"}</td>
                     <td>{number(row.leads)}</td>
-                    <td>{number(row.fits)}</td>
+                    <td>
+                      {number(row.tours_scheduled)}
+                    </td>
+                    <td>{number(row.tours_attended)}</td>
                     <td>{number(row.enrolled)}</td>
                     <td>
                       {percent(row.lead_to_enrolled_pct)}
@@ -280,9 +236,9 @@ export default async function DashboardPage({
           <div className="panel-heading">
             <div>
               <p className="eyebrow">
-                Cohorte · {range.label}
+                Cohort · {range.label}
               </p>
-              <h2>Rendimiento por asesora</h2>
+              <h2>Performance by Advisor</h2>
             </div>
           </div>
 
@@ -290,25 +246,31 @@ export default async function DashboardPage({
             <table>
               <thead>
                 <tr>
-                  <th>Asesora</th>
-                  <th>Leads</th>
-                  <th>Fit</th>
-                  <th>Inscritos</th>
-                  <th>Lead → inscrito</th>
+                  <th>Advisor</th>
+                  <th>New Leads</th>
+                  <th>School Tours Booked</th>
+                  <th>School Tours Attended</th>
+                  <th>Closed</th>
+                  <th>Lead → Closed</th>
                 </tr>
               </thead>
               <tbody>
                 {data.owners.map((row) => (
                   <tr
                     key={
-                      row.operational_owner ?? "sin-asignar"
+                      row.operational_owner ?? "unassigned"
                     }
                   >
                     <td>
-                      {row.operational_owner ?? "Sin asignar"}
+                      {ownerLabel(
+                        row.operational_owner,
+                      )}
                     </td>
                     <td>{number(row.leads)}</td>
-                    <td>{number(row.fits)}</td>
+                    <td>
+                      {number(row.tours_scheduled)}
+                    </td>
+                    <td>{number(row.tours_attended)}</td>
                     <td>{number(row.enrolled)}</td>
                     <td>
                       {percent(row.lead_to_enrolled_pct)}
@@ -326,7 +288,7 @@ export default async function DashboardPage({
           <div className="panel-heading">
             <div>
               <p className="eyebrow">{range.label}</p>
-              <h2>Salidas registradas en el periodo</h2>
+              <h2>Recorded Exits</h2>
             </div>
           </div>
 
@@ -334,21 +296,25 @@ export default async function DashboardPage({
             <table>
               <thead>
                 <tr>
-                  <th>Salida</th>
-                  <th>Último hito</th>
-                  <th>Motivo</th>
-                  <th>Casos</th>
+                  <th>Exit</th>
+                  <th>Previous Stage</th>
+                  <th>Reason</th>
+                  <th>Leads</th>
                 </tr>
               </thead>
               <tbody>
                 {data.exits.map((row, index) => (
                   <tr
-                    key={`${row.exit_type}-${row.exit_from_stage}-${row.exit_reason}-${index}`}
+                    key={`${row.exit_type}-${row.exit_from_stage}-${index}`}
                   >
-                    <td>{row.exit_type}</td>
-                    <td>{row.exit_from_stage}</td>
+                    <td>{stageLabel(row.exit_type)}</td>
+                    <td>
+                      {stageLabel(row.exit_from_stage)}
+                    </td>
                     <td>{row.exit_reason}</td>
-                    <td>{number(row.opportunity_count)}</td>
+                    <td>
+                      {number(row.opportunity_count)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -360,36 +326,46 @@ export default async function DashboardPage({
           <div className="panel-heading">
             <div>
               <p className="eyebrow">
-                Cohorte · {range.label}
+                Cohort · {range.label}
               </p>
-              <h2>Mayor inactividad actual</h2>
+              <h2>Longest Current Inactivity</h2>
             </div>
+            <AlertTriangle size={18} />
           </div>
 
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>Opportunity</th>
-                  <th>Stage</th>
+                  <th>Lead</th>
+                  <th>Current Stage</th>
                   <th>Owner</th>
-                  <th>Días</th>
+                  <th>Days</th>
                 </tr>
               </thead>
               <tbody>
                 {data.stale.map((row) => (
                   <tr key={row.ghl_opportunity_id}>
                     <td>
-                      <strong>{row.opportunity_name}</strong>
-                      {row.student_name ? (
-                        <span className="secondary-cell">
-                          {row.student_name}
-                        </span>
-                      ) : null}
+                      <Link
+                        href={`/leads/${encodeURIComponent(
+                          row.ghl_opportunity_id,
+                        )}`}
+                      >
+                        {row.opportunity_name}
+                      </Link>
                     </td>
-                    <td>{row.current_stage}</td>
-                    <td>{row.operational_owner}</td>
-                    <td>{row.days_since_update ?? "—"}</td>
+                    <td>
+                      {stageLabel(row.current_stage)}
+                    </td>
+                    <td>
+                      {ownerLabel(
+                        row.operational_owner,
+                      )}
+                    </td>
+                    <td>
+                      {row.days_since_update ?? "—"}
+                    </td>
                   </tr>
                 ))}
               </tbody>

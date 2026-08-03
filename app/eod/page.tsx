@@ -20,11 +20,13 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { EmptyState } from "@/components/empty-state";
 import { KpiCard } from "@/components/kpi-card";
+import { OperationalCascade } from "@/components/operational-cascade";
 import { requireCurrentAppUser } from "@/lib/auth";
 import {
   dateRangeParams,
   resolveDateRange,
 } from "@/lib/date-range";
+import { getOperationalCascade } from "@/lib/cascade";
 import { getEodData } from "@/lib/data";
 import {
   dateLabel,
@@ -35,37 +37,34 @@ import {
 export const dynamic = "force-dynamic";
 
 const teamMetricLabels: Record<string, string> = {
-  whatsapp_total_messages: "WhatsApp totales",
-  whatsapp_inbound_messages: "WhatsApp entrantes",
-  whatsapp_outbound_messages: "WhatsApp salientes",
-  whatsapp_manual_outbound_messages: "WhatsApp manuales",
-  whatsapp_automated_outbound_messages:
-    "WhatsApp automáticos",
-  whatsapp_active_conversations: "Conversaciones activas",
-  whatsapp_manually_attended_conversations:
-    "Conversaciones atendidas",
-  whatsapp_unique_contacts: "Contactos únicos",
-  whatsapp_admissions_related_messages:
-    "Mensajes con opportunity",
-  whatsapp_general_or_unclassified_messages:
-    "General / sin clasificar",
-  team_outbound_call_attempts: "Intentos outbound",
-  team_inbound_calls: "Llamadas inbound",
-  team_meaningful_calls_3min: "Llamadas 3+ minutos",
+  whatsapp_total_messages: "WhatsApp Messages",
+  whatsapp_inbound_messages: "Inbound WhatsApp",
+  whatsapp_outbound_messages: "Outbound WhatsApp",
+  whatsapp_manual_outbound_messages: "Manual Outbound WhatsApp",
+  whatsapp_automated_outbound_messages: "Automated WhatsApp",
+  whatsapp_active_conversations: "Active Conversations",
+  whatsapp_manually_attended_conversations: "Handled Conversations",
+  whatsapp_unique_contacts: "Unique Contacts",
+  whatsapp_admissions_related_messages: "Messages with Opportunity",
+  whatsapp_general_or_unclassified_messages: "General / Unclassified",
+  team_outbound_call_attempts: "Number of Dials",
+  team_inbound_calls: "Inbound Calls",
+  team_meaningful_calls_3min: "Meaningful Conversations",
+  trial_day_plus_closed_leads: "Trial Day+ / Closed",
 };
 
 const statusLabels: Record<string, string> = {
-  system: "Sistema",
-  pending: "Pendiente",
-  matched: "Coincide",
-  awaiting_confirmation: "Falta confirmar",
-  mismatch: "Diferencia",
-  draft: "Borrador",
-  review: "En revisión",
-  blocked: "Bloqueado",
-  validated: "Validado",
-  submitted: "Enviado",
-  missed: "No enviado",
+  system: "System",
+  pending: "Pending",
+  matched: "Matched",
+  awaiting_confirmation: "Awaiting Confirmation",
+  mismatch: "Mismatch",
+  draft: "Draft",
+  review: "Under Review",
+  blocked: "Blocked",
+  validated: "Validated",
+  submitted: "Submitted",
+  missed: "Not Submitted",
 };
 
 function statusClass(status: string): string {
@@ -107,43 +106,43 @@ function noticeMessage(
   if (notice === "saved") {
     return {
       tone: "good",
-      title: "Borrador guardado",
+      title: "Draft Saved",
       description:
-        "Los valores declarados y las notas quedaron registrados.",
+        "Declared values and notes were saved.",
     };
   }
 
   if (notice === "submitted") {
     return {
       tone: "good",
-      title: "Cierre enviado",
+      title: "EOD Submitted",
       description:
-        "Todas las métricas requeridas fueron confirmadas y coinciden.",
+        "All required metrics were confirmed and matched.",
     };
   }
 
   if (notice === "incomplete") {
     return {
       tone: "warning",
-      title: "El cierre sigue como borrador",
-      description: `${missing || "Una o más"} métricas están vacías o sin confirmar.`,
+      title: "The EOD remains a draft",
+      description: `${missing || "One or more"} metrics are empty or unconfirmed.`,
     };
   }
 
   if (notice === "blocked") {
     return {
       tone: "error",
-      title: "Cierre bloqueado por diferencia",
-      description: `${mismatches || "Una o más"} métricas críticas no coinciden. Guarda una explicación y corrige o solicita validación admin.`,
+      title: "EOD Blocked by a Mismatch",
+      description: `${mismatches || "One or more"} critical metrics do not match. Add an explanation, correct the value or request admin validation.`,
     };
   }
 
   if (notice === "validated") {
     return {
       tone: "good",
-      title: "Diferencia validada",
+      title: "Mismatch Validated",
       description:
-        "La cuenta admin aceptó la discrepancia con comentario de auditoría.",
+        "The admin account accepted the discrepancy with an audit comment.",
     };
   }
 
@@ -158,7 +157,10 @@ export default async function EodPage({
   const currentUser = await requireCurrentAppUser();
   const params = await searchParams;
   const range = resolveDateRange(params);
-  const data = await getEodData(range);
+  const [data, cascade] = await Promise.all([
+    getEodData(range),
+    getOperationalCascade(range),
+  ]);
 
   const latestSnapshot = data.snapshots[0] ?? null;
   const latestDate =
@@ -210,18 +212,20 @@ export default async function EodPage({
 
   return (
     <DashboardLayout
-      eyebrow="Cierre operativo"
+      eyebrow="Operational Close"
       title="End of Day"
-      subtitle="Confirmación de resultados calculados y registro de diferencias."
-      statusLabel={`Periodo ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
+      subtitle="Confirmation of calculated results and documented differences."
+      statusLabel={`Period ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
       <DateRangeFilter basePath="/eod" range={range} />
+
+      <OperationalCascade metrics={cascade} range={range} />
 
       {error ? (
         <section className="eod-feedback eod-feedback-error">
           <AlertTriangle size={19} />
           <div>
-            <strong>No se pudo procesar el cierre</strong>
+            <strong>Unable to Process EOD</strong>
             <span>{error}</span>
           </div>
         </section>
@@ -247,59 +251,54 @@ export default async function EodPage({
         <Clock4 size={19} />
         <div>
           <strong>
-            Ventana: corte diario a las 14:50 de Mérida
+            Window: daily cutoff at 2:50 PM Mérida time
           </strong>
           <span>
-            El lunes incluye actividad desde el viernes anterior.
-            El snapshot automático corre a las 14:52.
+            Monday includes activity from the previous Friday.
+            The automatic snapshot runs at 2:52 PM.
           </span>
         </div>
       </section>
 
       <section className="kpi-grid">
         <KpiCard
-          label="Asesoras en snapshot"
+          label="Advisors in Snapshot"
           value={number(advisorGroups.size)}
-          helper="Pathi y Cinthia activas"
+          helper="Pathi and Cinthia active"
           icon={UsersRound}
         />
         <KpiCard
-          label="WhatsApp totales"
+          label="WhatsApp Messages"
           value={number(metrics.whatsapp_total_messages)}
-          helper="Métrica compartida del canal"
+          helper="Shared channel metric"
           icon={MessageCircleMore}
         />
         <KpiCard
-          label="Conversaciones atendidas"
+          label="Handled Conversations"
           value={number(
             metrics.whatsapp_manually_attended_conversations,
           )}
-          helper="Con al menos una salida manual"
+          helper="With at least one manual outbound message"
           icon={CheckCircle2}
         />
         <KpiCard
-          label="Intentos de llamada"
+          label="Number of Dials"
           value={number(metrics.team_outbound_call_attempts)}
-          helper="Registrados dentro de GHL"
+          helper="Registered in GHL"
           icon={PhoneCall}
         />
         <KpiCard
-          label="Cierre generado"
-          value={latestSnapshot ? "Sí" : "No"}
+          label="Snapshot Generated"
+          value={latestSnapshot ? "Yes" : "No"}
           helper={dateTimeLabel(latestSnapshot?.generated_at)}
           icon={CalendarCheck2}
         />
         <KpiCard
-          label="Última sincronización"
-          value={
-            latestSync?.status === "success"
-              ? "OK"
-              : latestSync?.status ?? "—"
-          }
-          helper={dateTimeLabel(
-            latestSync?.finished_at ??
-              latestSync?.started_at,
+          label="Trial Day+ / Closed"
+          value={number(
+            metrics.trial_day_plus_closed_leads,
           )}
+          helper="Distinct leads entering Trial Day Booked or any later stage"
           icon={CheckCircle2}
         />
       </section>
@@ -307,12 +306,12 @@ export default async function EodPage({
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Equipo / canal</p>
-            <h2>Métricas compartidas del cierre</h2>
+            <p className="eyebrow">Team / Channel</p>
+            <h2>Shared EOD Metrics</h2>
           </div>
           <p className="panel-note">
-            WhatsApp no se reparte artificialmente entre asesoras
-            cuando GHL no entrega userId.
+            WhatsApp is not artificially split between advisors
+            when GHL does not provide a userId.
           </p>
         </div>
 
@@ -326,19 +325,19 @@ export default async function EodPage({
             ))}
           </div>
         ) : (
-          <EmptyState message="Todavía no existe un snapshot de equipo." />
+          <EmptyState message="No team snapshot is available yet." />
         )}
       </section>
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Confirmación operativa</p>
-            <h2>Snapshot individual</h2>
+            <p className="eyebrow">Operational Confirmation</p>
+            <h2>Individual Snapshot</h2>
           </div>
           <p className="panel-note">
-            Cada asesora puede editar su cierre. La cuenta admin
-            puede apoyar y validar diferencias.
+            Each advisor can edit her own EOD. The admin account
+            can support and validate mismatches.
           </p>
         </div>
 
@@ -362,18 +361,18 @@ export default async function EodPage({
                   >
                     <div className="advisor-heading">
                       <div>
-                        <p className="eyebrow">Asesora</p>
+                        <p className="eyebrow">Advisor</p>
                         <h3>{advisor}</h3>
                         <span className="eod-timestamp">
                           {group.validatedAt
-                            ? `Validado ${dateTimeLabel(
+                            ? `Validated ${dateTimeLabel(
                                 group.validatedAt,
                               )}`
                             : group.submittedAt
-                              ? `Enviado ${dateTimeLabel(
+                              ? `Submitted ${dateTimeLabel(
                                   group.submittedAt,
                                 )}`
-                              : "Pendiente de cierre"}
+                              : "Pending EOD"}
                         </span>
                       </div>
                       <span
@@ -427,12 +426,12 @@ export default async function EodPage({
                                 <strong>{row.label}</strong>
                                 <span>
                                   {row.description ??
-                                    "Métrica del cierre diario."}
+                                    "Daily EOD metric."}
                                 </span>
                               </div>
 
                               <div className="eod-system-value">
-                                <span>Sistema</span>
+                                <span>System</span>
                                 <strong>
                                   {number(row.system_value)}
                                 </strong>
@@ -441,7 +440,7 @@ export default async function EodPage({
                               {manual ? (
                                 <>
                                   <label className="eod-number-field">
-                                    <span>Declarado</span>
+                                    <span>Declared</span>
                                     <input
                                       defaultValue={
                                         row.declared_value ?? ""
@@ -464,12 +463,12 @@ export default async function EodPage({
                                       name={`confirmed__${row.metric_key}`}
                                       type="checkbox"
                                     />
-                                    <span>Confirmo</span>
+                                    <span>I Confirm</span>
                                   </label>
 
                                   <label className="eod-note-field">
                                     <span>
-                                      Nota de diferencia
+                                      Mismatch Note
                                     </span>
                                     <input
                                       defaultValue={
@@ -479,8 +478,8 @@ export default async function EodPage({
                                       name={`note__${row.metric_key}`}
                                       placeholder={
                                         row.blocks_submission_on_mismatch
-                                          ? "Obligatoria cuando no coincide"
-                                          : "Opcional"
+                                          ? "Required when values do not match"
+                                          : "Optional"
                                       }
                                       type="text"
                                     />
@@ -489,7 +488,7 @@ export default async function EodPage({
                               ) : (
                                 <div className="eod-system-only">
                                   <ShieldCheck size={15} />
-                                  <span>Automático</span>
+                                  <span>Automatic</span>
                                 </div>
                               )}
 
@@ -507,7 +506,7 @@ export default async function EodPage({
                                 {row.difference !== null &&
                                 row.difference !== 0 ? (
                                   <small>
-                                    Diferencia:{" "}
+                                    Difference:{" "}
                                     {row.difference > 0
                                       ? "+"
                                       : ""}
@@ -521,12 +520,12 @@ export default async function EodPage({
                       </div>
 
                       <label className="eod-comments-field">
-                        <span>Comentario general del cierre</span>
+                        <span>General EOD Comment</span>
                         <textarea
                           defaultValue={group.comments ?? ""}
                           disabled={!editable}
                           name="comments"
-                          placeholder="Contexto general, pendientes o explicación breve."
+                          placeholder="General context, pending items or a brief explanation."
                           rows={3}
                         />
                       </label>
@@ -541,7 +540,7 @@ export default async function EodPage({
                               value="save"
                             >
                               <Save size={16} />
-                              Guardar borrador
+                              Save Draft
                             </button>
                             <button
                               className="primary-button"
@@ -550,14 +549,14 @@ export default async function EodPage({
                               value="submit"
                             >
                               <Send size={16} />
-                              Enviar cierre
+                              Submit EOD
                             </button>
                           </>
                         ) : (
                           <span className="eod-readonly-note">
                             {locked
-                              ? "Este cierre ya no está abierto para edición."
-                              : "Puedes consultar este cierre, pero no editarlo."}
+                              ? "This EOD is no longer open for editing."
+                              : "You can review this EOD but cannot edit it."}
                           </span>
                         )}
                       </div>
@@ -585,10 +584,10 @@ export default async function EodPage({
                           ),
                         )}
                         <label>
-                          <span>Validación administrativa</span>
+                          <span>Admin Validation</span>
                           <textarea
                             name="validation_comment"
-                            placeholder="Explica por qué se acepta la diferencia."
+                            placeholder="Explain why the mismatch is accepted."
                             required
                             rows={2}
                           />
@@ -598,7 +597,7 @@ export default async function EodPage({
                           type="submit"
                         >
                           <FileCheck2 size={16} />
-                          Validar con diferencia
+                          Validate Mismatch
                         </button>
                       </form>
                     ) : null}
@@ -608,7 +607,7 @@ export default async function EodPage({
             )}
           </div>
         ) : (
-          <EmptyState message="Todavía no hay snapshots individuales para esta fecha." />
+          <EmptyState message="No individual snapshots are available for this date." />
         )}
       </section>
 
@@ -616,19 +615,19 @@ export default async function EodPage({
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Histórico</p>
-              <h2>Cierres dentro de {range.label}</h2>
+              <p className="eyebrow">History</p>
+              <h2>EOD Snapshots within {range.label}</h2>
             </div>
           </div>
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>Fecha</th>
+                  <th>Date</th>
                   <th>WhatsApp</th>
-                  <th>Manual outbound</th>
-                  <th>Conversaciones</th>
-                  <th>Llamadas</th>
+                  <th>Manual Outbound</th>
+                  <th>Conversations</th>
+                  <th>Calls</th>
                 </tr>
               </thead>
               <tbody>
@@ -669,19 +668,19 @@ export default async function EodPage({
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Salud del sistema</p>
-              <h2>Últimas sincronizaciones</h2>
+              <p className="eyebrow">System Health</p>
+              <h2>Latest Synchronizations</h2>
             </div>
           </div>
           <div className="table-scroll">
             <table>
               <thead>
                 <tr>
-                  <th>Proceso</th>
+                  <th>Process</th>
                   <th>Status</th>
-                  <th>Leídos</th>
-                  <th>Fallidos</th>
-                  <th>Fecha</th>
+                  <th>Read</th>
+                  <th>Failed</th>
+                  <th>Date</th>
                 </tr>
               </thead>
               <tbody>
