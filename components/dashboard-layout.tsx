@@ -78,7 +78,7 @@ export async function DashboardLayout({
 
       <footer className="footer">
         <span>Milhano Operations Dashboard · Live</span>
-        <span>Source: GHL → n8n → Supabase</span>
+        <span>Sources: GHL + EOD + verified manual adjustments → Supabase</span>
       </footer>
     </main>
   );

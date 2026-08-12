@@ -96,8 +96,9 @@ export async function saveEodSubmission(
     declared_value: safeString(
       formData.get(`declared__${metricKey}`),
     ),
-    user_confirmed:
-      formData.get(`confirmed__${metricKey}`) === "on",
+    manual_extra_value: safeString(
+      formData.get(`manual_extra__${metricKey}`),
+    ),
     discrepancy_note: safeString(
       formData.get(`note__${metricKey}`),
     ),
@@ -127,6 +128,7 @@ export async function saveEodSubmission(
     result?: string;
     status?: string;
     missing_or_unconfirmed?: number;
+    reported_gaps?: number;
     blocking_mismatches?: number;
   };
 
@@ -140,7 +142,9 @@ export async function saveEodSubmission(
         payload.missing_or_unconfirmed ?? 0,
       ),
       mismatches: String(
-        payload.blocking_mismatches ?? 0,
+        payload.reported_gaps ??
+          payload.blocking_mismatches ??
+          0,
       ),
     }),
   );

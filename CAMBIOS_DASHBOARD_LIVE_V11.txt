@@ -1,0 +1,16 @@
+MILHANO DASHBOARD LIVE | V11
+
+- New reconciliation layer: GHL/System, Reported Total, Known Outside GHL, Operational Total, Gap.
+- New /reconciliation page and nav item.
+- Cascade cards now open reconciliation instead of directly opening lead lists.
+- GHL lead drill-down remains available from Reconciliation > View GHL Records.
+- Qualified Leads added to the operational cascade.
+- Main KPI row uses the reconciled cascade source for New Leads, Tours, Closed and Dials.
+- Current GHL Stages remains CRM-only.
+- Source/Advisor breakdowns explicitly labeled GHL Only.
+- EOD mismatches no longer block submission.
+- EOD removes I Confirm and adds Reported Total + Known Outside GHL + Context.
+- Meaningful Conversations becomes defensible/manual with GHL 3+ minute calls as system reference.
+- Exact EOD metrics added for Qualified, Trial Days Booked, Trial Days Showed and Closed.
+- July Pathi historical report is stored as reported evidence without auto-converting discrepancies into manual extras.
+- No new n8n workflows.

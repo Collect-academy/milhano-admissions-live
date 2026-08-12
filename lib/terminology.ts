@@ -16,6 +16,10 @@ export const CASCADE_METRICS = [
     label: "Meaningful Conversations",
   },
   {
+    key: "qualified_leads",
+    label: "Qualified Leads",
+  },
+  {
     key: "school_tours_booked",
     label: "School Tours Booked",
   },
@@ -67,14 +71,23 @@ export function stageLabel(
   return STAGE_LABELS[value] ?? value;
 }
 
+const SUPPORT_METRIC_LABELS: Record<string, string> = {
+  answered_calls: "Answered / Connected Calls",
+  new_leads_handled: "New Leads Handled",
+  stage_advancements: "Stage Advancements",
+  ads_leads: "Ads Leads",
+  organic_leads: "Organic Leads",
+  messages_answered: "Messages Answered",
+};
+
 export function cascadeMetricLabel(
   key: string | null | undefined,
 ): string {
+  if (!key) return "Operational Metric";
+
   return (
     CASCADE_METRICS.find((metric) => metric.key === key)
-      ?.label ??
-    key ??
-    "Operational Metric"
+      ?.label ?? SUPPORT_METRIC_LABELS[key] ?? key
   );
 }
 

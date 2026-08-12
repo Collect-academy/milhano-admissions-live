@@ -180,6 +180,9 @@ export type EodDashboardRow = {
   user_confirmed: boolean;
   discrepancy_note: string | null;
   reconciliation_status: string;
+  manual_extra_value: number;
+  operational_total: number;
+  operational_difference: number | null;
 };
 
 export type EodTeamSnapshot = {

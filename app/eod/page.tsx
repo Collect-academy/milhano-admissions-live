@@ -36,6 +36,12 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const callOutsideGhlMetricKeys = new Set([
+  "calls_made",
+  "ghl_connected_calls",
+  "meaningful_conversations",
+]);
+
 const teamMetricLabels: Record<string, string> = {
   whatsapp_total_messages: "WhatsApp Messages",
   whatsapp_inbound_messages: "Inbound WhatsApp",
@@ -55,8 +61,12 @@ const teamMetricLabels: Record<string, string> = {
 
 const statusLabels: Record<string, string> = {
   system: "System",
-  pending: "Pending",
+  pending: "Not Reported",
   matched: "Matched",
+  reconciled: "Reconciled",
+  mixed_reconciled: "Mixed · Reconciled",
+  mixed_gap: "Mixed · Gap",
+  reported_gap: "Reported Gap",
   awaiting_confirmation: "Awaiting Confirmation",
   mismatch: "Mismatch",
   draft: "Draft",
@@ -69,9 +79,13 @@ const statusLabels: Record<string, string> = {
 
 function statusClass(status: string): string {
   if (
-    ["matched", "system", "validated", "submitted"].includes(
-      status,
-    )
+    [
+      "matched",
+      "reconciled",
+      "system",
+      "validated",
+      "submitted",
+    ].includes(status)
   ) {
     return "status-good";
   }
@@ -117,23 +131,23 @@ function noticeMessage(
       tone: "good",
       title: "EOD Submitted",
       description:
-        "All required metrics were confirmed and matched.",
+        "The EOD was saved even if the reported values differ from GHL. Any remaining gap stays visible for reconciliation.",
     };
   }
 
   if (notice === "incomplete") {
     return {
       tone: "warning",
-      title: "The EOD remains a draft",
-      description: `${missing || "One or more"} metrics are empty or unconfirmed.`,
+      title: "Legacy Draft Status",
+      description: `${missing || "One or more"} values were incomplete under the previous EOD policy. V11 no longer blocks submission for a mismatch.`,
     };
   }
 
   if (notice === "blocked") {
     return {
       tone: "error",
-      title: "EOD Blocked by a Mismatch",
-      description: `${mismatches || "One or more"} critical metrics do not match. Add an explanation, correct the value or request admin validation.`,
+      title: "Legacy Blocked EOD",
+      description: `${mismatches || "One or more"} gaps were blocked under the previous policy. New EOD submissions are non-blocking.`,
     };
   }
 
@@ -214,7 +228,7 @@ export default async function EodPage({
     <DashboardLayout
       eyebrow="Operational Close"
       title="End of Day"
-      subtitle="Confirmation of calculated results and documented differences."
+      subtitle="System values, advisor-reported totals and known activity outside GHL are stored side by side."
       statusLabel={`Period ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
       <DateRangeFilter basePath="/eod" range={range} />
@@ -256,6 +270,18 @@ export default async function EodPage({
           <span>
             Monday includes activity from the previous Friday.
             The automatic snapshot runs at 2:52 PM.
+          </span>
+        </div>
+      </section>
+
+      <section className="scope-banner">
+        <ShieldCheck size={19} />
+        <div>
+          <strong>How to report a mismatch</strong>
+          <span>
+            Reported Total is what you observed. Known Outside GHL
+            is only the portion you know is missing from GHL. You
+            can submit even when a gap remains.
           </span>
         </div>
       </section>
@@ -336,8 +362,7 @@ export default async function EodPage({
             <h2>Individual Snapshot</h2>
           </div>
           <p className="panel-note">
-            Each advisor can edit her own EOD. The admin account
-            can support and validate mismatches.
+            Each advisor can report the real total and, separately, only the activity she knows is outside GHL. A mismatch no longer blocks submission.
           </p>
         </div>
 
@@ -407,9 +432,7 @@ export default async function EodPage({
 
                       <div className="eod-metric-list">
                         {group.rows.map((row) => {
-                          const manual =
-                            row.requires_user_confirmation &&
-                            !row.is_system_only;
+                          const manual = !row.is_system_only;
 
                           return (
                             <section
@@ -440,7 +463,7 @@ export default async function EodPage({
                               {manual ? (
                                 <>
                                   <label className="eod-number-field">
-                                    <span>Declared</span>
+                                    <span>Reported Total</span>
                                     <input
                                       defaultValue={
                                         row.declared_value ?? ""
@@ -454,33 +477,36 @@ export default async function EodPage({
                                     />
                                   </label>
 
-                                  <label className="eod-confirm-field">
+                                  <label className="eod-number-field eod-extra-field">
+                                    <span>
+                                      {callOutsideGhlMetricKeys.has(
+                                        row.metric_key,
+                                      )
+                                        ? "WhatsApp / External"
+                                        : "Known Outside GHL"}
+                                    </span>
                                     <input
-                                      defaultChecked={
-                                        row.user_confirmed
+                                      defaultValue={
+                                        row.manual_extra_value ?? 0
                                       }
                                       disabled={!editable}
-                                      name={`confirmed__${row.metric_key}`}
-                                      type="checkbox"
+                                      min="0"
+                                      name={`manual_extra__${row.metric_key}`}
+                                      placeholder="0"
+                                      step="1"
+                                      type="number"
                                     />
-                                    <span>I Confirm</span>
                                   </label>
 
                                   <label className="eod-note-field">
-                                    <span>
-                                      Mismatch Note
-                                    </span>
+                                    <span>Context / Reason</span>
                                     <input
                                       defaultValue={
                                         row.discrepancy_note ?? ""
                                       }
                                       disabled={!editable}
                                       name={`note__${row.metric_key}`}
-                                      placeholder={
-                                        row.blocks_submission_on_mismatch
-                                          ? "Required when values do not match"
-                                          : "Optional"
-                                      }
+                                      placeholder="Example: 4 WhatsApp calls outside GHL"
                                       type="text"
                                     />
                                   </label>
@@ -503,14 +529,22 @@ export default async function EodPage({
                                   ] ??
                                     row.reconciliation_status}
                                 </span>
-                                {row.difference !== null &&
-                                row.difference !== 0 ? (
+                                {row.operational_difference !== null &&
+                                row.operational_difference !== 0 ? (
                                   <small>
-                                    Difference:{" "}
-                                    {row.difference > 0
+                                    Gap:{" "}
+                                    {row.operational_difference > 0
                                       ? "+"
                                       : ""}
-                                    {number(row.difference)}
+                                    {number(
+                                      row.operational_difference,
+                                    )}
+                                  </small>
+                                ) : manual ? (
+                                  <small>
+                                    Operational: {number(
+                                      row.operational_total,
+                                    )}
                                   </small>
                                 ) : null}
                               </div>

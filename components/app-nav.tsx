@@ -9,6 +9,7 @@ const links = [
   { href: "/whatsapp", label: "WhatsApp" },
   { href: "/llamadas", label: "Calls" },
   { href: "/eod", label: "EOD" },
+  { href: "/reconciliation", label: "Reconciliation" },
   { href: "/sistema", label: "System" },
 ];
 

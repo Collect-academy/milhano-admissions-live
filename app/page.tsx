@@ -53,6 +53,26 @@ export default async function DashboardPage({
     )?.conversion_from_lead_pct ?? null;
 
   const rangeQuery = dateRangeQuery(range);
+  const cascadeByKey = new Map(
+    cascade.map((metric) => [metric.metric_key, metric]),
+  );
+
+  const reconciled = (metricKey: string, fallback: number) =>
+    cascadeByKey.get(metricKey)?.metric_value ?? fallback;
+
+  const sourceHelper = (metricKey: string, fallback: string) => {
+    const metric = cascadeByKey.get(metricKey);
+    if (!metric) return fallback;
+
+    const parts = [`GHL ${number(metric.system_value)}`];
+    if (metric.manual_extra_value > 0) {
+      parts.push(`+${number(metric.manual_extra_value)} manual`);
+    }
+    if (metric.gap !== null && metric.gap !== 0) {
+      parts.push(`gap ${metric.gap > 0 ? "+" : ""}${number(metric.gap)}`);
+    }
+    return parts.join(" · ");
+  };
 
   return (
     <DashboardLayout
@@ -95,32 +115,51 @@ export default async function DashboardPage({
         className="kpi-grid"
       >
         <KpiCard
-          helper={range.label}
+          helper={sourceHelper("new_leads", range.label)}
           icon={Activity}
           label="New Leads"
-          value={number(data.period.new_leads)}
+          value={number(
+            reconciled("new_leads", data.period.new_leads),
+          )}
         />
         <KpiCard
-          helper="School Tour stage entries"
+          helper={sourceHelper(
+            "school_tours_booked",
+            "School Tour stage entries",
+          )}
           icon={Clock3}
           label="School Tours Booked"
-          value={number(data.period.tours_scheduled)}
+          value={number(
+            reconciled(
+              "school_tours_booked",
+              data.period.tours_scheduled,
+            ),
+          )}
         />
         <KpiCard
-          helper={`${number(
-            data.period.tours_attended,
-          )} attended`}
+          helper={sourceHelper(
+            "school_tours_attended",
+            `${number(data.period.tours_attended)} attended`,
+          )}
           icon={GraduationCap}
           label="School Tours Attended"
-          value={number(data.period.tours_attended)}
+          value={number(
+            reconciled(
+              "school_tours_attended",
+              data.period.tours_attended,
+            ),
+          )}
         />
         <KpiCard
-          helper={`${percent(
-            leadToClosed,
-          )} lead-to-closed`}
+          helper={sourceHelper(
+            "closed",
+            `${percent(leadToClosed)} lead-to-closed`,
+          )}
           icon={GraduationCap}
           label="Closed"
-          value={number(data.period.enrolled)}
+          value={number(
+            reconciled("closed", data.period.enrolled),
+          )}
         />
         <KpiCard
           helper="Shared institutional channel"
@@ -129,12 +168,20 @@ export default async function DashboardPage({
           value={number(data.period.whatsapp_messages)}
         />
         <KpiCard
-          helper={`${number(
-            data.period.outbound_call_attempts,
-          )} outbound attempts`}
+          helper={sourceHelper(
+            "number_of_dials",
+            `${number(
+              data.period.outbound_call_attempts,
+            )} outbound attempts`,
+          )}
           icon={PhoneCall}
           label="Number of Dials"
-          value={number(data.period.call_attempts)}
+          value={number(
+            reconciled(
+              "number_of_dials",
+              data.period.call_attempts,
+            ),
+          )}
         />
       </section>
 
@@ -196,7 +243,7 @@ export default async function DashboardPage({
               <p className="eyebrow">
                 Cohort · {range.label}
               </p>
-              <h2>Performance by Source</h2>
+              <h2>Performance by Source · GHL Only</h2>
             </div>
           </div>
 
@@ -238,7 +285,7 @@ export default async function DashboardPage({
               <p className="eyebrow">
                 Cohort · {range.label}
               </p>
-              <h2>Performance by Advisor</h2>
+              <h2>Performance by Advisor · GHL Only</h2>
             </div>
           </div>
 

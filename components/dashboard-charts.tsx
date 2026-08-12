@@ -35,7 +35,7 @@ export function DashboardCharts({
           <h2>Daily Admissions Activity</h2>
         </div>
         <p className="panel-note">
-          Historical events by date, not only the current stage.
+          GHL/System historical events by date. Manual period adjustments are shown in Reconciliation and are not artificially distributed across days.
         </p>
       </div>
 

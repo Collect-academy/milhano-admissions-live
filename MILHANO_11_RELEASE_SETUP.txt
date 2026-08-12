@@ -1,0 +1,196 @@
+MILHANO | V11 RECONCILIATION RELEASE
+
+OBJETIVO
+
+Esta versión deja de tratar GHL y el reporte de la asesora como si una de las dos fuentes tuviera que borrar a la otra.
+
+Se conservan tres valores separados:
+
+1. GHL / System
+   Dato automático. Nunca se sobrescribe manualmente.
+
+2. Reported Total
+   Lo que la asesora o un reporte histórico afirma que ocurrió.
+   Sirve como evidencia para comparar. NO se suma automáticamente.
+
+3. Known Outside GHL / Manual Extra
+   Sólo actividad verificada que sabemos que NO está incluida en GHL.
+
+Operational Total = GHL / System + Known Outside GHL
+Gap = Reported Total - Operational Total
+
+
+ORDEN DE DEPLOYMENT
+
+0. PRECHECK OPCIONAL (RECOMENDADO)
+
+Ejecuta:
+
+MILHANO_11_PRECHECK.sql
+
+Debe devolver compatible = true y listas de missing_* vacías. Si da false, no ejecutes todavía V11: conserva el JSON de salida para revisar la diferencia de schema.
+
+1. SUPABASE
+
+Ejecuta completo:
+
+MILHANO_11_RECONCILIATION_LAYER.sql
+
+El SQL:
+- agrega Qualified Leads a la cascada;
+- agrega Answered / Connected Calls a la capa de reconciliación;
+- crea el catálogo y el historial de reconciliación;
+- crea milhano_get_operational_reconciliation;
+- agrega manual_extra_value al EOD;
+- hace el EOD NO BLOQUEANTE por diferencias;
+- reemplaza el checkbox I Confirm por una lógica automática;
+- agrega métricas EOD exactas para Qualified, Trial Days y Closed;
+- refresca los snapshots EOD del día de las asesoras activas;
+- NO modifica el dato raw de GHL.
+
+Al final del SQL deben aparecer dos resultados de sanity check.
+
+
+2. BACKFILL DE JULIO
+
+Después ejecuta:
+
+MILHANO_11_JULY_PATHI_REPORT.sql
+
+Carga como Reported Total:
+- New Leads: 137
+- Ads Leads: 133
+- Organic Leads: 4
+- Messages Answered: 133
+- Number of Dials: 221
+- Answered / Connected Calls: 70
+- Qualified Leads: 23
+- School Tours Booked: 14
+- School Tours Attended: 6
+- Closed: 4
+
+IMPORTANTE:
+manual_extra_value queda en 0 a propósito.
+
+Ejemplo:
+Si GHL devuelve 108 New Leads, la página mostrará inicialmente:
+
+GHL / System     108
+Known Outside GHL  0
+Operational Total 108
+Reported Total    137
+Gap               +29
+
+Sólo cuando confirmemos que esos 29 no existen realmente en GHL se registra:
+Known Outside GHL = 29
+
+y entonces Operational Total = 137.
+
+Esto evita convertir una falla de query/sync en 29 leads ficticios.
+
+Number of Dials de julio queda además marcado como Data Issue porque el dashboard histórico reportaba 0 mientras el EOD actual sí demuestra que la captura de llamadas GHL existe. El flag se puede reemplazar después con un nuevo ajuste admin cuando terminemos el diagnóstico.
+
+
+3. GITHUB / VERCEL
+
+Sube el contenido extraído de:
+
+MILHANO_ADMISSIONS_LIVE_DASHBOARD_V11_RECONCILIATION.zip
+
+Commit sugerido:
+
+Dashboard V11: reconciliation layer and non-blocking EOD
+
+No hay que crear ni modificar workflows n8n para este release.
+
+
+QUÉ CAMBIA EN SUMMARY
+
+- La cascada ahora incluye Qualified Leads.
+- Los scorecards abren /reconciliation.
+- El número grande es Operational Total, no el reporte manual.
+- Cada card muestra GHL, Manual Extra, Reported y Gap cuando aplica.
+- New Leads / School Tours / Closed / Dials de los KPI inferiores usan la misma fuente reconciliada que la cascada.
+  Esto elimina el problema visual de tener, por ejemplo, 108 arriba y 110 abajo por usar queries diferentes.
+- Current GHL Stages continúa 100% GHL. Nunca se inventa el stage de un lead que no existe en el CRM.
+- Performance by Source y Performance by Advisor quedan rotulados GHL Only porque no podemos asignar correctamente un agregado manual a una fuente o asesora sin evidencia individual.
+
+
+QUÉ CAMBIA EN EOD
+
+Para cada métrica editable la asesora ve:
+
+System
+Reported Total
+Known Outside GHL
+Context / Reason
+Status / Gap
+
+Ya NO existe I Confirm.
+Ya NO se bloquea Submit EOD porque el número sea diferente.
+
+Ejemplo:
+System = 10
+Reported Total = 14
+Known Outside GHL = 4
+=> Operational = 14
+=> Reconciled
+
+Otro ejemplo:
+System = 10
+Reported Total = 14
+Known Outside GHL = 2
+=> Operational = 12
+=> Gap +2
+=> el EOD se puede enviar y el gap queda para investigar.
+
+Meaningful Conversations ahora es editable. El System es sólo una referencia de llamadas GHL de 3+ minutos; la asesora puede reportar conversaciones significativas que ocurrieron por WhatsApp o fuera de GHL.
+
+
+CAPTURA DIARIA / SEMANAL / MENSUAL
+
+OPERACIÓN NORMAL
+La asesora reporta una sola vez al día en EOD.
+Los Manual Extra diarios se agregan automáticamente al seleccionar semana, mes o año.
+
+BACKFILL / CORRECCIÓN ADMIN
+En Reconciliation > Add Report or Verified Manual Extra puedes elegir cualquier From / To:
+- un día;
+- una semana;
+- un mes;
+- un periodo custom.
+
+Un ajuste de periodo sólo entra a un rango superior cuando el rango seleccionado contiene completamente ese periodo. Esto evita repartir artificialmente un ajuste mensual entre días que desconocemos.
+
+No dupliques un Manual Extra que ya fue capturado por la asesora en EOD. La pantalla separa:
+- EOD Manual Extra
+- Admin Manual Extra
+para que sea visible de dónde viene el total.
+
+
+VALIDACIÓN DESPUÉS DEL DEPLOY
+
+1. Abre Summary > Last Month.
+2. Confirma que New Leads tiene un solo número consistente entre la cascada y el KPI inferior.
+3. Haz clic en New Leads.
+4. En Reconciliation confirma que ves System, Reported, Manual Extra, Operational Total y Gap.
+5. Para julio debe aparecer Reported 137 sin sumar automáticamente el gap.
+6. Haz clic View GHL Records y confirma que abre el listado de registros del sistema.
+7. Entra a EOD con Pathi.
+8. Cambia un Reported Total para que NO coincida con System.
+9. Deja Known Outside GHL en 0 y agrega una nota.
+10. Pulsa Submit EOD. Debe enviarse sin quedar Blocked.
+11. Regresa a Reconciliation y confirma que el reporte EOD se refleja y que el gap sigue visible.
+12. Como admin, agrega un Manual Extra de prueba y confirma que Operational Total = System + Manual Extra.
+13. Borra/reemplaza ese ajuste de prueba guardando el mismo metric/period/advisor/type con Manual Extra = 0. La nueva versión sustituye la activa y la anterior queda en el audit trail como Superseded.
+
+
+ROLLBACK
+
+Frontend:
+- redeploy del commit V10/V9 anterior.
+
+Database:
+- las tablas nuevas pueden permanecer sin afectar al frontend viejo.
+- NO se recomienda borrar milhano_metric_reconciliation_entries porque contiene el audit trail.
+- si se vuelve temporalmente al EOD anterior, recuerda que V11 cambió blocks_submission_on_mismatch a false; volver a activar bloqueo sería una decisión operativa, no un requisito técnico.

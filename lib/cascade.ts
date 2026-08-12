@@ -8,8 +8,20 @@ export type OperationalCascadeMetric = {
   label: string;
   display_order: number;
   metric_value: number;
-  metric_scope: "selected_period" | "today";
+  metric_scope: "selected_period" | "today" | "manual_only";
+  system_value: number | null;
+  eod_manual_extra: number;
+  admin_manual_extra: number;
+  manual_extra_value: number;
+  operational_total: number | null;
+  reported_value: number | null;
+  gap: number | null;
+  reconciliation_status: string;
   definition: string;
+  show_in_cascade: boolean;
+  supports_manual_extra: boolean;
+  system_issue_flag: boolean;
+  reported_source: string | null;
 };
 
 export type CascadeLead = {
@@ -110,12 +122,12 @@ function normalizeNumbers<T extends Record<string, unknown>>(
   });
 }
 
-export async function getOperationalCascade(
+export async function getOperationalReconciliation(
   range: DateRange,
 ): Promise<OperationalCascadeMetric[]> {
   const supabase = createSupabaseAdmin();
   const result = await supabase.rpc(
-    "milhano_get_operational_cascade",
+    "milhano_get_operational_reconciliation",
     {
       p_start: range.start,
       p_end: range.end,
@@ -124,13 +136,30 @@ export async function getOperationalCascade(
 
   if (result.error) {
     throw new Error(
-      `Unable to load the operational cascade: ${result.error.message}`,
+      `Unable to load operational reconciliation: ${result.error.message}`,
     );
   }
 
-  return normalizeNumbers(
+  const rows = normalizeNumbers(
     result.data,
-  ) as unknown as OperationalCascadeMetric[];
+  ) as unknown as Array<
+    Omit<OperationalCascadeMetric, "metric_value">
+  >;
+
+  return rows.map((row) => ({
+    ...row,
+    metric_value: Number(
+      row.operational_total ?? row.system_value ?? 0,
+    ),
+  }));
+}
+
+export async function getOperationalCascade(
+  range: DateRange,
+): Promise<OperationalCascadeMetric[]> {
+  const rows = await getOperationalReconciliation(range);
+
+  return rows.filter((row) => row.show_in_cascade);
 }
 
 export async function getCascadeLeads(
