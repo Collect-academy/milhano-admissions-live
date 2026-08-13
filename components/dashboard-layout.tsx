@@ -3,10 +3,13 @@ import { LogOut } from "lucide-react";
 
 import { logout } from "@/app/login/actions";
 import { AppNav } from "@/components/app-nav";
+import { LanguageToggle } from "@/components/language-toggle";
 import {
   isSupabaseAuthConfigured,
   requireCurrentAppUser,
 } from "@/lib/auth";
+import { getDashboardLocale } from "@/lib/i18n";
+import { tr } from "@/lib/locale";
 
 type Props = {
   eyebrow: string;
@@ -30,6 +33,7 @@ export async function DashboardLayout({
   children,
 }: Props) {
   const user = await requireCurrentAppUser();
+  const locale = await getDashboardLocale();
   const individualAuth = isSupabaseAuthConfigured();
 
   return (
@@ -42,11 +46,14 @@ export async function DashboardLayout({
             <span>Admissions OS</span>
           </div>
         </div>
-        <AppNav />
+        <AppNav locale={locale} />
         <div className="session-controls">
+          {user.username?.toLowerCase() !== "monacashflow" ? (
+            <LanguageToggle locale={locale} />
+          ) : null}
           <div className="session-user">
             <strong>{user.displayName}</strong>
-            <span>{roleLabels[user.role]}</span>
+            <span>{locale === "es" ? ({ advisor: "Asesora", admin: "Admin", viewer: "Dirección" } as const)[user.role] : roleLabels[user.role]}</span>
           </div>
           {individualAuth ? (
             <form action={logout}>
@@ -55,7 +62,7 @@ export async function DashboardLayout({
                 type="submit"
               >
                 <LogOut size={16} />
-                Sign Out
+                {tr(locale, "Sign Out", "Salir")}
               </button>
             </form>
           ) : null}
@@ -77,8 +84,8 @@ export async function DashboardLayout({
       {children}
 
       <footer className="footer">
-        <span>Milhano Operations Dashboard · Live</span>
-        <span>Sources: GHL + EOD + verified manual adjustments → Supabase</span>
+        <span>{tr(locale, "Milhano Operations Dashboard · Live", "Dashboard Operativo Milhano · Live")}</span>
+        <span>{tr(locale, "Sources: GHL + EOD + verified manual adjustments → Supabase", "Fuentes: GHL + EOD + ajustes manuales verificados → Supabase")}</span>
       </footer>
     </main>
   );

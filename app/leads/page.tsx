@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/empty-state";
 import { getCascadeLeads } from "@/lib/cascade";
 import { resolveDateRange } from "@/lib/date-range";
 import { dateTimeLabel, number } from "@/lib/format";
+import { getDashboardLocale } from "@/lib/i18n";
+import { tr } from "@/lib/locale";
 import {
   attendanceLabel,
   cascadeMetricLabel,
@@ -27,6 +29,7 @@ export default async function LeadsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  const locale = await getDashboardLocale();
   const range = resolveDateRange(params);
   const metric = first(params.metric) || "school_tours_attended";
   const query = first(params.q).toLowerCase();
@@ -50,27 +53,28 @@ export default async function LeadsPage({
 
   return (
     <DashboardLayout
-      eyebrow="Clickable scorecard"
-      title={cascadeMetricLabel(metric)}
-      subtitle="Lead-level detail for the selected operational metric."
-      statusLabel={`${number(filtered.length)} lead rows`}
+      eyebrow={tr(locale, "Clickable scorecard", "Scorecard clickeable")}
+      title={cascadeMetricLabel(metric, locale)}
+      subtitle={tr(locale, "Lead-level detail for the selected operational metric.", "Detalle por lead de la métrica operativa seleccionada.")}
+      statusLabel={`${number(filtered.length)} ${tr(locale, "lead rows", "leads")}`}
     >
       <Link className="secondary-button inline-back-link" href="/">
         <ArrowLeft size={16} />
-        Back to Summary
+        {tr(locale, "Back to Summary", "Volver al Resumen")}
       </Link>
 
       <DateRangeFilter
         basePath="/leads"
         preserve={{ metric, q: first(params.q) }}
         range={range}
+        locale={locale}
       />
 
       <section className="panel">
         <div className="panel-heading">
           <div>
             <p className="eyebrow">{range.label}</p>
-            <h2>{cascadeMetricLabel(metric)}</h2>
+            <h2>{cascadeMetricLabel(metric, locale)}</h2>
           </div>
           <form className="lead-search-form" method="get">
             <input name="metric" type="hidden" value={metric} />
@@ -85,7 +89,7 @@ export default async function LeadsPage({
             <input
               defaultValue={first(params.q)}
               name="q"
-              placeholder="Search name, phone, notes or objection"
+              placeholder={tr(locale, "Search name, phone, notes or objection", "Buscar nombre, teléfono, notas u objeción")}
             />
           </form>
         </div>
@@ -96,12 +100,12 @@ export default async function LeadsPage({
               <thead>
                 <tr>
                   <th>Lead</th>
-                  <th>Current Stage</th>
-                  <th>Activity</th>
+                  <th>{tr(locale, "Current Stage", "Stage Actual")}</th>
+                  <th>{tr(locale, "Activity", "Actividad")}</th>
                   <th>School Tour</th>
-                  <th>Objection</th>
-                  <th>Notes</th>
-                  <th>Owner</th>
+                  <th>{tr(locale, "Objection", "Objeción")}</th>
+                  <th>{tr(locale, "Notes", "Notas")}</th>
+                  <th>{tr(locale, "Owner", "Asesora")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,23 +123,23 @@ export default async function LeadsPage({
                         <strong>{row.lead_name}</strong>
                       )}
                       <span className="secondary-cell">
-                        {row.phone ?? row.email ?? "No contact data"}
+                        {row.phone ?? row.email ?? tr(locale, "No contact data", "Sin datos de contacto")}
                       </span>
                     </td>
-                    <td>{stageLabel(row.current_stage)}</td>
+                    <td>{stageLabel(row.current_stage, locale)}</td>
                     <td>
                       {dateTimeLabel(row.activity_at)}
                       {row.activity_count > 1 ? (
                         <span className="secondary-cell">
-                          {number(row.activity_count)} events
+                          {number(row.activity_count)} {tr(locale, "events", "eventos")}
                         </span>
                       ) : null}
                     </td>
-                    <td>{attendanceLabel(row.attendance_status)}</td>
+                    <td>{attendanceLabel(row.attendance_status, locale)}</td>
                     <td>
                       {row.has_objection
-                        ? row.objection_summary ?? "Objection recorded"
-                        : "None recorded"}
+                        ? row.objection_summary ?? tr(locale, "Objection recorded", "Objeción registrada")
+                        : tr(locale, "None recorded", "Ninguna registrada")}
                     </td>
                     <td>
                       {row.school_tour_notes ? (
@@ -147,14 +151,14 @@ export default async function LeadsPage({
                         row.historical_comments ?? "—"
                       )}
                     </td>
-                    <td>{row.operational_owner ?? "Unassigned"}</td>
+                    <td>{row.operational_owner ?? tr(locale, "Unassigned", "Sin asignar")}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <EmptyState message="No leads match this scorecard and period." />
+          <EmptyState message={tr(locale, "No leads match this scorecard and period.", "No hay leads que coincidan con este scorecard y periodo.")} />
         )}
       </section>
     </DashboardLayout>

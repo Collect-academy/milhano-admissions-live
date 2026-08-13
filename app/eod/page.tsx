@@ -1,166 +1,74 @@
 import {
   AlertTriangle,
-  CalendarCheck2,
   CheckCircle2,
-  Clock4,
-  FileCheck2,
-  MessageCircleMore,
-  PhoneCall,
   Save,
   Send,
-  ShieldCheck,
-  UsersRound,
 } from "lucide-react";
 
-import {
-  saveEodSubmission,
-  validateEodSubmission,
-} from "@/app/eod/actions";
+import { saveEodSubmission } from "@/app/eod/actions";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { EmptyState } from "@/components/empty-state";
-import { KpiCard } from "@/components/kpi-card";
-import { OperationalCascade } from "@/components/operational-cascade";
+import { HelpTip } from "@/components/help-tip";
+import { conceptDefinition } from "@/lib/concepts";
 import { requireCurrentAppUser } from "@/lib/auth";
-import {
-  dateRangeParams,
-  resolveDateRange,
-} from "@/lib/date-range";
-import { getOperationalCascade } from "@/lib/cascade";
+import { dateRangeParams, resolveDateRange } from "@/lib/date-range";
 import { getEodData } from "@/lib/data";
-import {
-  dateLabel,
-  dateTimeLabel,
-  number,
-} from "@/lib/format";
+import { dateLabel, dateTimeLabel, number } from "@/lib/format";
+import { getDashboardLocale } from "@/lib/i18n";
+import { tr, type Locale } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
-const callOutsideGhlMetricKeys = new Set([
-  "calls_made",
-  "ghl_connected_calls",
-  "meaningful_conversations",
-]);
+type SearchParams = Record<string, string | string[] | undefined>;
 
-const teamMetricLabels: Record<string, string> = {
-  whatsapp_total_messages: "WhatsApp Messages",
-  whatsapp_inbound_messages: "Inbound WhatsApp",
-  whatsapp_outbound_messages: "Outbound WhatsApp",
-  whatsapp_manual_outbound_messages: "Manual Outbound WhatsApp",
-  whatsapp_automated_outbound_messages: "Automated WhatsApp",
-  whatsapp_active_conversations: "Active Conversations",
-  whatsapp_manually_attended_conversations: "Handled Conversations",
-  whatsapp_unique_contacts: "Unique Contacts",
-  whatsapp_admissions_related_messages: "Messages with Opportunity",
-  whatsapp_general_or_unclassified_messages: "General / Unclassified",
-  team_outbound_call_attempts: "Number of Dials",
-  team_inbound_calls: "Inbound Calls",
-  team_meaningful_calls_3min: "Meaningful Conversations",
-  trial_day_plus_closed_leads: "Trial Day+ / Closed",
+const SIMPLE_EOD_KEYS = [
+  "new_leads_received",
+  "ads_leads_reported",
+  "organic_leads_reported",
+  "contacted_reported",
+  "responses_reported",
+  "qualified_leads",
+  "school_tours_scheduled",
+  "school_tours_attended",
+] as const;
+
+const EOD_COPY: Record<string, {
+  definitionKey: string;
+  en: string;
+  es: string;
+}> = {
+  new_leads_received: { definitionKey: "new_leads", en: "Total Leads", es: "Leads Totales" },
+  ads_leads_reported: { definitionKey: "ads_leads", en: "Ads Leads", es: "Leads Ads" },
+  organic_leads_reported: { definitionKey: "organic_leads", en: "Organic Leads", es: "Orgánico" },
+  contacted_reported: { definitionKey: "contacted_reported", en: "Contacted", es: "Contactados" },
+  responses_reported: { definitionKey: "responses_reported", en: "# Responses", es: "# Respuestas" },
+  qualified_leads: { definitionKey: "qualified_leads", en: "Qualified / Fit", es: "Qualified / Fit" },
+  school_tours_scheduled: { definitionKey: "school_tours_booked", en: "ST Booked", es: "ST Booked" },
+  school_tours_attended: { definitionKey: "school_tours_attended", en: "ST Attended", es: "ST Attended" },
 };
 
-const statusLabels: Record<string, string> = {
-  system: "System",
-  pending: "Not Reported",
-  matched: "Matched",
-  reconciled: "Reconciled",
-  mixed_reconciled: "Mixed · Reconciled",
-  mixed_gap: "Mixed · Gap",
-  reported_gap: "Reported Gap",
-  awaiting_confirmation: "Awaiting Confirmation",
-  mismatch: "Mismatch",
-  draft: "Draft",
-  review: "Under Review",
-  blocked: "Blocked",
-  validated: "Validated",
-  submitted: "Submitted",
-  missed: "Not Submitted",
-};
-
-function statusClass(status: string): string {
-  if (
-    [
-      "matched",
-      "reconciled",
-      "system",
-      "validated",
-      "submitted",
-    ].includes(status)
-  ) {
-    return "status-good";
-  }
-
-  if (["mismatch", "blocked", "missed"].includes(status)) {
-    return "status-bad";
-  }
-
-  return "status-pending";
-}
-
-type SearchParams = Record<
-  string,
-  string | string[] | undefined
->;
-
-function first(
-  value: string | string[] | undefined,
-): string {
+function first(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
-function noticeMessage(
-  notice: string,
-  missing: string,
-  mismatches: string,
-): {
-  tone: "good" | "warning" | "error";
-  title: string;
-  description: string;
-} | null {
-  if (notice === "saved") {
-    return {
-      tone: "good",
-      title: "Draft Saved",
-      description:
-        "Declared values and notes were saved.",
-    };
-  }
+function labelFor(key: string, locale: Locale): string {
+  const copy = EOD_COPY[key];
+  if (!copy) return key;
+  return locale === "es" ? copy.es : copy.en;
+}
 
-  if (notice === "submitted") {
-    return {
-      tone: "good",
-      title: "EOD Submitted",
-      description:
-        "The EOD was saved even if the reported values differ from GHL. Any remaining gap stays visible for reconciliation.",
-    };
-  }
-
-  if (notice === "incomplete") {
-    return {
-      tone: "warning",
-      title: "Legacy Draft Status",
-      description: `${missing || "One or more"} values were incomplete under the previous EOD policy. V11 no longer blocks submission for a mismatch.`,
-    };
-  }
-
-  if (notice === "blocked") {
-    return {
-      tone: "error",
-      title: "Legacy Blocked EOD",
-      description: `${mismatches || "One or more"} gaps were blocked under the previous policy. New EOD submissions are non-blocking.`,
-    };
-  }
-
-  if (notice === "validated") {
-    return {
-      tone: "good",
-      title: "Mismatch Validated",
-      description:
-        "The admin account accepted the discrepancy with an audit comment.",
-    };
-  }
-
-  return null;
+function statusLabel(status: string, locale: Locale): string {
+  const labels: Record<string, [string, string]> = {
+    draft: ["Draft", "Borrador"],
+    submitted: ["Submitted", "Enviado"],
+    validated: ["Validated", "Validado"],
+    review: ["Under Review", "En revisión"],
+    missed: ["Not Submitted", "No enviado"],
+    blocked: ["Legacy Blocked", "Bloqueo legacy"],
+  };
+  const pair = labels[status];
+  return pair ? (locale === "es" ? pair[1] : pair[0]) : status;
 }
 
 export default async function EodPage({
@@ -169,585 +77,187 @@ export default async function EodPage({
   searchParams: Promise<SearchParams>;
 }) {
   const currentUser = await requireCurrentAppUser();
+  const locale = await getDashboardLocale();
   const params = await searchParams;
   const range = resolveDateRange(params);
-  const [data, cascade] = await Promise.all([
-    getEodData(range),
-    getOperationalCascade(range),
-  ]);
+  const data = await getEodData(range);
 
-  const latestSnapshot = data.snapshots[0] ?? null;
-  const latestDate =
-    latestSnapshot?.eod_date ?? data.rows[0]?.eod_date ?? null;
+  const latestDate = data.rows[0]?.eod_date ?? null;
   const latestRows = latestDate
     ? data.rows.filter((row) => row.eod_date === latestDate)
     : [];
 
-  const advisorGroups = new Map<
-    string,
-    {
-      appUserId: string;
-      submissionId: string;
-      status: string;
-      comments: string | null;
-      submittedAt: string | null;
-      validatedAt: string | null;
-      rows: typeof latestRows;
-    }
-  >();
+  const visibleRows = currentUser.role === "advisor"
+    ? latestRows.filter((row) => row.app_user_id === currentUser.id)
+    : latestRows;
 
-  for (const row of latestRows) {
-    const current = advisorGroups.get(row.display_name) ?? {
+  const groups = new Map<string, {
+    appUserId: string;
+    submissionId: string;
+    status: string;
+    comments: string | null;
+    submittedAt: string | null;
+    rows: typeof visibleRows;
+  }>();
+
+  for (const row of visibleRows) {
+    const current = groups.get(row.display_name) ?? {
       appUserId: row.app_user_id,
       submissionId: row.submission_id,
       status: row.submission_status,
       comments: row.submission_comments,
       submittedAt: row.submitted_at,
-      validatedAt: row.validated_at,
       rows: [],
     };
-
     current.rows.push(row);
-    advisorGroups.set(row.display_name, current);
+    groups.set(row.display_name, current);
   }
 
-  const metrics = latestSnapshot?.metrics ?? {};
-  const latestSync = data.syncRuns.find(
-    (run) => run.sync_type === "eod_snapshot",
-  );
-
-  const notice = noticeMessage(
-    first(params.notice),
-    first(params.missing),
-    first(params.mismatches),
-  );
-  const error = first(params.error);
   const preservedRange = dateRangeParams(range);
+  const notice = first(params.notice);
+  const error = first(params.error);
 
   return (
     <DashboardLayout
-      eyebrow="Operational Close"
-      title="End of Day"
-      subtitle="System values, advisor-reported totals and known activity outside GHL are stored side by side."
-      statusLabel={`Period ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
+      eyebrow={tr(locale, "Daily report", "Reporte diario")}
+      title="EOD"
+      subtitle={tr(
+        locale,
+        "Enter the same simple numbers you would report to the team. The EOD can be submitted even when GHL differs.",
+        "Ingresa los mismos números simples que reportarías al equipo. El EOD se puede enviar aunque GHL no cuadre.",
+      )}
+      statusLabel={latestDate ? `${tr(locale, "EOD", "EOD")} ${dateLabel(latestDate)}` : tr(locale, "No snapshot", "Sin snapshot")}
     >
-      <DateRangeFilter basePath="/eod" range={range} />
+      <DateRangeFilter basePath="/eod" range={range} locale={locale} />
 
-      <OperationalCascade metrics={cascade} range={range} />
+      <section className="scope-banner eod-simple-banner">
+        <CheckCircle2 size={19} />
+        <div>
+          <strong>{tr(locale, "Simple reporting", "Reporte simple")}</strong>
+          <span>
+            {tr(
+              locale,
+              "No GHL confirmation is required here. System-vs-reported differences are reviewed later in Reconciliation.",
+              "Aquí no necesitas confirmar GHL. Las diferencias entre sistema y reporte se revisan después en Reconciliación.",
+            )}
+          </span>
+        </div>
+      </section>
 
       {error ? (
         <section className="eod-feedback eod-feedback-error">
           <AlertTriangle size={19} />
+          <div><strong>{tr(locale, "Unable to save EOD", "No se pudo guardar el EOD")}</strong><span>{error}</span></div>
+        </section>
+      ) : null}
+
+      {notice === "submitted" || notice === "saved" ? (
+        <section className="eod-feedback eod-feedback-good">
+          <CheckCircle2 size={19} />
           <div>
-            <strong>Unable to Process EOD</strong>
-            <span>{error}</span>
+            <strong>{notice === "submitted" ? tr(locale, "EOD Submitted", "EOD Enviado") : tr(locale, "Draft Saved", "Borrador Guardado")}</strong>
+            <span>{tr(locale, "Your reported numbers were saved. Any discrepancy remains auditable without blocking submission.", "Tus números reportados quedaron guardados. Cualquier discrepancia permanece auditable sin bloquear el envío.")}</span>
           </div>
         </section>
       ) : null}
 
-      {notice ? (
-        <section
-          className={`eod-feedback eod-feedback-${notice.tone}`}
-        >
-          {notice.tone === "good" ? (
-            <CheckCircle2 size={19} />
-          ) : (
-            <AlertTriangle size={19} />
-          )}
-          <div>
-            <strong>{notice.title}</strong>
-            <span>{notice.description}</span>
-          </div>
-        </section>
-      ) : null}
+      {groups.size ? (
+        [...groups.entries()].map(([displayName, group]) => {
+          const editable = currentUser.role === "admin" || (
+            currentUser.role === "advisor" && currentUser.id === group.appUserId && !["submitted", "validated"].includes(group.status)
+          );
+          const rowMap = new Map(group.rows.map((row) => [row.metric_key, row]));
+          const simpleRows = SIMPLE_EOD_KEYS
+            .map((key) => rowMap.get(key))
+            .filter((row): row is NonNullable<typeof row> => Boolean(row));
 
-      <section className="scope-banner">
-        <Clock4 size={19} />
-        <div>
-          <strong>
-            Window: daily cutoff at 2:50 PM Mérida time
-          </strong>
-          <span>
-            Monday includes activity from the previous Friday.
-            The automatic snapshot runs at 2:52 PM.
-          </span>
-        </div>
-      </section>
+          const total = rowMap.get("new_leads_received")?.declared_value ?? null;
+          const ads = rowMap.get("ads_leads_reported")?.declared_value ?? null;
+          const organic = rowMap.get("organic_leads_reported")?.declared_value ?? null;
+          const acquisitionMismatch = total !== null && ads !== null && organic !== null && total !== ads + organic;
 
-      <section className="scope-banner">
-        <ShieldCheck size={19} />
-        <div>
-          <strong>How to report a mismatch</strong>
-          <span>
-            Reported Total is what you observed. Known Outside GHL
-            is only the portion you know is missing from GHL. You
-            can submit even when a gap remains.
-          </span>
-        </div>
-      </section>
+          return (
+            <section className="panel eod-simple-card" key={group.submissionId}>
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">{tr(locale, "Advisor EOD", "EOD Asesora")}</p>
+                  <h2>{displayName}</h2>
+                </div>
+                <div className="eod-simple-status">
+                  <span className="status-pill status-pending">{statusLabel(group.status, locale)}</span>
+                  {group.submittedAt ? <small>{dateTimeLabel(group.submittedAt)}</small> : null}
+                </div>
+              </div>
 
-      <section className="kpi-grid">
-        <KpiCard
-          label="Advisors in Snapshot"
-          value={number(advisorGroups.size)}
-          helper="Pathi and Cinthia active"
-          icon={UsersRound}
-        />
-        <KpiCard
-          label="WhatsApp Messages"
-          value={number(metrics.whatsapp_total_messages)}
-          helper="Shared channel metric"
-          icon={MessageCircleMore}
-        />
-        <KpiCard
-          label="Handled Conversations"
-          value={number(
-            metrics.whatsapp_manually_attended_conversations,
-          )}
-          helper="With at least one manual outbound message"
-          icon={CheckCircle2}
-        />
-        <KpiCard
-          label="Number of Dials"
-          value={number(metrics.team_outbound_call_attempts)}
-          helper="Registered in GHL"
-          icon={PhoneCall}
-        />
-        <KpiCard
-          label="Snapshot Generated"
-          value={latestSnapshot ? "Yes" : "No"}
-          helper={dateTimeLabel(latestSnapshot?.generated_at)}
-          icon={CalendarCheck2}
-        />
-        <KpiCard
-          label="Trial Day+ / Closed"
-          value={number(
-            metrics.trial_day_plus_closed_leads,
-          )}
-          helper="Distinct leads entering Trial Day Booked or any later stage"
-          icon={CheckCircle2}
-        />
-      </section>
+              {acquisitionMismatch ? (
+                <div className="eod-inline-warning">
+                  <AlertTriangle size={16} />
+                  <span>{tr(locale, `Ads + Organic = ${number((ads ?? 0) + (organic ?? 0))}, but Total Leads = ${number(total)}. You may still submit; this is only a warning.`, `Ads + Orgánico = ${number((ads ?? 0) + (organic ?? 0))}, pero Leads Totales = ${number(total)}. Puedes enviar de todas formas; solo es una alerta.`)}</span>
+                </div>
+              ) : null}
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Team / Channel</p>
-            <h2>Shared EOD Metrics</h2>
-          </div>
-          <p className="panel-note">
-            WhatsApp is not artificially split between advisors
-            when GHL does not provide a userId.
-          </p>
-        </div>
+              <form action={saveEodSubmission} className="eod-simple-form">
+                <input name="submission_id" type="hidden" value={group.submissionId} />
+                {Object.entries(preservedRange).map(([key, value]) => (
+                  <input key={key} name={key} type="hidden" value={value} />
+                ))}
 
-        {latestSnapshot ? (
-          <div className="metric-tile-grid">
-            {Object.entries(metrics).map(([key, value]) => (
-              <article className="metric-tile" key={key}>
-                <span>{teamMetricLabels[key] ?? key}</span>
-                <strong>{number(value)}</strong>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <EmptyState message="No team snapshot is available yet." />
-        )}
-      </section>
-
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Operational Confirmation</p>
-            <h2>Individual Snapshot</h2>
-          </div>
-          <p className="panel-note">
-            Each advisor can report the real total and, separately, only the activity she knows is outside GHL. A mismatch no longer blocks submission.
-          </p>
-        </div>
-
-        {advisorGroups.size ? (
-          <div className="advisor-grid advisor-grid-editable">
-            {[...advisorGroups.entries()].map(
-              ([advisor, group]) => {
-                const canEdit =
-                  currentUser.role === "admin" ||
-                  currentUser.id === group.appUserId;
-                const locked = [
-                  "submitted",
-                  "validated",
-                ].includes(group.status);
-                const editable = canEdit && !locked;
-
-                return (
-                  <article
-                    className="advisor-card eod-advisor-card"
-                    key={advisor}
-                  >
-                    <div className="advisor-heading">
-                      <div>
-                        <p className="eyebrow">Advisor</p>
-                        <h3>{advisor}</h3>
-                        <span className="eod-timestamp">
-                          {group.validatedAt
-                            ? `Validated ${dateTimeLabel(
-                                group.validatedAt,
-                              )}`
-                            : group.submittedAt
-                              ? `Submitted ${dateTimeLabel(
-                                  group.submittedAt,
-                                )}`
-                              : "Pending EOD"}
+                <div className="eod-simple-grid">
+                  {simpleRows.map((row) => {
+                    const copy = EOD_COPY[row.metric_key];
+                    return (
+                      <label className="eod-simple-field" key={row.metric_key}>
+                        <input name="metric_key" type="hidden" value={row.metric_key} />
+                        <span>
+                          {labelFor(row.metric_key, locale)}{" "}
+                          <HelpTip text={copy ? conceptDefinition(copy.definitionKey, locale) : row.description} />
                         </span>
-                      </div>
-                      <span
-                        className={`status-pill ${statusClass(
-                          group.status,
-                        )}`}
-                      >
-                        {statusLabels[group.status] ??
-                          group.status}
-                      </span>
-                    </div>
-
-                    <form
-                      action={saveEodSubmission}
-                      className="eod-form"
-                    >
-                      <input
-                        name="submission_id"
-                        type="hidden"
-                        value={group.submissionId}
-                      />
-                      {Object.entries(preservedRange).map(
-                        ([key, value]) => (
-                          <input
-                            key={key}
-                            name={key}
-                            type="hidden"
-                            value={value}
-                          />
-                        ),
-                      )}
-
-                      <div className="eod-metric-list">
-                        {group.rows.map((row) => {
-                          const manual = !row.is_system_only;
-
-                          return (
-                            <section
-                              className="eod-metric-row"
-                              key={`${row.submission_id}-${row.metric_key}`}
-                            >
-                              <input
-                                name="metric_key"
-                                type="hidden"
-                                value={row.metric_key}
-                              />
-
-                              <div className="eod-metric-copy">
-                                <strong>{row.label}</strong>
-                                <span>
-                                  {row.description ??
-                                    "Daily EOD metric."}
-                                </span>
-                              </div>
-
-                              <div className="eod-system-value">
-                                <span>System</span>
-                                <strong>
-                                  {number(row.system_value)}
-                                </strong>
-                              </div>
-
-                              {manual ? (
-                                <>
-                                  <label className="eod-number-field">
-                                    <span>Reported Total</span>
-                                    <input
-                                      defaultValue={
-                                        row.declared_value ?? ""
-                                      }
-                                      disabled={!editable}
-                                      min="0"
-                                      name={`declared__${row.metric_key}`}
-                                      placeholder="0"
-                                      step="1"
-                                      type="number"
-                                    />
-                                  </label>
-
-                                  <label className="eod-number-field eod-extra-field">
-                                    <span>
-                                      {callOutsideGhlMetricKeys.has(
-                                        row.metric_key,
-                                      )
-                                        ? "WhatsApp / External"
-                                        : "Known Outside GHL"}
-                                    </span>
-                                    <input
-                                      defaultValue={
-                                        row.manual_extra_value ?? 0
-                                      }
-                                      disabled={!editable}
-                                      min="0"
-                                      name={`manual_extra__${row.metric_key}`}
-                                      placeholder="0"
-                                      step="1"
-                                      type="number"
-                                    />
-                                  </label>
-
-                                  <label className="eod-note-field">
-                                    <span>Context / Reason</span>
-                                    <input
-                                      defaultValue={
-                                        row.discrepancy_note ?? ""
-                                      }
-                                      disabled={!editable}
-                                      name={`note__${row.metric_key}`}
-                                      placeholder="Example: 4 WhatsApp calls outside GHL"
-                                      type="text"
-                                    />
-                                  </label>
-                                </>
-                              ) : (
-                                <div className="eod-system-only">
-                                  <ShieldCheck size={15} />
-                                  <span>Automatic</span>
-                                </div>
-                              )}
-
-                              <div className="eod-row-status">
-                                <span
-                                  className={`status-pill ${statusClass(
-                                    row.reconciliation_status,
-                                  )}`}
-                                >
-                                  {statusLabels[
-                                    row.reconciliation_status
-                                  ] ??
-                                    row.reconciliation_status}
-                                </span>
-                                {row.operational_difference !== null &&
-                                row.operational_difference !== 0 ? (
-                                  <small>
-                                    Gap:{" "}
-                                    {row.operational_difference > 0
-                                      ? "+"
-                                      : ""}
-                                    {number(
-                                      row.operational_difference,
-                                    )}
-                                  </small>
-                                ) : manual ? (
-                                  <small>
-                                    Operational: {number(
-                                      row.operational_total,
-                                    )}
-                                  </small>
-                                ) : null}
-                              </div>
-                            </section>
-                          );
-                        })}
-                      </div>
-
-                      <label className="eod-comments-field">
-                        <span>General EOD Comment</span>
-                        <textarea
-                          defaultValue={group.comments ?? ""}
+                        <input
+                          defaultValue={row.declared_value ?? ""}
                           disabled={!editable}
-                          name="comments"
-                          placeholder="General context, pending items or a brief explanation."
-                          rows={3}
+                          min="0"
+                          name={`declared__${row.metric_key}`}
+                          placeholder="0"
+                          step="1"
+                          type="number"
                         />
                       </label>
+                    );
+                  })}
+                </div>
 
-                      <div className="eod-form-actions">
-                        {editable ? (
-                          <>
-                            <button
-                              className="secondary-button"
-                              name="intent"
-                              type="submit"
-                              value="save"
-                            >
-                              <Save size={16} />
-                              Save Draft
-                            </button>
-                            <button
-                              className="primary-button"
-                              name="intent"
-                              type="submit"
-                              value="submit"
-                            >
-                              <Send size={16} />
-                              Submit EOD
-                            </button>
-                          </>
-                        ) : (
-                          <span className="eod-readonly-note">
-                            {locked
-                              ? "This EOD is no longer open for editing."
-                              : "You can review this EOD but cannot edit it."}
-                          </span>
-                        )}
-                      </div>
-                    </form>
+                <label className="eod-comments-field">
+                  <span>{tr(locale, "Notes / breakdown (optional)", "Notas / desglose (opcional)")}</span>
+                  <textarea
+                    defaultValue={group.comments ?? ""}
+                    disabled={!editable}
+                    name="comments"
+                    placeholder={tr(locale, "Example: Contacted = 21 calls + 12 WhatsApp. Mention anything outside GHL here.", "Ejemplo: Contactados = 21 llamadas + 12 WhatsApp. Anota aquí cualquier actividad fuera de GHL.")}
+                    rows={3}
+                  />
+                </label>
 
-                    {group.status === "blocked" &&
-                    currentUser.role === "admin" ? (
-                      <form
-                        action={validateEodSubmission}
-                        className="eod-admin-validation"
-                      >
-                        <input
-                          name="submission_id"
-                          type="hidden"
-                          value={group.submissionId}
-                        />
-                        {Object.entries(preservedRange).map(
-                          ([key, value]) => (
-                            <input
-                              key={key}
-                              name={key}
-                              type="hidden"
-                              value={value}
-                            />
-                          ),
-                        )}
-                        <label>
-                          <span>Admin Validation</span>
-                          <textarea
-                            name="validation_comment"
-                            placeholder="Explain why the mismatch is accepted."
-                            required
-                            rows={2}
-                          />
-                        </label>
-                        <button
-                          className="eod-validate-button"
-                          type="submit"
-                        >
-                          <FileCheck2 size={16} />
-                          Validate Mismatch
-                        </button>
-                      </form>
-                    ) : null}
-                  </article>
-                );
-              },
-            )}
-          </div>
-        ) : (
-          <EmptyState message="No individual snapshots are available for this date." />
-        )}
-      </section>
-
-      <div className="two-column">
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">History</p>
-              <h2>EOD Snapshots within {range.label}</h2>
-            </div>
-          </div>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>WhatsApp</th>
-                  <th>Manual Outbound</th>
-                  <th>Conversations</th>
-                  <th>Calls</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.snapshots.map((snapshot) => (
-                  <tr key={snapshot.eod_date}>
-                    <td>{dateLabel(snapshot.eod_date)}</td>
-                    <td>
-                      {number(
-                        snapshot.metrics
-                          .whatsapp_total_messages,
-                      )}
-                    </td>
-                    <td>
-                      {number(
-                        snapshot.metrics
-                          .whatsapp_manual_outbound_messages,
-                      )}
-                    </td>
-                    <td>
-                      {number(
-                        snapshot.metrics
-                          .whatsapp_manually_attended_conversations,
-                      )}
-                    </td>
-                    <td>
-                      {number(
-                        snapshot.metrics
-                          .team_outbound_call_attempts,
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">System Health</p>
-              <h2>Latest Synchronizations</h2>
-            </div>
-          </div>
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Process</th>
-                  <th>Status</th>
-                  <th>Read</th>
-                  <th>Failed</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.syncRuns.map((run) => (
-                  <tr key={run.id}>
-                    <td>{run.sync_type}</td>
-                    <td>
-                      <span
-                        className={`status-pill ${
-                          run.status === "success"
-                            ? "status-good"
-                            : run.status === "failed"
-                              ? "status-bad"
-                              : "status-pending"
-                        }`}
-                      >
-                        {run.status}
-                      </span>
-                    </td>
-                    <td>{number(run.records_read)}</td>
-                    <td>{number(run.records_failed)}</td>
-                    <td>
-                      {dateTimeLabel(
-                        run.finished_at ?? run.started_at,
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+                <div className="eod-form-actions">
+                  {editable ? (
+                    <>
+                      <button className="secondary-button" name="intent" type="submit" value="save">
+                        <Save size={16} /> {tr(locale, "Save Draft", "Guardar Borrador")}
+                      </button>
+                      <button className="primary-button" name="intent" type="submit" value="submit">
+                        <Send size={16} /> {tr(locale, "Submit EOD", "Enviar EOD")}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="eod-readonly-note">{tr(locale, "Read-only EOD.", "EOD de solo lectura.")}</span>
+                  )}
+                </div>
+              </form>
+            </section>
+          );
+        })
+      ) : (
+        <EmptyState message={tr(locale, "No EOD snapshot is available for this period.", "No hay snapshot EOD disponible para este periodo.")} />
+      )}
     </DashboardLayout>
   );
 }

@@ -10,6 +10,7 @@ export type CurrentAppUser = {
   authUserId: string;
   displayName: string;
   email: string | null;
+  username: string | null;
   role: "advisor" | "admin" | "viewer";
   ghlUserId: string | null;
 };
@@ -28,6 +29,7 @@ export async function getCurrentAppUser(): Promise<CurrentAppUser | null> {
       authUserId: "basic-auth-fallback",
       displayName: "Administrador temporal",
       email: null,
+      username: null,
       role: "admin",
       ghlUserId: null,
     };
@@ -44,7 +46,7 @@ export async function getCurrentAppUser(): Promise<CurrentAppUser | null> {
   const admin = createSupabaseAdmin();
   const result = await admin
     .from("milhano_app_users")
-    .select("id, auth_user_id, display_name, email, role, ghl_user_id, is_active")
+    .select("id, auth_user_id, display_name, email, username, role, ghl_user_id, is_active")
     .eq("auth_user_id", authUserId)
     .eq("is_active", true)
     .maybeSingle();
@@ -64,6 +66,7 @@ export async function getCurrentAppUser(): Promise<CurrentAppUser | null> {
     authUserId: result.data.auth_user_id,
     displayName: result.data.display_name,
     email: result.data.email,
+    username: result.data.username ?? null,
     role: result.data.role,
     ghlUserId: result.data.ghl_user_id,
   };

@@ -15,8 +15,8 @@ type SearchParams = Promise<{
 }>;
 
 const errorMessages: Record<string, string> = {
-  invalid: "The email or password is incorrect.",
-  missing: "Enter your email and password.",
+  invalid: "The username/email or password is incorrect.",
+  missing: "Enter your username/email and password.",
   access:
     "The account signed in, but it is not linked to an active dashboard user.",
   "not-configured":
@@ -58,8 +58,7 @@ export default async function LoginPage({
             <p className="eyebrow">Private access</p>
             <h1>Sign In</h1>
             <p>
-              Use the individual account created for the
-              dashboard.
+              Use your dashboard username and password.
             </p>
           </div>
         </div>
@@ -81,13 +80,15 @@ export default async function LoginPage({
             <input name="next" type="hidden" value={next} />
 
             <label>
-              <span>Email</span>
+              <span>Username</span>
               <input
-                autoComplete="email"
-                name="email"
-                placeholder="name@coldem.edu.mx"
+                autoCapitalize="none"
+                autoComplete="username"
+                name="identifier"
+                placeholder="MonaCashflow"
                 required
-                type="email"
+                spellCheck={false}
+                type="text"
               />
             </label>
 

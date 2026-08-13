@@ -3,17 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import type { Locale } from "@/lib/locale";
+
 const links = [
-  { href: "/", label: "Summary" },
-  { href: "/pipeline", label: "Pipeline" },
-  { href: "/whatsapp", label: "WhatsApp" },
-  { href: "/llamadas", label: "Calls" },
-  { href: "/eod", label: "EOD" },
-  { href: "/reconciliation", label: "Reconciliation" },
-  { href: "/sistema", label: "System" },
+  { href: "/", en: "Summary", es: "Resumen" },
+  { href: "/pipeline", en: "Pipeline", es: "Pipeline" },
+  { href: "/whatsapp", en: "WhatsApp", es: "WhatsApp" },
+  { href: "/llamadas", en: "Calls", es: "Llamadas" },
+  { href: "/eod", en: "EOD", es: "EOD" },
+  { href: "/reconciliation", en: "Reconciliation", es: "Reconciliación" },
+  { href: "/sistema", en: "System", es: "Sistema" },
 ];
 
-export function AppNav() {
+export function AppNav({ locale }: { locale: Locale }) {
   const pathname = usePathname();
 
   return (
@@ -37,7 +39,7 @@ export function AppNav() {
             href={link.href}
             key={link.href}
           >
-            {link.label}
+            {locale === "es" ? link.es : link.en}
           </Link>
         );
       })}

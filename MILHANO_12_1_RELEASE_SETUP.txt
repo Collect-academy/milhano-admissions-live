@@ -1,0 +1,196 @@
+MILHANO ADMISSIONS | V12.1
+SIMPLE EOD + QUALIFIED/FIT ALIAS + FOLLOW-UP SPLIT + BILINGUAL HELP
+
+IMPORTANT CORRECTION FROM V12
+
+Qualified and Fit are NOT separate stages.
+They are the same Milhano business milestone.
+
+GHL keeps the stage name:
+Fit
+
+The dashboard/EOD displays it as:
+Qualified / Fit
+
+DO NOT create a GHL stage named Qualified.
+
+------------------------------------------------------------
+A. GHL PIPELINE CHANGE
+------------------------------------------------------------
+
+Previous early-stage structure:
+Cliente potencial
+No responde / Seguimiento
+No fit
+Lost / Sin continuidad
+Fit
+...
+
+V12.1 preferred structure:
+Cliente potencial
+No responde
+Seguimiento
+No fit
+Lost / Sin continuidad
+Fit
+School Tour agendado
+School Tour atendido
+Pasadía agendada
+Pasadía asistida
+Retroalimentación
+En evaluación
+Inscripción en proceso
+Inscrito
+
+Recommended GHL steps:
+
+1. Rename the existing stage:
+   No responde / Seguimiento
+   to:
+   No responde
+
+2. Create ONE new stage:
+   Seguimiento
+
+3. Place Seguimiento directly after No responde.
+
+4. Do NOT create Qualified.
+
+5. Existing opportunities that were in the combined stage will become
+   No responde after the rename. Review the active ones and move to
+   Seguimiento only those that really have a future contact action/callback.
+
+Operational definitions:
+
+No responde
+- Contact attempts happened but no reply yet.
+- Still active.
+- NOT Lost.
+
+Seguimiento
+- There is a known next contact action or valid reason to retry later.
+- Example: asked for a callback at another hour/day.
+- Still active.
+
+Lost / Sin continuidad
+- Active pursuit is actually finished.
+- Do not use simply because the requested callback time was inconvenient.
+
+No fit
+- Does not meet an admissions criterion.
+
+Fit = Qualified
+- Same business milestone.
+- Dashboard label: Qualified / Fit.
+
+Historical records named "No responde / Seguimiento" remain supported as
+legacy so old history is not destroyed.
+
+------------------------------------------------------------
+B. SUPABASE
+------------------------------------------------------------
+
+Run:
+MILHANO_12_1_SIMPLE_EOD_FIT_FOLLOWUP_BILINGUAL.sql
+
+This is safe to run whether the earlier V12 SQL was never run OR was
+already run. If V12 created the separate Qualified rule in Supabase,
+V12.1 disables that rule and restores Fit as the only qualification event.
+
+It does NOT create a GHL Qualified stage.
+
+------------------------------------------------------------
+C. DASHBOARD DEPLOY
+------------------------------------------------------------
+
+Deploy:
+MILHANO_ADMISSIONS_LIVE_DASHBOARD_V12_1_FIT_FOLLOWUP_SIMPLE_EOD_BILINGUAL.zip
+
+V12.1 includes all previous V11/V11.1 functionality plus:
+- Simple advisor EOD
+- ES / EN switch for normal users
+- MonaCashflow forced to English
+- ? help definitions across key business metrics/stages
+- Facebook/Instagram kept as ambiguous raw source unless paid/organic is proven
+- Qualified / Fit unified again
+- No responde vs Seguimiento separated in terminology/dashboard
+- Legacy combined stage recognized during transition
+
+------------------------------------------------------------
+D. GHL TEST
+------------------------------------------------------------
+
+After changing the GHL stages:
+
+1. Move one test lead into No responde.
+2. Move one test lead into Seguimiento.
+3. Move one real/test qualified lead into Fit only when appropriate.
+4. Run:
+   MILHANO_12_1_GHL_FOLLOWUP_STAGE_CHECK.sql
+
+Expected:
+- Recent events show No responde and Seguimiento.
+- Qualification evidence shows evidence_stage = Fit.
+- No active Supabase rule should treat Qualified as a separate milestone.
+
+------------------------------------------------------------
+E. PATHI EOD BACKFILL / AUDIT
+------------------------------------------------------------
+
+Pathi's supplied reports are preserved as reported evidence:
+
+Monday 2026-08-10
+Total Leads 13
+Ads Leads 13
+Organic 0
+Contacted 33 (reported as 21 + 12; components unspecified)
+Responses 9
+Qualified / Fit 3
+ST Booked 1
+ST Attended 1
+
+Tuesday 2026-08-11
+Total Leads 14
+Ads Leads 14
+Organic 0
+Contacted 26
+Responses 7
+Qualified / Fit 6
+ST Booked 2
+ST Attended 2
+
+To load them:
+MILHANO_12_1_PATHI_AUG10_11_REPORTED.sql
+
+Then run the read-only comparison:
+MILHANO_12_1_AUDIT_PATHI_AUG10_11_READ_ONLY.sql
+
+Do not convert gaps to Manual Extra until the audit identifies what is
+actually absent from GHL.
+
+------------------------------------------------------------
+F. LANGUAGE + HELP
+------------------------------------------------------------
+
+Normal dashboard users:
+ES | EN switch is visible in the header.
+Spanish is the default when no language cookie exists.
+
+MonaCashflow:
+English is forced server-side and the language switch is hidden.
+
+The ? help control explains definitions such as:
+- Leads
+- Ads / Organic
+- Contactados
+- Responses
+- Qualified / Fit
+- No responde
+- Seguimiento
+- No Fit
+- Lost
+- School Tour milestones
+- Dials / Connected Calls / Meaningful Conversations
+- WhatsApp message/conversation metrics
+- Raw Source
+- System / Reported / Manual Extra / Operational / Gap

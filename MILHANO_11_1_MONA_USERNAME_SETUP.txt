@@ -1,0 +1,89 @@
+MILHANO | V11.1 | MONA USERNAME LOGIN
+
+VISIBLE LOGIN FOR MONA
+
+Username: MonaCashflow
+Password: Collect123$
+
+Mona does NOT need to type or know an email address.
+
+HOW IT WORKS
+
+Supabase Auth itself authenticates with email/password, not a generic
+username/password pair. The dashboard now resolves MonaCashflow on the
+server to the existing internal auth identity:
+
+mona@coldem.edu.mx
+
+The email is only an internal identifier. It is not shown in the login
+form and Mona does not need access to that inbox.
+
+INSTALL ORDER
+
+1) SUPABASE SQL
+
+Run:
+MILHANO_11_1_MONA_USERNAME_LOGIN.sql
+
+Expected final row:
+display_name       Mona Al Idrissi
+username           MonaCashflow
+internal_auth_email mona@coldem.edu.mx
+role               admin
+is_active          true
+
+auth_user_id may still be null if the Auth user has not been created.
+
+2) SUPABASE AUTH USER
+
+Supabase > Authentication > Users > Add user > Create new user
+
+Internal email:
+mona@coldem.edu.mx
+
+Password:
+Collect123$
+
+Mark / auto-confirm the email.
+
+If the user already exists, do not create a duplicate. Reset/set that
+user's password to Collect123$ and keep it confirmed.
+
+3) IF auth_user_id WAS NULL
+
+Re-run MILHANO_11_1_MONA_USERNAME_LOGIN.sql once.
+The final row must now have auth_user_id populated.
+
+4) DEPLOY
+
+Deploy:
+MILHANO_ADMISSIONS_LIVE_DASHBOARD_V11_1_MONA_USERNAME.zip
+
+This includes all V11 reconciliation features plus username login.
+
+5) TEST
+
+Open an incognito/private window.
+
+Username:
+MonaCashflow
+
+Password:
+Collect123$
+
+Expected:
+- Mona Al Idrissi displayed in navigation
+- role Admin
+- access to Reconciliation
+- ability to create reconciliation adjustments
+- logout works
+
+EXISTING USERS
+
+Existing advisor/admin email logins continue to work. Only the login form
+label changes to Username; entering a full email address is still accepted.
+
+SECURITY NOTE
+
+Collect123$ is the requested initial password. Because it has been shared
+in chat, changing it after the first successful login would be safer.

@@ -13,6 +13,7 @@ import {
 } from "recharts";
 
 import type { WhatsAppDaily } from "@/lib/types";
+import type { Locale } from "@/lib/locale";
 
 function shortDate(value: string): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -21,7 +22,7 @@ function shortDate(value: string): string {
   }).format(new Date(`${value}T12:00:00`));
 }
 
-export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
+export function WhatsAppActivityChart({ data, locale = "en" }: { data: WhatsAppDaily[]; locale?: Locale }) {
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
@@ -44,14 +45,14 @@ export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
           <Legend />
           <Bar
             dataKey="inbound_messages"
-            name="Inbound"
+            name={locale === "es" ? "Entrantes" : "Inbound"}
             stackId="messages"
             fill="var(--blue)"
             radius={[0, 0, 0, 0]}
           />
           <Bar
             dataKey="manual_outbound_messages"
-            name="Manual Outbound"
+            name={locale === "es" ? "Salientes manuales" : "Manual Outbound"}
             stackId="messages"
             fill="var(--green)"
             radius={[5, 5, 0, 0]}
@@ -59,7 +60,7 @@ export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
           <Line
             type="monotone"
             dataKey="active_conversations"
-            name="Conversations"
+            name={locale === "es" ? "Conversaciones" : "Conversations"}
             stroke="var(--gold)"
             strokeWidth={2}
             dot={false}
@@ -70,7 +71,7 @@ export function WhatsAppActivityChart({ data }: { data: WhatsAppDaily[] }) {
   );
 }
 
-export function WhatsAppClassificationChart({ data }: { data: WhatsAppDaily[] }) {
+export function WhatsAppClassificationChart({ data, locale = "en" }: { data: WhatsAppDaily[]; locale?: Locale }) {
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
@@ -87,13 +88,13 @@ export function WhatsAppClassificationChart({ data }: { data: WhatsAppDaily[] })
           <Legend />
           <Bar
             dataKey="admissions_related_messages"
-            name="With Opportunity"
+            name={locale === "es" ? "Con Opportunity" : "With Opportunity"}
             stackId="classification"
             fill="var(--green)"
           />
           <Bar
             dataKey="general_or_unclassified_messages"
-            name="General / Unclassified"
+            name={locale === "es" ? "General / Sin clasificar" : "General / Unclassified"}
             stackId="classification"
             fill="var(--gold)"
             radius={[5, 5, 0, 0]}

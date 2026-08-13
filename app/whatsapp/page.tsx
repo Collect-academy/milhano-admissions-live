@@ -23,6 +23,8 @@ import {
   number,
   percent,
 } from "@/lib/format";
+import { getDashboardLocale } from "@/lib/i18n";
+import { tr } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +53,7 @@ export default async function WhatsAppPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
+  const locale = await getDashboardLocale();
   const range = resolveDateRange(params);
   const data = await getWhatsAppDashboardData(range);
   const selected = data.daily;
@@ -75,14 +78,15 @@ export default async function WhatsAppPage({
 
   return (
     <DashboardLayout
-      eyebrow="Institutional Channel"
-      title="WhatsApp Operations"
-      subtitle="Institutional number volume: general service, admissions and automations."
-      statusLabel={`Period ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
+      eyebrow={tr(locale, "Institutional Channel", "Canal Institucional")}
+      title={tr(locale, "WhatsApp Operations", "Operación de WhatsApp")}
+      subtitle={tr(locale, "Institutional number volume: general service, admissions and automations.", "Volumen del número institucional: servicio general, admisiones y automatizaciones.")}
+      statusLabel={`${tr(locale, "Period", "Periodo")} ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
       <DateRangeFilter
         basePath="/whatsapp"
         range={range}
+        locale={locale}
       />
 
       {backfill ? (
@@ -116,72 +120,81 @@ export default async function WhatsAppPage({
 
       <section className="kpi-grid">
         <KpiCard
-          label={`Messages · ${range.label}`}
+          label={`${tr(locale, "Messages", "Mensajes")} · ${range.label}`}
           value={number(selectedTotal)}
-          helper="Inbound + outbound"
+          helper={tr(locale, "Inbound + outbound", "Entrantes + salientes")}
           icon={MessageCircleMore}
+          definitionKey="whatsapp_messages"
+          locale={locale}
         />
         <KpiCard
-          label="Inbound"
+          label={tr(locale, "Inbound", "Entrantes")}
           value={number(sum(selected, "inbound_messages"))}
-          helper="Received demand"
+          helper={tr(locale, "Received demand", "Demanda recibida")}
           icon={Inbox}
+          definitionKey="whatsapp_inbound"
+          locale={locale}
         />
         <KpiCard
-          label="Manual Outbound"
+          label={tr(locale, "Manual Outbound", "Salientes Manuales")}
           value={number(
             sum(selected, "manual_outbound_messages"),
           )}
-          helper="Shared channel"
+          helper={tr(locale, "Shared channel", "Canal compartido")}
           icon={Send}
+          definitionKey="whatsapp_manual_outbound"
+          locale={locale}
         />
         <KpiCard
-          label="Automated"
+          label={tr(locale, "Automated", "Automatizados")}
           value={number(
             sum(selected, "automated_outbound_messages"),
           )}
-          helper="Sent by workflows"
+          helper={tr(locale, "Sent by workflows", "Enviados por workflows")}
           icon={Bot}
+          definitionKey="whatsapp_automated"
+          locale={locale}
         />
         <KpiCard
-          label="Conversations"
+          label={tr(locale, "Conversations", "Conversaciones")}
           value={number(
             sum(selected, "active_conversations"),
           )}
-          helper="Daily sum; contacts may repeat across days"
+          helper={tr(locale, "Daily sum; contacts may repeat across days", "Suma diaria; los contactos pueden repetirse entre días")}
           icon={MessagesSquare}
+          definitionKey="whatsapp_conversations"
+          locale={locale}
         />
         <KpiCard
-          label="Contacts"
+          label={tr(locale, "Contacts", "Contactos")}
           value={number(sum(selected, "unique_contacts"))}
-          helper="Daily sum; contacts may repeat across days"
+          helper={tr(locale, "Daily sum; contacts may repeat across days", "Suma diaria; los contactos pueden repetirse entre días")}
           icon={ContactRound}
+          definitionKey="whatsapp_contacts"
+          locale={locale}
         />
       </section>
 
       <section className="decision-banner">
         <div>
           <p className="eyebrow">
-            Operational Signal · {range.label}
+            {tr(locale, "Operational Signal", "Señal Operativa")} · {range.label}
           </p>
           <h2>
-            The institutional number handles service beyond
-            admissions
+            {tr(locale, "The institutional number handles service beyond admissions", "El número institucional atiende servicio más allá de admisiones")}
           </h2>
           <p>
-            {percent(generalShare)} of period messages
-            are classified as general service or have no
-            opportunity.
+            {percent(generalShare)} {tr(locale, "of period messages are classified as general service or have no opportunity.", "de los mensajes del periodo se clasifican como servicio general o no tienen opportunity.")}
           </p>
         </div>
         <div className="decision-stats">
           <div>
             <strong>{number(selectedAdmissions)}</strong>
-            <span>With Opportunity</span>
+            <span>{tr(locale, "With Opportunity", "Con Opportunity")}</span>
           </div>
           <div>
             <strong>{number(selectedGeneral)}</strong>
-            <span>General / Unclassified</span>
+            <span>{tr(locale, "General / Unclassified", "General / Sin clasificar")}</span>
           </div>
         </div>
       </section>
@@ -192,56 +205,54 @@ export default async function WhatsAppPage({
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">{range.label}</p>
-                <h2>Messages and Conversations</h2>
+                <h2>{tr(locale, "Messages and Conversations", "Mensajes y Conversaciones")}</h2>
               </div>
               <p className="panel-note">
-                Manual activity reflects human work on the channel, not
-                a specific advisor.
+                {tr(locale, "Manual activity reflects human work on the channel, not a specific advisor.", "La actividad manual refleja trabajo humano en el canal, no necesariamente de una asesora específica.")}
               </p>
             </div>
-            <WhatsAppActivityChart data={selected} />
+            <WhatsAppActivityChart data={selected} locale={locale} />
           </section>
 
           <section className="panel">
             <div className="panel-heading">
               <div>
                 <p className="eyebrow">{range.label}</p>
-                <h2>Admissions vs General Service</h2>
+                <h2>{tr(locale, "Admissions vs General Service", "Admisiones vs Servicio General")}</h2>
               </div>
               <p className="panel-note">
-                “With Opportunity” is an operational relationship,
-                not a semantic classification.
+                {tr(locale, "“With Opportunity” is an operational relationship, not a semantic classification.", "“Con Opportunity” es una relación operativa, no una clasificación semántica.")}
               </p>
             </div>
-            <WhatsAppClassificationChart data={selected} />
+            <WhatsAppClassificationChart data={selected} locale={locale} />
           </section>
         </div>
       ) : (
-        <EmptyState message="No WhatsApp activity exists in the selected period." />
+        <EmptyState message={tr(locale, "No WhatsApp activity exists in the selected period.", "No hay actividad de WhatsApp en el periodo seleccionado.")} />
       )}
 
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Daily Detail</p>
+            <p className="eyebrow">{tr(locale, "Daily Detail", "Detalle Diario")}</p>
             <h2>{range.label}</h2>
           </div>
           <p className="panel-note">
-            Each Message ID is counted once.
+            {tr(locale, "Each Message ID is counted once.", "Cada Message ID se cuenta una sola vez.")}
           </p>
         </div>
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Date</th>
+                <th>{tr(locale, "Date", "Fecha")}</th>
                 <th>Total</th>
-                <th>Inbound</th>
-                <th>Manual Outbound</th>
-                <th>Automated</th>
-                <th>Conversations</th>
-                <th>Handled</th>
-                <th>Messages / Conversation</th>
+                <th>{tr(locale, "Inbound", "Entrantes")}</th>
+                <th>{tr(locale, "Manual Outbound", "Salientes Manuales")}</th>
+                <th>{tr(locale, "Automated", "Automatizados")}</th>
+                <th>{tr(locale, "Conversations", "Conversaciones")}</th>
+                <th>{tr(locale, "Handled", "Atendidas")}</th>
+                <th>{tr(locale, "Messages / Conversation", "Mensajes / Conversación")}</th>
               </tr>
             </thead>
             <tbody>
@@ -277,8 +288,8 @@ export default async function WhatsAppPage({
       <section className="panel compact-panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Loaded Historical Coverage</p>
-            <h2>Available Total in Supabase</h2>
+            <p className="eyebrow">{tr(locale, "Loaded Historical Coverage", "Cobertura Histórica Cargada")}</p>
+            <h2>{tr(locale, "Available Total in Supabase", "Total Disponible en Supabase")}</h2>
           </div>
         </div>
         <div className="summary-row">
@@ -286,25 +297,25 @@ export default async function WhatsAppPage({
             <strong>
               {number(data.summary?.total_messages)}
             </strong>
-            <span>messages</span>
+            <span>{tr(locale, "messages", "mensajes")}</span>
           </div>
           <div>
             <strong>
               {number(data.summary?.active_conversations)}
             </strong>
-            <span>conversaciones</span>
+            <span>{tr(locale, "conversations", "conversaciones")}</span>
           </div>
           <div>
             <strong>
               {number(data.summary?.unique_contacts)}
             </strong>
-            <span>contactos</span>
+            <span>{tr(locale, "contacts", "contactos")}</span>
           </div>
           <div>
             <strong>
               {dateLabel(data.summary?.first_message_at)}
             </strong>
-            <span>first record</span>
+            <span>{tr(locale, "first record", "primer registro")}</span>
           </div>
         </div>
       </section>

@@ -1,0 +1,40 @@
+MILHANO DASHBOARD V12.1 | 2026-08-13
+
+CORRECTION
+- Qualified and Fit are one milestone again.
+- GHL stage remains Fit.
+- Dashboard and EOD display "Qualified / Fit".
+- V12 separate-Qualified logic is retired/disabled if it had been applied.
+- No downstream inference: missing Fit remains visible as a process/data gap.
+
+PIPELINE
+- Preferred current stages separate No responde from Seguimiento.
+- No responde = attempted but no response yet; still active.
+- Seguimiento = known callback/future contact action; still active.
+- Lost remains a separate final exit state.
+- No fit remains a separate eligibility exit state.
+- Legacy "No responde / Seguimiento" remains readable during migration.
+
+EOD
+- Keeps Pathi-style simple 8-field form.
+- Qualified field renamed Qualified / Fit.
+- Submission remains non-blocking when GHL differs.
+
+ATTRIBUTION
+- Facebook/Instagram remain raw Source values.
+- They are not automatically labeled Ads.
+- Ads vs Organic stays advisor/EOD reported unless stronger evidence exists.
+
+UX
+- ES/EN toggle retained for normal users.
+- MonaCashflow remains always English.
+- Expanded ? help definitions across business metrics and current stages.
+
+RECONCILIATION
+- V11 architecture retained: System + verified Manual Extra = Operational Total.
+- Reported Total and remaining Gap stay visible and auditable.
+
+COMPATIBILITY
+- First Human Touch recognizes No responde, Seguimiento and the legacy combined stage.
+- Daily follow-up KPI recognizes both new follow-up stages plus historical combined events.
+- Call outcome analytics classifies either No responde or Seguimiento as follow-up rather than "other stage".

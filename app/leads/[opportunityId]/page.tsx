@@ -13,6 +13,10 @@ import { saveSchoolTourDetails } from "@/app/leads/[opportunityId]/actions";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { requireCurrentAppUser } from "@/lib/auth";
 import { getLeadDetail } from "@/lib/cascade";
+import { getDashboardLocale } from "@/lib/i18n";
+import { tr } from "@/lib/locale";
+import { HelpTip } from "@/components/help-tip";
+import { conceptDefinition, stageConceptDefinition } from "@/lib/concepts";
 import {
   dateLabel,
   dateTimeInputValue,
@@ -36,6 +40,7 @@ export default async function LeadDetailPage({
   searchParams: SearchParams;
 }) {
   const currentUser = await requireCurrentAppUser();
+  const locale = await getDashboardLocale();
   const canEdit = currentUser.role !== "viewer";
   const { opportunityId } = await params;
   const notices = await searchParams;
@@ -55,22 +60,22 @@ export default async function LeadDetailPage({
 
   return (
     <DashboardLayout
-      eyebrow="Lead Details"
+      eyebrow={tr(locale, "Lead Details", "Detalle del Lead")}
       title={leadName}
-      subtitle="School Tour attendance, objections, notes and stage history."
-      statusLabel={stageLabel(opportunity.current_stage)}
+      subtitle={tr(locale, "School Tour attendance, objections, notes and stage history.", "Asistencia a School Tour, objeciones, notas e historial de stages.")}
+      statusLabel={stageLabel(opportunity.current_stage, locale)}
     >
       <Link className="secondary-button inline-back-link" href="/leads?metric=school_tours_attended">
         <ArrowLeft size={16} />
-        Back to Lead List
+        {tr(locale, "Back to Lead List", "Volver a la Lista")}
       </Link>
 
       {notices.saved ? (
         <section className="eod-feedback eod-feedback-good">
           <CheckCircle2 size={18} />
           <div>
-            <strong>School Tour details saved</strong>
-            <span>The scorecards and lead list now use the updated information.</span>
+            <strong>{tr(locale, "School Tour details saved", "Detalles de School Tour guardados")}</strong>
+            <span>{tr(locale, "The scorecards and lead list now use the updated information.", "Los scorecards y la lista de leads ya usan la información actualizada.")}</span>
           </div>
         </section>
       ) : null}
@@ -79,7 +84,7 @@ export default async function LeadDetailPage({
         <section className="eod-feedback eod-feedback-error">
           <MessageSquareText size={18} />
           <div>
-            <strong>Unable to save</strong>
+            <strong>{tr(locale, "Unable to save", "No se pudo guardar")}</strong>
             <span>{notices.error}</span>
           </div>
         </section>
@@ -89,8 +94,8 @@ export default async function LeadDetailPage({
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Contact</p>
-              <h2>Lead Profile</h2>
+              <p className="eyebrow">{tr(locale, "Contact", "Contacto")}</p>
+              <h2>{tr(locale, "Lead Profile", "Perfil del Lead")}</h2>
             </div>
           </div>
           <dl className="detail-list">
@@ -98,9 +103,9 @@ export default async function LeadDetailPage({
             <div><dt>Student</dt><dd>{opportunity.student_name ?? "—"}</dd></div>
             <div><dt>Phone</dt><dd>{opportunity.phone ?? "—"}</dd></div>
             <div><dt>Email</dt><dd>{opportunity.email ?? "—"}</dd></div>
-            <div><dt>Current Stage</dt><dd>{stageLabel(opportunity.current_stage)}</dd></div>
-            <div><dt>Owner</dt><dd>{opportunity.assigned_user ?? opportunity.historical_advisor ?? "Unassigned"}</dd></div>
-            <div><dt>Source</dt><dd>{opportunity.source ?? "—"}</dd></div>
+            <div><dt>{tr(locale, "Current Stage", "Stage Actual")} <HelpTip text={conceptDefinition("current_stage", locale)} /></dt><dd>{stageLabel(opportunity.current_stage, locale)} <HelpTip text={stageConceptDefinition(opportunity.current_stage, locale)} /></dd></div>
+            <div><dt>{tr(locale, "Owner", "Asesora")}</dt><dd>{opportunity.assigned_user ?? opportunity.historical_advisor ?? tr(locale, "Unassigned", "Sin asignar")}</dd></div>
+            <div><dt>Source <HelpTip text={conceptDefinition("raw_source", locale)} /></dt><dd>{opportunity.source ?? "—"}</dd></div>
             <div><dt>Grade</dt><dd>{opportunity.grade_interest ?? "—"}</dd></div>
             <div><dt>Priority</dt><dd>{opportunity.priority ?? "—"}</dd></div>
             <div><dt>Lead Date</dt><dd>{dateLabel(opportunity.original_lead_date ?? opportunity.created_at)}</dd></div>
@@ -110,8 +115,8 @@ export default async function LeadDetailPage({
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Structured layer</p>
-              <h2>School Tour Details</h2>
+              <p className="eyebrow">{tr(locale, "Structured layer", "Capa estructurada")}</p>
+              <h2>{tr(locale, "School Tour Details", "Detalles de School Tour")}</h2>
             </div>
             <CalendarClock size={19} />
           </div>
@@ -125,7 +130,7 @@ export default async function LeadDetailPage({
 
             <div className="tour-form-grid">
               <label>
-                <span>Scheduled For</span>
+                <span>{tr(locale, "Scheduled For", "Agendado Para")}</span>
                 <input
                   defaultValue={dateTimeInputValue(tour.scheduled_for)}
                   disabled={!canEdit}
@@ -135,22 +140,22 @@ export default async function LeadDetailPage({
               </label>
 
               <label>
-                <span>Attendance</span>
+                <span>{tr(locale, "Attendance", "Asistencia")}</span>
                 <select
                   defaultValue={tour.attendance_status}
                   disabled={!canEdit}
                   name="attendance_status"
                 >
-                  <option value="unknown">Unknown</option>
-                  <option value="scheduled">Scheduled</option>
-                  <option value="showed">Showed</option>
+                  <option value="unknown">{tr(locale, "Unknown", "Desconocido")}</option>
+                  <option value="scheduled">{tr(locale, "Scheduled", "Agendado")}</option>
+                  <option value="showed">{tr(locale, "Showed", "Asistió")}</option>
                   <option value="no_show">No-show</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="cancelled">{tr(locale, "Cancelled", "Cancelado")}</option>
                 </select>
               </label>
 
               <label>
-                <span>Attended At</span>
+                <span>{tr(locale, "Attended At", "Asistió el")}</span>
                 <input
                   defaultValue={dateTimeInputValue(tour.attended_at)}
                   disabled={!canEdit}
@@ -166,12 +171,12 @@ export default async function LeadDetailPage({
                   name="has_objection"
                   type="checkbox"
                 />
-                <span>Has Objection</span>
+                <span>{tr(locale, "Has Objection", "Tiene Objeción")}</span>
               </label>
             </div>
 
             <label>
-              <span>Objection Summary</span>
+              <span>{tr(locale, "Objection Summary", "Resumen de Objeción")}</span>
               <textarea
                 defaultValue={tour.objection_summary ?? ""}
                 disabled={!canEdit}
@@ -182,7 +187,7 @@ export default async function LeadDetailPage({
             </label>
 
             <label>
-              <span>No-show Reason</span>
+              <span>{tr(locale, "No-show Reason", "Razón No-show")}</span>
               <textarea
                 defaultValue={tour.no_show_reason ?? ""}
                 disabled={!canEdit}
@@ -193,7 +198,7 @@ export default async function LeadDetailPage({
             </label>
 
             <label>
-              <span>School Tour Notes</span>
+              <span>{tr(locale, "School Tour Notes", "Notas School Tour")}</span>
               <textarea
                 defaultValue={tour.school_tour_notes ?? ""}
                 disabled={!canEdit}
@@ -209,18 +214,17 @@ export default async function LeadDetailPage({
                 type="submit"
               >
                 <Save size={16} />
-                Save School Tour Details
+                {tr(locale, "Save School Tour Details", "Guardar Detalles School Tour")}
               </button>
             ) : (
               <p className="eod-readonly-note">
-                Leadership accounts can review these details but
-                cannot edit them.
+                {tr(locale, "Leadership accounts can review these details but cannot edit them.", "Las cuentas de dirección pueden revisar estos detalles pero no editarlos.")}
               </p>
             )}
           </form>
 
           <p className="panel-note lead-detail-updated">
-            Current status: {attendanceLabel(tour.attendance_status)}
+            {tr(locale, "Current status", "Estado actual")}: {attendanceLabel(tour.attendance_status, locale)}
             {tour.school_tour_updated_at
               ? ` · Updated ${dateTimeLabel(tour.school_tour_updated_at)}`
               : ""}
@@ -231,13 +235,13 @@ export default async function LeadDetailPage({
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Legacy context</p>
-            <h2>Historical Comments</h2>
+            <p className="eyebrow">{tr(locale, "Legacy context", "Contexto histórico")}</p>
+            <h2>{tr(locale, "Historical Comments", "Comentarios Históricos")}</h2>
           </div>
         </div>
         <p className="legacy-comments">
           {opportunity.historical_comments ??
-            "No historical comments were imported for this lead."}
+            tr(locale, "No historical comments were imported for this lead.", "No se importaron comentarios históricos para este lead.")}
         </p>
       </section>
 
@@ -245,17 +249,17 @@ export default async function LeadDetailPage({
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">CRM history</p>
-              <h2>Stage Timeline</h2>
+              <p className="eyebrow">{tr(locale, "CRM history", "Historial CRM")}</p>
+              <h2>{tr(locale, "Stage Timeline", "Timeline de Stages")}</h2>
             </div>
           </div>
           <div className="timeline-list">
             {data.stageEvents.map((event) => (
               <article key={event.event_id}>
                 <span>{dateTimeLabel(event.event_timestamp)}</span>
-                <strong>{stageLabel(event.to_stage)}</strong>
+                <strong>{stageLabel(event.to_stage, locale)} <HelpTip text={stageConceptDefinition(event.to_stage, locale)} /></strong>
                 <p>
-                  {stageLabel(event.from_stage)} → {stageLabel(event.to_stage)}
+                  {stageLabel(event.from_stage, locale)} → {stageLabel(event.to_stage, locale)}
                   {event.note ? ` · ${event.note}` : ""}
                 </p>
               </article>
@@ -266,8 +270,8 @@ export default async function LeadDetailPage({
         <section className="panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">GHL activity</p>
-              <h2>Recent Calls</h2>
+              <p className="eyebrow">{tr(locale, "GHL activity", "Actividad GHL")}</p>
+              <h2>{tr(locale, "Recent Calls", "Llamadas Recientes")}</h2>
             </div>
             <PhoneCall size={19} />
           </div>
@@ -277,20 +281,20 @@ export default async function LeadDetailPage({
                 <article key={call.event_id}>
                   <span>{dateTimeLabel(call.event_timestamp)}</span>
                   <strong>
-                    {call.direction === "outbound" ? "Outbound" : "Inbound"} ·{" "}
+                    {call.direction === "outbound" ? tr(locale, "Outbound", "Saliente") : tr(locale, "Inbound", "Entrante")} ·{" "}
                     {duration(call.call_duration_seconds)}
                   </strong>
                   <p>
                     {call.is_meaningful_conversation
-                      ? "Meaningful Conversation"
+                      ? tr(locale, "Meaningful Conversation", "Conversación Significativa")
                       : call.is_connected_raw
-                        ? "Connected Call"
-                        : call.call_status ?? "Call Attempt"}
+                        ? tr(locale, "Connected Call", "Llamada Contestada")
+                        : call.call_status ?? tr(locale, "Call Attempt", "Intento de Llamada")}
                   </p>
                 </article>
               ))
             ) : (
-              <p>No GHL calls are linked to this opportunity.</p>
+              <p>{tr(locale, "No GHL calls are linked to this opportunity.", "No hay llamadas GHL vinculadas a esta opportunity.")}</p>
             )}
           </div>
         </section>

@@ -13,13 +13,17 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { KpiCard } from "@/components/kpi-card";
 import { OperationalCascade } from "@/components/operational-cascade";
-import { getOperationalCascade } from "@/lib/cascade";
+import { getOperationalReconciliation } from "@/lib/cascade";
 import {
   dateRangeQuery,
   resolveDateRange,
 } from "@/lib/date-range";
 import { getDashboardData } from "@/lib/data";
 import { dateLabel, number, percent } from "@/lib/format";
+import { getDashboardLocale } from "@/lib/i18n";
+import { tr } from "@/lib/locale";
+import { HelpTip } from "@/components/help-tip";
+import { conceptDefinition, stageConceptDefinition } from "@/lib/concepts";
 import { getSystemHealthData } from "@/lib/system-health";
 import {
   ownerLabel,
@@ -40,12 +44,14 @@ export default async function DashboardPage({
 }) {
   const params = await searchParams;
   const range = resolveDateRange(params);
+  const locale = await getDashboardLocale();
 
-  const [data, health, cascade] = await Promise.all([
+  const [data, health, reconciliation] = await Promise.all([
     getDashboardData(range),
     getSystemHealthData(),
-    getOperationalCascade(range),
+    getOperationalReconciliation(range),
   ]);
+  const cascade = reconciliation.filter((metric) => metric.show_in_cascade);
 
   const leadToClosed =
     data.funnel.find(
@@ -54,8 +60,10 @@ export default async function DashboardPage({
 
   const rangeQuery = dateRangeQuery(range);
   const cascadeByKey = new Map(
-    cascade.map((metric) => [metric.metric_key, metric]),
+    reconciliation.map((metric) => [metric.metric_key, metric]),
   );
+  const adsReported = cascadeByKey.get("ads_leads")?.reported_value ?? null;
+  const organicReported = cascadeByKey.get("organic_leads")?.reported_value ?? null;
 
   const reconciled = (metricKey: string, fallback: number) =>
     cascadeByKey.get(metricKey)?.metric_value ?? fallback;
@@ -76,12 +84,12 @@ export default async function DashboardPage({
 
   return (
     <DashboardLayout
-      eyebrow="Milhano · Admissions"
-      statusLabel={`Period ${dateLabel(
+      eyebrow={tr(locale, "Milhano · Admissions", "Milhano · Admisiones")}
+      statusLabel={`${tr(locale, "Period", "Periodo")} ${dateLabel(
         range.start,
       )} – ${dateLabel(range.end)}`}
-      subtitle="Unified admissions performance, activity and operational follow-up."
-      title="Admissions Summary"
+      subtitle={tr(locale, "Unified admissions performance, activity and operational follow-up.", "Rendimiento unificado de admisiones, actividad y seguimiento operativo.")}
+      title={tr(locale, "Admissions Summary", "Resumen de Admisiones")}
     >
       <Link
         className={
@@ -95,19 +103,20 @@ export default async function DashboardPage({
       >
         <span>
           {health.overallStatus === "healthy"
-            ? "System is up to date"
+            ? tr(locale, "System is up to date", "Sistema actualizado")
             : health.overallStatus === "error"
-              ? "System has errors"
-              : "System requires review"}
+              ? tr(locale, "System has errors", "El sistema tiene errores")
+              : tr(locale, "System requires review", "El sistema requiere revisión")}
         </span>
-        <strong>View monitoring →</strong>
+        <strong>{tr(locale, "View monitoring →", "Ver monitoreo →")}</strong>
       </Link>
 
-      <DateRangeFilter basePath="/" range={range} />
+      <DateRangeFilter basePath="/" range={range} locale={locale} />
 
       <OperationalCascade
         metrics={cascade}
         range={range}
+        locale={locale}
       />
 
       <section
@@ -117,7 +126,9 @@ export default async function DashboardPage({
         <KpiCard
           helper={sourceHelper("new_leads", range.label)}
           icon={Activity}
-          label="New Leads"
+          label={tr(locale, "New Leads", "Leads Totales")}
+          definitionKey="new_leads"
+          locale={locale}
           value={number(
             reconciled("new_leads", data.period.new_leads),
           )}
@@ -128,7 +139,9 @@ export default async function DashboardPage({
             "School Tour stage entries",
           )}
           icon={Clock3}
-          label="School Tours Booked"
+          label={tr(locale, "School Tours Booked", "ST Booked")}
+          definitionKey="school_tours_booked"
+          locale={locale}
           value={number(
             reconciled(
               "school_tours_booked",
@@ -142,7 +155,9 @@ export default async function DashboardPage({
             `${number(data.period.tours_attended)} attended`,
           )}
           icon={GraduationCap}
-          label="School Tours Attended"
+          label={tr(locale, "School Tours Attended", "ST Attended")}
+          definitionKey="school_tours_attended"
+          locale={locale}
           value={number(
             reconciled(
               "school_tours_attended",
@@ -156,15 +171,19 @@ export default async function DashboardPage({
             `${percent(leadToClosed)} lead-to-closed`,
           )}
           icon={GraduationCap}
-          label="Closed"
+          label={tr(locale, "Closed", "Inscritos / Closed")}
+          definitionKey="closed"
+          locale={locale}
           value={number(
             reconciled("closed", data.period.enrolled),
           )}
         />
         <KpiCard
-          helper="Shared institutional channel"
+          helper={tr(locale, "Shared institutional channel", "Canal institucional compartido")}
           icon={MessageCircleMore}
-          label="WhatsApp Messages"
+          label={tr(locale, "WhatsApp Messages", "Mensajes WhatsApp")}
+          definitionKey="whatsapp_messages"
+          locale={locale}
           value={number(data.period.whatsapp_messages)}
         />
         <KpiCard
@@ -175,7 +194,9 @@ export default async function DashboardPage({
             )} outbound attempts`,
           )}
           icon={PhoneCall}
-          label="Number of Dials"
+          label={tr(locale, "Number of Dials", "Llamadas GHL")}
+          definitionKey="number_of_dials"
+          locale={locale}
           value={number(
             reconciled(
               "number_of_dials",
@@ -188,14 +209,45 @@ export default async function DashboardPage({
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">
-              Current operational position
-            </p>
-            <h2>Current GHL Stages</h2>
+            <p className="eyebrow">{tr(locale, "Reported acquisition", "Adquisición reportada")}</p>
+            <h2>{tr(locale, "Ads vs Organic", "Ads vs Orgánico")}</h2>
           </div>
           <p className="panel-note">
-            These cards show the current CRM stage. The unified
-            cascade above measures period activity.
+            {tr(locale,
+              "This is reported attribution, not inferred from raw Facebook/Instagram Source values.",
+              "Esta atribución es reportada; no se infiere del Source crudo Facebook/Instagram.")}
+          </p>
+        </div>
+        <div className="kpi-grid pipeline-kpi-grid">
+          <KpiCard
+            label={tr(locale, "Ads Leads", "Leads Ads")}
+            value={adsReported === null ? "—" : number(adsReported)}
+            helper={tr(locale, "Advisor/EOD reported", "Reportado por asesora/EOD")}
+            icon={Activity}
+            definitionKey="ads_leads"
+            locale={locale}
+          />
+          <KpiCard
+            label={tr(locale, "Organic Leads", "Leads Orgánicos")}
+            value={organicReported === null ? "—" : number(organicReported)}
+            helper={tr(locale, "Advisor/EOD reported", "Reportado por asesora/EOD")}
+            icon={Activity}
+            definitionKey="organic_leads"
+            locale={locale}
+          />
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">
+              {tr(locale, "Current operational position", "Posición operativa actual")}
+            </p>
+            <h2>{tr(locale, "Current GHL Stages", "Stages Actuales en GHL")} <HelpTip text={conceptDefinition("current_stage", locale)} /></h2>
+          </div>
+          <p className="panel-note">
+            {tr(locale, "These cards show the current CRM stage. The unified cascade above measures period activity.", "Estas cards muestran el stage actual en CRM. La cascada superior mide actividad del periodo.")}
           </p>
         </div>
 
@@ -210,20 +262,19 @@ export default async function DashboardPage({
             >
               <div className="stage-topline">
                 <span className="stage-chip stage-hito">
-                  Current Stage
+                  {tr(locale, "Current Stage", "Stage Actual")}
                 </span>
                 <strong>
                   {number(stage.opportunity_count)}
                 </strong>
               </div>
-              <h3>{stageLabel(stage.stage_name)}</h3>
+              <h3>{stageLabel(stage.stage_name, locale)} <HelpTip text={stageConceptDefinition(stage.stage_name, locale)} /></h3>
               <div className="stage-meta">
                 <span>
-                  {number(stage.open_count)} open
+                  {number(stage.open_count)} {tr(locale, "open", "abiertos")}
                 </span>
                 <span>
-                  {number(stage.open_8_plus_days)} with 8+
-                  days
+                  {number(stage.open_8_plus_days)} {tr(locale, "with 8+ days", "con 8+ días")}
                 </span>
               </div>
             </Link>
@@ -234,6 +285,7 @@ export default async function DashboardPage({
       <DashboardCharts
         daily={data.daily}
         rangeLabel={range.label}
+        locale={locale}
       />
 
       <div className="two-column">
@@ -243,7 +295,7 @@ export default async function DashboardPage({
               <p className="eyebrow">
                 Cohort · {range.label}
               </p>
-              <h2>Performance by Source · GHL Only</h2>
+              <h2>{tr(locale, "Performance by Raw Source · GHL Only", "Rendimiento por Source Crudo · Solo GHL")} <HelpTip text={conceptDefinition("raw_source", locale)} /></h2>
             </div>
           </div>
 
@@ -251,18 +303,23 @@ export default async function DashboardPage({
             <table>
               <thead>
                 <tr>
-                  <th>Source</th>
-                  <th>New Leads</th>
-                  <th>School Tours Booked</th>
-                  <th>School Tours Attended</th>
-                  <th>Closed</th>
-                  <th>Lead → Closed</th>
+                  <th>{tr(locale, "Source", "Source")} <HelpTip text={conceptDefinition("raw_source", locale)} /></th>
+                  <th>{tr(locale, "New Leads", "Leads Totales")}</th>
+                  <th>{tr(locale, "School Tours Booked", "ST Booked")}</th>
+                  <th>{tr(locale, "School Tours Attended", "ST Attended")}</th>
+                  <th>{tr(locale, "Closed", "Inscritos / Closed")}</th>
+                  <th>{tr(locale, "Lead → Closed", "Lead → Closed")}</th>
                 </tr>
               </thead>
               <tbody>
                 {data.sources.map((row) => (
                   <tr key={row.source ?? "no-source"}>
-                    <td>{row.source ?? "No Source"}</td>
+                    <td>
+                      {row.source ?? tr(locale, "No Source", "Sin Source")}
+                      {["facebook", "instagram"].includes((row.source ?? "").trim().toLowerCase()) ? (
+                        <span className="source-ambiguity-badge">{tr(locale, "Ads/Organic unknown", "Ads/Orgánico sin definir")}</span>
+                      ) : null}
+                    </td>
                     <td>{number(row.leads)}</td>
                     <td>
                       {number(row.tours_scheduled)}
@@ -285,7 +342,7 @@ export default async function DashboardPage({
               <p className="eyebrow">
                 Cohort · {range.label}
               </p>
-              <h2>Performance by Advisor · GHL Only</h2>
+              <h2>{tr(locale, "Performance by Advisor · GHL Only", "Rendimiento por Asesora · Solo GHL")}</h2>
             </div>
           </div>
 
@@ -293,12 +350,12 @@ export default async function DashboardPage({
             <table>
               <thead>
                 <tr>
-                  <th>Advisor</th>
-                  <th>New Leads</th>
-                  <th>School Tours Booked</th>
-                  <th>School Tours Attended</th>
-                  <th>Closed</th>
-                  <th>Lead → Closed</th>
+                  <th>{tr(locale, "Advisor", "Asesora")}</th>
+                  <th>{tr(locale, "New Leads", "Leads Totales")}</th>
+                  <th>{tr(locale, "School Tours Booked", "ST Booked")}</th>
+                  <th>{tr(locale, "School Tours Attended", "ST Attended")}</th>
+                  <th>{tr(locale, "Closed", "Inscritos / Closed")}</th>
+                  <th>{tr(locale, "Lead → Closed", "Lead → Closed")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -310,7 +367,7 @@ export default async function DashboardPage({
                   >
                     <td>
                       {ownerLabel(
-                        row.operational_owner,
+                        row.operational_owner, locale,
                       )}
                     </td>
                     <td>{number(row.leads)}</td>
@@ -335,7 +392,7 @@ export default async function DashboardPage({
           <div className="panel-heading">
             <div>
               <p className="eyebrow">{range.label}</p>
-              <h2>Recorded Exits</h2>
+              <h2>{tr(locale, "Recorded Exits", "Salidas Registradas")}</h2>
             </div>
           </div>
 
@@ -343,9 +400,9 @@ export default async function DashboardPage({
             <table>
               <thead>
                 <tr>
-                  <th>Exit</th>
-                  <th>Previous Stage</th>
-                  <th>Reason</th>
+                  <th>{tr(locale, "Exit", "Salida")}</th>
+                  <th>{tr(locale, "Previous Stage", "Stage Anterior")}</th>
+                  <th>{tr(locale, "Reason", "Motivo")}</th>
                   <th>Leads</th>
                 </tr>
               </thead>
@@ -354,9 +411,9 @@ export default async function DashboardPage({
                   <tr
                     key={`${row.exit_type}-${row.exit_from_stage}-${index}`}
                   >
-                    <td>{stageLabel(row.exit_type)}</td>
+                    <td>{stageLabel(row.exit_type, locale)}</td>
                     <td>
-                      {stageLabel(row.exit_from_stage)}
+                      {stageLabel(row.exit_from_stage, locale)}
                     </td>
                     <td>{row.exit_reason}</td>
                     <td>
@@ -375,7 +432,7 @@ export default async function DashboardPage({
               <p className="eyebrow">
                 Cohort · {range.label}
               </p>
-              <h2>Longest Current Inactivity</h2>
+              <h2>{tr(locale, "Longest Current Inactivity", "Mayor Inactividad Actual")}</h2>
             </div>
             <AlertTriangle size={18} />
           </div>
@@ -385,9 +442,9 @@ export default async function DashboardPage({
               <thead>
                 <tr>
                   <th>Lead</th>
-                  <th>Current Stage</th>
-                  <th>Owner</th>
-                  <th>Days</th>
+                  <th>{tr(locale, "Current Stage", "Stage Actual")}</th>
+                  <th>{tr(locale, "Owner", "Asesora")}</th>
+                  <th>{tr(locale, "Days", "Días")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -403,11 +460,11 @@ export default async function DashboardPage({
                       </Link>
                     </td>
                     <td>
-                      {stageLabel(row.current_stage)}
+                      {stageLabel(row.current_stage, locale)}
                     </td>
                     <td>
                       {ownerLabel(
-                        row.operational_owner,
+                        row.operational_owner, locale,
                       )}
                     </td>
                     <td>

@@ -12,6 +12,7 @@ import {
 } from "recharts";
 
 import type { DailyKpi } from "@/lib/types";
+import type { Locale } from "@/lib/locale";
 
 function shortDate(value: string): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -23,19 +24,21 @@ function shortDate(value: string): string {
 export function DashboardCharts({
   daily,
   rangeLabel,
+  locale = "en",
 }: {
   daily: DailyKpi[];
   rangeLabel: string;
+  locale?: Locale;
 }) {
   return (
     <section className="panel">
       <div className="panel-heading">
         <div>
           <p className="eyebrow">{rangeLabel}</p>
-          <h2>Daily Admissions Activity</h2>
+          <h2>{locale === "es" ? "Actividad Diaria de Admisiones" : "Daily Admissions Activity"}</h2>
         </div>
         <p className="panel-note">
-          GHL/System historical events by date. Manual period adjustments are shown in Reconciliation and are not artificially distributed across days.
+          {locale === "es" ? "Eventos históricos GHL/Sistema por fecha. Los ajustes manuales por periodo se muestran en Reconciliación y no se distribuyen artificialmente entre días." : "GHL/System historical events by date. Manual period adjustments are shown in Reconciliation and are not artificially distributed across days."}
         </p>
       </div>
 
@@ -77,7 +80,7 @@ export function DashboardCharts({
             <Line
               dataKey="new_leads"
               dot={false}
-              name="New Leads"
+              name={locale === "es" ? "Leads Totales" : "New Leads"}
               stroke="var(--green)"
               strokeWidth={2}
               type="monotone"
@@ -85,7 +88,7 @@ export function DashboardCharts({
             <Line
               dataKey="tours_scheduled"
               dot={false}
-              name="School Tours Booked"
+              name={locale === "es" ? "ST Booked" : "School Tours Booked"}
               stroke="var(--gold)"
               strokeWidth={2}
               type="monotone"
@@ -93,7 +96,7 @@ export function DashboardCharts({
             <Line
               dataKey="enrolled"
               dot={false}
-              name="Closed"
+              name={locale === "es" ? "Inscritos / Closed" : "Closed"}
               stroke="var(--blue)"
               strokeWidth={2}
               type="monotone"

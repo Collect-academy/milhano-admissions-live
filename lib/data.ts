@@ -68,18 +68,20 @@ type CohortRow = OpportunityRow & {
 
 const STAGES = [
   ["Cliente potencial", 1, "Entrada"],
-  ["No responde / Seguimiento", 2, "Seguimiento"],
-  ["No fit", 3, "Salida"],
-  ["Lost / Sin continuidad", 4, "Salida"],
-  ["Fit", 5, "Hito"],
-  ["School Tour agendado", 6, "Hito"],
-  ["School Tour atendido", 7, "Hito"],
-  ["Pasadía agendada", 8, "Hito"],
-  ["Pasadía asistida", 9, "Hito"],
-  ["Retroalimentación", 10, "Hito"],
-  ["En evaluación", 11, "Hito"],
-  ["Inscripción en proceso", 12, "Hito"],
-  ["Inscrito", 13, "Resultado"],
+  ["No responde", 2, "Seguimiento"],
+  ["Seguimiento", 3, "Seguimiento"],
+  ["No responde / Seguimiento", 4, "Legacy"],
+  ["No fit", 5, "Salida"],
+  ["Lost / Sin continuidad", 6, "Salida"],
+  ["Fit", 7, "Hito"],
+  ["School Tour agendado", 8, "Hito"],
+  ["School Tour atendido", 9, "Hito"],
+  ["Pasadía agendada", 10, "Hito"],
+  ["Pasadía asistida", 11, "Hito"],
+  ["Retroalimentación", 12, "Hito"],
+  ["En evaluación", 13, "Hito"],
+  ["Inscripción en proceso", 14, "Hito"],
+  ["Inscrito", 15, "Resultado"],
 ] as const;
 
 const FUNNEL_STAGES = [

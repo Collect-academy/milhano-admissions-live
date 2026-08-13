@@ -96,9 +96,6 @@ export async function saveEodSubmission(
     declared_value: safeString(
       formData.get(`declared__${metricKey}`),
     ),
-    manual_extra_value: safeString(
-      formData.get(`manual_extra__${metricKey}`),
-    ),
     discrepancy_note: safeString(
       formData.get(`note__${metricKey}`),
     ),

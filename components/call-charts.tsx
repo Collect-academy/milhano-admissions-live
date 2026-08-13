@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import type { CallDaily } from "@/lib/types";
+import type { Locale } from "@/lib/locale";
 
 function shortDate(value: string): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -22,7 +23,7 @@ function shortDate(value: string): string {
   }).format(new Date(`${value}T12:00:00`));
 }
 
-export function CallActivityChart({ data }: { data: CallDaily[] }) {
+export function CallActivityChart({ data, locale = "en" }: { data: CallDaily[]; locale?: Locale }) {
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
@@ -39,19 +40,19 @@ export function CallActivityChart({ data }: { data: CallDaily[] }) {
           <Legend />
           <Bar
             dataKey="outbound_attempts"
-            name="Number of Dials"
+            name={locale === "es" ? "Llamadas GHL" : "Number of Dials"}
             fill="var(--green)"
             radius={[5, 5, 0, 0]}
           />
           <Bar
             dataKey="inbound_calls"
-            name="Inbound Calls"
+            name={locale === "es" ? "Llamadas entrantes" : "Inbound Calls"}
             fill="var(--blue)"
             radius={[5, 5, 0, 0]}
           />
           <Bar
             dataKey="meaningful_3min_plus_calls"
-            name="Meaningful Conversations"
+            name={locale === "es" ? "Conversaciones significativas" : "Meaningful Conversations"}
             fill="var(--gold)"
             radius={[5, 5, 0, 0]}
           />
@@ -61,7 +62,7 @@ export function CallActivityChart({ data }: { data: CallDaily[] }) {
   );
 }
 
-export function PickupRateChart({ data }: { data: CallDaily[] }) {
+export function PickupRateChart({ data, locale = "en" }: { data: CallDaily[]; locale?: Locale }) {
   return (
     <div className="chart-wrapper">
       <ResponsiveContainer width="100%" height="100%">
@@ -79,7 +80,7 @@ export function PickupRateChart({ data }: { data: CallDaily[] }) {
           <Line
             type="monotone"
             dataKey="ghl_pickup_rate_pct"
-            name="GHL Connected Rate"
+            name={locale === "es" ? "Tasa conectadas GHL" : "GHL Connected Rate"}
             stroke="var(--blue)"
             strokeWidth={2}
             dot={false}
@@ -87,7 +88,7 @@ export function PickupRateChart({ data }: { data: CallDaily[] }) {
           <Line
             type="monotone"
             dataKey="meaningful_3min_pickup_rate_pct"
-            name="Meaningful Conversation Rate"
+            name={locale === "es" ? "Tasa conversaciones significativas" : "Meaningful Conversation Rate"}
             stroke="var(--green)"
             strokeWidth={2}
             dot={false}
