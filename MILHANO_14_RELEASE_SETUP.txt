@@ -1,0 +1,52 @@
+MILHANO | V14 | HISTORICAL EOD + MANUAL MEANINGFUL
+
+WHAT V14 ADDS
+
+1. "Subir EOD anterior" / "Add previous EOD" on the EOD page.
+2. Advisor selects a prior date and gets their own EOD for that date.
+3. Admin selects both date and advisor.
+4. Existing (advisor, date) submissions are reopened instead of duplicated.
+5. Submitted EODs remain read-only for advisors.
+6. Missing/draft historical EODs refresh their system evidence before opening. Already submitted/validated EODs are opened without silently refreshing their closed snapshot.
+7. Meaningful Conversations stays in the simple EOD as a manual KPI.
+8. No n8n workflow is created for Meaningful Conversations.
+
+MEANINGFUL CONVERSATION DEFINITION
+Unique lead who provided admissions-relevant information during the EOD window, even if the information is still insufficient to determine Fit vs No Fit. It can happen by WhatsApp or phone.
+
+DEPLOYMENT
+
+1) SUPABASE
+Run complete:
+MILHANO_14_HISTORICAL_EOD_MEANINGFUL.sql
+
+Expected validation:
+- meaningful_conversations_reported is active, manual, non-blocking.
+- milhano_prepare_historical_eod is SECURITY DEFINER.
+
+2) GITHUB / VERCEL
+Deploy:
+MILHANO_ADMISSIONS_LIVE_DASHBOARD_V14_HISTORICAL_EOD.zip
+
+Recommended commit:
+Dashboard V14: historical EOD entry and manual meaningful conversations
+
+3) TEST
+Advisor test:
+- Open EOD.
+- Expand "Subir EOD anterior".
+- Pick a previous date with no submitted EOD.
+- Confirm the historical form opens.
+- Fill Meaningful Conversations and save/submit.
+- Open the same date again and confirm there is no duplicate.
+
+Admin test:
+- Log in as MonaCashflow.
+- Open EOD (English).
+- Expand "Add previous EOD".
+- Select advisor + date.
+- Confirm the correct advisor/date opens.
+
+N8N
+No new workflow is required for V14.
+See MILHANO_14_N8N_EXECUTION_BUDGET.txt for cadence recommendations.

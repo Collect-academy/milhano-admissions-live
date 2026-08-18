@@ -1,0 +1,145 @@
+MILHANO | V14 | N8N EXECUTION BUDGET
+
+KNOWN PERIODIC MILHANO WORKFLOWS
+
+1) MILHANO | 03A | WhatsApp All Messages Reconciliation
+   Current configured cadence: every 15 minutes, plus weekday EOD 14:48.
+   Current theoretical load: 96/day + 5 extra/week.
+   Only the current 03A/V3 should be active; do not leave an older 03A duplicate active.
+
+2) MILHANO | 03B | Call API Reconciliation
+   Current configured cadence: every 15 minutes, plus weekday EOD 14:48.
+   Current theoretical load: 96/day + 5 extra/week.
+   This replaced the old Call Live Sync; the old 03B should remain inactive/archived.
+
+3) MILHANO | 04 | Daily EOD Snapshot
+   Current configured cadence: weekdays 14:52.
+   Current theoretical load: 5/week.
+
+4) MILHANO | 08 | System Health Monitor
+   Current configured cadence: every 30 minutes.
+   Current theoretical load: 48/day.
+
+5) MILHANO | 05 | WhatsApp Historical Backfill
+   Configured cadence: every minute.
+   IMPORTANT: this is a temporary migration workflow and should be INACTIVE after completion.
+   If accidentally left active, it can generate up to 1,440 executions/day even when there is nothing useful left to backfill.
+
+NOT PERIODIC
+- MILHANO | 01 | Opportunities Full Reconciliation: manual reconciliation.
+- Opportunity Live Sync: event/webhook driven.
+- Historical/manual SQL backfills: not n8n periodic tasks.
+
+CURRENT SCHEDULED LOAD IF 03A + 03B + 04 + 08 REMAIN AS CONFIGURED
+- 03A: ~2,902 executions per 30-day month (96 x 30 + ~22 EOD runs)
+- 03B: ~2,902 per 30-day month
+- 04: ~22 per month
+- 08: ~1,440 per 30-day month
+- TOTAL: ~7,266 scheduled executions/month before event-driven workflows.
+- Approximate daily load: 243 on weekdays and 240 on weekends.
+
+At a 2,500-execution monthly ceiling, this fixed schedule alone would consume about 291% of the allowance before Opportunity Live Sync or any other event-driven workflows run.
+
+CONFIGURATION A — BALANCED / RECOMMENDED
+Goal: dashboard useful throughout the workday without pretending it needs real time.
+
+03A WhatsApp:
+- Weekdays: hourly, 08:48 through 20:48 (13/day).
+- Weekend: 4 runs/day.
+- The 14:48 weekday run is naturally included; remove the separate EOD trigger.
+
+03B Calls:
+- Weekdays: every 2 hours, 08:48 through 20:48 (7/day).
+- Weekend: 2 runs/day.
+- Include 14:48 as one of the scheduled runs; remove duplicate EOD trigger.
+
+04 EOD Snapshot:
+- Weekdays 14:52 (1/day).
+
+08 Health:
+- 4 runs/day (for example 08:00, 12:00, 16:00, 20:00).
+
+Estimated weekly executions:
+- WhatsApp: 73
+- Calls: 39
+- EOD: 5
+- Health: 28
+- Total: 145/week
+- Weekday load: 25/day
+- Weekend load: 10/day
+- Approx. 621/month (30-day month)
+- Share of a 2,500/month budget: ~25%; leaves ~1,879 executions for event-driven and other workflows.
+
+Freshness:
+- WhatsApp: <= 1 hour on weekdays; several-hour weekend delay.
+- Calls: <= 2 hours on weekdays.
+- EOD: exact daily cut.
+- Health: <= 4 hours.
+
+CONFIGURATION B — LEAN / MAXIMUM EXECUTION CONTROL
+Goal: reserve most of the account execution budget for event-driven and other business workflows.
+
+03A WhatsApp:
+- Weekdays every 2 hours, 08:48 through 20:48 (7/day).
+- Weekend: 2 runs/day.
+- The 14:48 weekday run is naturally included; remove the separate EOD trigger.
+
+03B Calls:
+- Weekdays every 3 hours, 08:48 through 20:48 (5/day).
+- Weekend: 1 run/day.
+- The 14:48 EOD refresh is naturally included; no duplicate EOD trigger.
+
+04 EOD Snapshot:
+- Weekdays 14:52 (1/day).
+
+08 Health:
+- Twice daily (09:00 and 17:00).
+
+Estimated weekly executions:
+- WhatsApp: 39
+- Calls: 27
+- EOD: 5
+- Health: 14
+- Total: 85/week
+- Weekday load: 15/day
+- Weekend load: 5/day
+- Approx. 364/month (30-day month)
+- Share of a 2,500/month budget: ~15%; leaves ~2,136 executions for event-driven and other workflows.
+
+Freshness:
+- WhatsApp: <= 2 hours on weekdays.
+- Calls: <= 3 hours during business hours, with 14:48 included.
+- EOD: exact daily cut.
+- Health: <= 8 hours during the operating day.
+
+RECOMMENDATION
+Use Configuration B while the account has a low execution ceiling / many other workflows. Move to Configuration A only if the dashboard is being actively reviewed during the day and the extra freshness creates operational value.
+
+CRITICAL CHECK
+Verify in n8n that MILHANO | 05 | WhatsApp Historical Backfill is inactive. It was designed to stop after the historical migration completed.
+
+DUPLICATE-WORKFLOW CHECK
+- Keep exactly one current 03A WhatsApp reconciliation workflow active.
+- Keep only 03B Call API Reconciliation active; old 03B Call Live Sync should be inactive.
+- Keep 05 Historical Backfill inactive after completion.
+- 02 Opportunity Live Sync is webhook/event-driven and should not be converted to polling.
+
+IMPLEMENTATION CRON EXAMPLES (America/Merida)
+Configuration A:
+- 03A weekday hourly:       48 8-20 * * 1-5
+- 03A weekend 4/day:        48 9,13,17,20 * * 0,6
+- 03B weekday every 2h:     48 8,10,12,14,16,18,20 * * 1-5
+- 03B weekend 2/day:        48 10,18 * * 0,6
+- 04 EOD:                   52 14 * * 1-5
+- 08 Health 4/day:          0 8,12,16,20 * * *
+
+Configuration B:
+- 03A weekday every 2h:     48 8,10,12,14,16,18,20 * * 1-5
+- 03A weekend 2/day:        48 10,18 * * 0,6
+- 03B weekday every 3h:     48 8,11,14,17,20 * * 1-5
+- 03B weekend 1/day:        48 14 * * 0,6
+- 04 EOD:                   52 14 * * 1-5
+- 08 Health 2/day:          0 9,17 * * *
+
+CAPACITY NOTE
+03A and 03B currently fetch at most the latest 100 messages/calls per run. If WhatsApp can exceed 100 messages between two scheduled polls, Configuration B can lose historical coverage between runs; use Configuration A (or a shorter 03A cadence) during high-volume campaigns. Calls are normally much lower-volume, so a slower call cadence is safer.

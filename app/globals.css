@@ -2657,3 +2657,254 @@ tbody tr:hover {
     transform: translateY(0);
   }
 }
+
+
+/* ==========================================================
+   V14 historical EOD entry
+========================================================== */
+
+.historical-eod-panel {
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(25, 61, 48, 0.04);
+  overflow: hidden;
+}
+
+.historical-eod-panel > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 14px;
+  color: var(--green-dark);
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-weight: 850;
+  list-style: none;
+}
+
+.historical-eod-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.historical-eod-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(180px, 260px) auto 1fr;
+  align-items: end;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding: 12px 14px;
+  background: var(--surface-soft);
+}
+
+.historical-eod-form label {
+  display: grid;
+  gap: 5px;
+}
+
+.historical-eod-form label > span {
+  color: var(--muted);
+  font-size: 0.57rem;
+  font-weight: 800;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.historical-eod-form input,
+.historical-eod-form select {
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  padding: 7px 9px;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.66rem;
+}
+
+.historical-eod-form p {
+  align-self: center;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.6rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1050px) {
+  .historical-eod-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .historical-eod-form p {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 600px) {
+  .historical-eod-form {
+    grid-template-columns: 1fr;
+  }
+
+  .historical-eod-form p {
+    grid-column: auto;
+  }
+}
+
+/* ==========================================================
+   V15 EOD corrections, audit logs and gap export
+========================================================== */
+
+.eod-edit-rule {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(23, 107, 82, 0.22);
+  border-radius: 11px;
+  background: var(--green-soft);
+  padding: 10px 12px;
+  color: var(--green-dark);
+}
+
+.eod-edit-rule strong {
+  font-size: 0.7rem;
+}
+
+.eod-edit-rule span,
+.eod-edit-rule small {
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+.eod-edit-rule small {
+  color: var(--muted);
+}
+
+.reconciliation-report-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+  padding: 11px 13px;
+}
+
+.reconciliation-report-bar > div {
+  display: grid;
+  gap: 3px;
+}
+
+.reconciliation-report-bar strong {
+  color: var(--text);
+  font-size: 0.7rem;
+}
+
+.reconciliation-report-bar span {
+  color: var(--muted);
+  font-size: 0.61rem;
+  line-height: 1.4;
+}
+
+.report-download-link {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.log-scope-banner {
+  margin-bottom: 12px;
+}
+
+.activity-log-list {
+  display: grid;
+  gap: 8px;
+}
+
+.activity-log-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-soft);
+  padding: 10px 11px;
+}
+
+.activity-log-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.activity-log-main {
+  display: grid;
+  gap: 3px;
+}
+
+.activity-log-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--text);
+  font-size: 0.67rem;
+}
+
+.activity-log-title strong,
+.activity-log-title b {
+  font-weight: 850;
+}
+
+.activity-log-main > small,
+.activity-log-row > time {
+  color: var(--muted);
+  font-size: 0.56rem;
+}
+
+.activity-log-main p {
+  margin: 2px 0 0;
+  color: var(--text);
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
+
+.activity-log-note {
+  width: fit-content;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  padding: 2px 7px;
+  color: #795815;
+  font-size: 0.54rem;
+  font-weight: 750;
+}
+
+.activity-log-row > time {
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .reconciliation-report-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .report-download-link {
+    width: 100%;
+  }
+
+  .activity-log-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .activity-log-row > time {
+    grid-column: 2;
+  }
+}

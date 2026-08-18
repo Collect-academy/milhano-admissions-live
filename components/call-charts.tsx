@@ -52,7 +52,7 @@ export function CallActivityChart({ data, locale = "en" }: { data: CallDaily[]; 
           />
           <Bar
             dataKey="meaningful_3min_plus_calls"
-            name={locale === "es" ? "Conversaciones significativas" : "Meaningful Conversations"}
+            name={locale === "es" ? "Llamadas 3+ min" : "Calls 3+ min"}
             fill="var(--gold)"
             radius={[5, 5, 0, 0]}
           />
@@ -88,7 +88,7 @@ export function PickupRateChart({ data, locale = "en" }: { data: CallDaily[]; lo
           <Line
             type="monotone"
             dataKey="meaningful_3min_pickup_rate_pct"
-            name={locale === "es" ? "Tasa conversaciones significativas" : "Meaningful Conversation Rate"}
+            name={locale === "es" ? "Tasa llamadas 3+ min" : "3+ Minute Call Rate"}
             stroke="var(--green)"
             strokeWidth={2}
             dot={false}

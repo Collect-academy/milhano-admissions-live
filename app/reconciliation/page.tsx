@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Database,
+  Download,
   FilePenLine,
   GitCompareArrows,
   ShieldAlert,
@@ -50,7 +51,7 @@ const SYSTEM_RECORD_KEYS = new Set([
   "number_of_dials",
   "answered_calls",
   "unique_contacted_leads",
-  "meaningful_conversations",
+  "responded_leads",
   "qualified_leads",
   "school_tours_booked",
   "school_tours_today",
@@ -137,6 +138,16 @@ export default async function ReconciliationPage({
         range={range}
         locale={locale}
       />
+
+      <section className="reconciliation-report-bar">
+        <div>
+          <strong>{tr(locale, "GHL tracking gap report", "Reporte de fuga de tracking GHL")}</strong>
+          <span>{tr(locale, "Compare each KPI's GHL/System count with the reported total, verified outside-GHL activity and unresolved gap.", "Compara el conteo GHL/Sistema de cada KPI con el total reportado, la actividad verificada fuera de GHL y el gap pendiente.")}</span>
+        </div>
+        <a className="secondary-button report-download-link" href={`/reconciliation/export?${rangeQuery}`}>
+          <Download size={16} /> {tr(locale, "Download CSV", "Descargar CSV")}
+        </a>
+      </section>
 
       {error ? (
         <section className="eod-feedback eod-feedback-error">

@@ -12,6 +12,7 @@ const links = [
   { href: "/llamadas", en: "Calls", es: "Llamadas" },
   { href: "/eod", en: "EOD", es: "EOD" },
   { href: "/reconciliation", en: "Reconciliation", es: "Reconciliación" },
+  { href: "/logs", en: "Logs", es: "Logs" },
   { href: "/sistema", en: "System", es: "Sistema" },
 ];
 

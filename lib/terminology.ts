@@ -4,6 +4,7 @@ export const CASCADE_METRICS = [
   { key: "new_leads", label: "New Leads" },
   { key: "number_of_dials", label: "Number of Dials" },
   { key: "unique_contacted_leads", label: "Unique Contacted Leads" },
+  { key: "responded_leads", label: "Responded" },
   { key: "meaningful_conversations", label: "Meaningful Conversations" },
   { key: "qualified_leads", label: "Qualified / Fit" },
   { key: "school_tours_booked", label: "School Tours Booked" },
@@ -71,12 +72,14 @@ const SUPPORT_METRIC_LABELS: Record<string, { en: string; es: string }> = {
   messages_answered: { en: "Messages Answered", es: "Mensajes Contestados" },
   contacted_reported: { en: "Contact Attempts", es: "Contactados" },
   responses_reported: { en: "Responses", es: "Respuestas" },
+  meaningful_conversations_reported: { en: "Meaningful Conversations", es: "Conversaciones Significativas" },
 };
 
 const CASCADE_METRIC_LABELS_ES: Record<string, string> = {
   new_leads: "Leads Totales",
   number_of_dials: "Llamadas",
-  unique_contacted_leads: "Leads Contactados (GHL)",
+  unique_contacted_leads: "Leads Únicos Contactados",
+  responded_leads: "Respondieron",
   meaningful_conversations: "Conversaciones Significativas",
   qualified_leads: "Qualified / Fit",
   school_tours_booked: "ST Booked",

@@ -44,6 +44,37 @@ function errorMessage(error: unknown): string {
   return "Unable to save the EOD.";
 }
 
+function historicalRedirect(
+  eodDate: string,
+  values: Record<string, string>,
+): string {
+  const params = new URLSearchParams({
+    range: "custom",
+    from: eodDate,
+    to: eodDate,
+    history: "1",
+  });
+
+  for (const [key, value] of Object.entries(values)) {
+    if (value) params.set(key, value);
+  }
+
+  return `/eod?${params.toString()}`;
+}
+
+function meridaToday(): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Merida",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function isIsoDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
 async function actorAppUserId(
   currentUser: Awaited<ReturnType<typeof requireCurrentAppUser>>,
 ): Promise<string> {
@@ -67,6 +98,74 @@ async function actorAppUserId(
   }
 
   return result.data.id;
+}
+
+export async function openHistoricalEod(
+  formData: FormData,
+): Promise<never> {
+  const currentUser = await requireCurrentAppUser();
+  const actorId = await actorAppUserId(currentUser);
+  const eodDate = safeString(formData.get("historical_eod_date"));
+
+  if (!isIsoDate(eodDate)) {
+    redirect(`/eod?error=${encodeURIComponent("Select a valid EOD date.")}`);
+  }
+
+  if (eodDate > meridaToday()) {
+    redirect(
+      historicalRedirect(eodDate, {
+        error: "A future EOD cannot be created.",
+      }),
+    );
+  }
+
+  if (!["advisor", "admin"].includes(currentUser.role)) {
+    redirect(
+      historicalRedirect(eodDate, {
+        error: "Your role cannot create an EOD.",
+      }),
+    );
+  }
+
+  const targetUserId = currentUser.role === "advisor"
+    ? currentUser.id
+    : safeString(formData.get("historical_advisor_id"));
+
+  if (!targetUserId) {
+    redirect(
+      historicalRedirect(eodDate, {
+        error: "Select an advisor.",
+      }),
+    );
+  }
+
+  const supabase = createSupabaseAdmin();
+  const result = await supabase.rpc(
+    "milhano_prepare_historical_eod",
+    {
+      p_target_app_user_id: targetUserId,
+      p_eod_date: eodDate,
+      p_actor_app_user_id: actorId,
+    },
+  );
+
+  if (result.error) {
+    redirect(
+      historicalRedirect(eodDate, {
+        error: errorMessage(result.error),
+      }),
+    );
+  }
+
+  revalidatePath("/eod");
+  revalidatePath("/logs");
+  revalidatePath("/reconciliation");
+
+  redirect(
+    historicalRedirect(eodDate, {
+      notice: "historical-opened",
+    }),
+  );
 }
 
 export async function saveEodSubmission(
@@ -130,6 +229,8 @@ export async function saveEodSubmission(
   };
 
   revalidatePath("/eod");
+  revalidatePath("/logs");
+  revalidatePath("/reconciliation");
 
   redirect(
     redirectQuery(formData, {

@@ -1,0 +1,91 @@
+MILHANO ADMISSIONS | V15
+EOD EDITING + LOGS + GHL GAP REPORT
+
+INSTALL ORDER
+
+1) SUPABASE
+Run the full file:
+MILHANO_15_EOD_EDIT_LOGS_GHL_GAP_REPORT.sql
+
+Expected validation:
+- log_table_exists = true
+- log_view_exists = true
+- milhano_save_eod_submission = SECURITY DEFINER
+
+2) DEPLOY
+Deploy the complete ZIP/repository version V15.
+No n8n workflow changes are required for V15.
+
+3) TEST EOD CORRECTION
+Use an advisor test EOD that was already submitted.
+Open that date from EOD > Add previous EOD.
+
+Expected:
+- fields open PRE-FILLED with the totals already saved
+- submitted EOD is editable by its own advisor
+- validated EOD remains admin-only
+- banner explains that values are FINAL TOTALS, not deltas
+- each ? repeats the rule
+
+Example:
+Stored Total Leads = 20
+Correct total = 22
+Enter 22.
+DO NOT enter 2 or +2.
+
+Change only one field and click Update EOD.
+Reopen the date and confirm the changed field is 22 and all other totals stayed unchanged.
+
+4) TEST LOGS
+Open Dashboard > Logs.
+Expected simple entry similar to:
+Pathi · updated submitted EOD · 18 Aug 2026
+Total Leads 20 -> 22 · Meaningful Conversations 0 -> 5
+
+The log records:
+- actor who made the change
+- EOD owner/advisor
+- EOD date
+- field(s) changed
+- old value -> new value
+- whether notes changed
+- timestamp
+
+Logs begin with V15 saves/updates. V15 does not invent retroactive field-level logs for older edits that were never recorded at that level.
+
+5) TEST GHL GAP REPORT
+Open Reconciliation for the desired date range.
+Click Download CSV / Descargar CSV.
+
+The file is Excel-compatible and includes one row per KPI with:
+- GHL / System
+- Reported Total
+- Verified Outside GHL
+- Unresolved Gap
+- Not Captured in GHL
+- GHL Capture Rate
+- Reconciliation Status
+- Tracking Mode
+
+FORMULAS / INTERPRETATION
+
+Not Captured in GHL = max(Reported Total - GHL/System, 0)
+
+Verified Outside GHL is the part already confirmed as genuinely outside GHL.
+Unresolved Gap is the part of the discrepancy that still has not been explained.
+
+Manual-by-design KPIs are explicitly labeled so a low GHL capture rate is not automatically interpreted as a workflow failure. Meaningful Conversations is one example.
+
+IMPORTANT
+Do not sum leakage across unrelated KPIs into one grand total. A lead can appear in multiple funnel/activity KPIs, so doing so would double-count people/activity.
+
+SECURITY / EDIT POLICY
+- Advisor: can edit own Draft, Blocked and Submitted EOD.
+- Advisor: cannot edit Validated EOD.
+- Admin: can edit any EOD, including Validated. A changed validated EOD returns to Submitted and loses the stale validation marker.
+- Viewer/Leadership: read-only.
+
+VALUE SEMANTICS
+EOD = FINAL TOTALS / REPLACEMENT VALUES.
+Reconciliation Manual Extra = incremental amount known to be outside GHL.
+These are deliberately different concepts.

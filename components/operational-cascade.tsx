@@ -80,7 +80,9 @@ export function OperationalCascade({
                   {metricLabel(metric.metric_key, locale, metric.label)} <HelpTip text={definition} />
                 </h3>
                 <div className="cascade-breakdown">
-                  <span>{tr(locale, "GHL", "GHL")} {number(metric.system_value)}</span>
+                  {metric.system_value !== null ? (
+                    <span>{tr(locale, "GHL", "GHL")} {number(metric.system_value)}</span>
+                  ) : null}
                   {metric.manual_extra_value > 0 ? (
                     <span>+{number(metric.manual_extra_value)} {tr(locale, "manual", "manual")}</span>
                   ) : null}

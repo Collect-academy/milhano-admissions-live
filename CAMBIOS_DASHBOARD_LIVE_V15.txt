@@ -1,0 +1,15 @@
+MILHANO DASHBOARD V15
+
+1. EOD submitted records can now be corrected by the owning advisor.
+2. Existing EOD values are pre-filled during edits.
+3. EOD values are explicitly FINAL TOTALS, never +delta adjustments.
+4. Every EOD ? includes the replace-not-add instruction.
+5. Submitted EODs show a dedicated Update EOD action.
+6. Validated EODs remain admin-only; editing a validated EOD invalidates the old validation.
+7. New field-level EOD audit table stores before -> after changes.
+8. New Logs view is accessible to every authenticated dashboard user.
+9. Logs show actor, advisor, date, changed fields, old/new values, note changes and timestamp using simple wording.
+10. Reconciliation now has Download CSV for a GHL Tracking Gap report.
+11. Gap report includes GHL/System, Reported, Verified Outside GHL, unresolved gap, estimated not captured in GHL and GHL capture rate.
+12. Manual-by-design KPIs are labeled to avoid interpreting expected manual metrics as tracking failures.
+13. No new n8n workflows or scheduled executions are introduced in V15.

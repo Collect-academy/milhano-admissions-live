@@ -90,12 +90,20 @@ const DEFINITIONS: Record<string, { en: string; es: string }> = {
     es: "Intentos de llamada telefónica saliente visibles para GHL. Las llamadas de WhatsApp o llamadas externas pueden no aparecer aquí.",
   },
   unique_contacted_leads: {
-    en: "System reference for distinct leads with a connected outbound GHL call. It is not the same as the advisor's Contactados/attempts total.",
-    es: "Referencia del sistema para leads únicos con una llamada saliente conectada en GHL. No es lo mismo que el total manual de Contactados/intentos.",
+    en: "Distinct admissions leads with at least one observable human outbound attempt: a GHL call attempt or a manual/countable outbound WhatsApp. This counts unique leads, not total contact attempts.",
+    es: "Leads únicos de admisiones con al menos un intento humano saliente observable: una llamada GHL o un WhatsApp manual/contabilizable. Cuenta leads únicos, no intentos totales de contacto.",
+  },
+  responded_leads: {
+    en: "Distinct admissions leads who gave a simple observable response: an inbound WhatsApp reply or a connected GHL call. A response does not imply that enough information was provided to qualify the lead.",
+    es: "Leads únicos de admisiones que dieron una respuesta simple observable: un WhatsApp entrante o una llamada GHL conectada. Responder no significa que ya haya información suficiente para calificar al lead.",
   },
   meaningful_conversations: {
-    en: "Operational conversation quality metric. GHL can only provide a partial call-based reference; WhatsApp/external conversations may require manual reporting.",
-    es: "Métrica operativa de calidad de conversación. GHL solo aporta una referencia parcial basada en llamadas; conversaciones de WhatsApp/externas pueden requerir reporte manual.",
+    en: "Unique leads who provided admissions-relevant information, even if the information is still insufficient to decide Fit vs No Fit. It can happen by WhatsApp or phone and is reported by the advisor; it is not inferred from call duration or message count.",
+    es: "Leads únicos que proporcionaron información relevante para admisiones, aunque todavía sea insuficiente para decidir Fit vs No Fit. Puede ocurrir por WhatsApp o llamada y lo reporta la asesora; no se infiere por duración de llamada ni cantidad de mensajes.",
+  },
+  calls_3min: {
+    en: "GHL calls lasting at least 3 minutes. This is a duration-based call metric only and is no longer treated as Meaningful Conversations.",
+    es: "Llamadas de GHL con duración de al menos 3 minutos. Es únicamente una métrica de duración de llamadas y ya no se trata como Conversaciones Significativas.",
   },
   raw_source: {
     en: "Raw Source exactly as GHL provides it. Facebook/Instagram can be paid or organic unless campaign/UTM evidence explicitly identifies the acquisition type.",
@@ -197,7 +205,8 @@ export function metricLabel(key: string, locale: Locale, fallback?: string): str
   const labels: Record<string, { en: string; es: string }> = {
     new_leads: { en: "New Leads", es: "Leads Totales" },
     number_of_dials: { en: "Number of Dials", es: "Llamadas" },
-    unique_contacted_leads: { en: "Unique Contacted Leads", es: "Leads Contactados (GHL)" },
+    unique_contacted_leads: { en: "Unique Contacted Leads", es: "Leads Únicos Contactados" },
+    responded_leads: { en: "Responded", es: "Respondieron" },
     meaningful_conversations: { en: "Meaningful Conversations", es: "Conversaciones Significativas" },
     qualified_leads: { en: "Qualified / Fit", es: "Qualified / Fit" },
     school_tours_booked: { en: "School Tours Booked", es: "ST Booked" },

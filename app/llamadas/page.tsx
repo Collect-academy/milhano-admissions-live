@@ -174,13 +174,13 @@ export default async function CallsPage({
           locale={locale}
         />
         <KpiCard
-          label={tr(locale, "Meaningful Conversations", "Conversaciones Significativas")}
+          label={tr(locale, "Calls 3+ min (GHL)", "Llamadas 3+ min (GHL)")}
           value={number(meaningful)}
           helper={`${percent(
             meaningfulRate,
-          )} of outbound dials`}
+          )} ${tr(locale, "of outbound dials", "de llamadas salientes")}`}
           icon={Timer}
-          definitionKey="meaningful_conversations"
+          definitionKey="calls_3min"
           locale={locale}
         />
         <KpiCard
@@ -224,7 +224,7 @@ export default async function CallsPage({
                 <h2>{tr(locale, "Two Pickup Readings", "Dos Lecturas de Respuesta")}</h2>
               </div>
               <p className="panel-note">
-                {tr(locale, "GHL connected is preserved; 3+ minutes is the operational proxy.", "Se conserva la clasificación connected de GHL; 3+ minutos es solo una referencia operativa.")}
+                {tr(locale, "GHL connected is preserved; 3+ minutes is a duration metric only, not the Meaningful Conversation KPI.", "Se conserva la clasificación connected de GHL; 3+ minutos es solo una métrica de duración, no el KPI de Conversaciones Significativas.")}
               </p>
             </div>
             <PickupRateChart data={selected} locale={locale} />

@@ -1,0 +1,16 @@
+MILHANO DASHBOARD V13 — RESPONDED + MEANINGFUL CONVERSATIONS
+
+- Added Responded scorecard between Unique Contacted Leads and Meaningful Conversations.
+- Responded system count = distinct admissions leads with inbound WhatsApp or connected GHL call.
+- Re-defined Unique Contacted Leads = distinct admissions leads with outbound GHL call attempt or manual/countable outbound WhatsApp.
+- Kept advisor EOD Contactados as contact attempts; it is intentionally not compared directly with unique leads.
+- Meaningful Conversations is now manual-primary and semantic: relevant admissions information provided, even if Fit vs No Fit is not yet decidable.
+- Added Meaningful Conversations to the simple EOD between # Responses and Qualified / Fit.
+- Renamed the Calls-page 3+ minute proxy to Calls 3+ min (GHL) so it cannot be confused with Meaningful Conversations.
+- No Responded stage is created or required in GHL.
+- No Meaningful Conversation stage is created or required in GHL.
+- Existing Seguimiento is the appropriate current stage when a lead has responded / had a meaningful conversation but more information or a later contact is still needed.
+- No new n8n workflow required.
+- Added read-only Pathi Aug 10-13 EOD status audit.
+- Added idempotent safe backfill that fills only missing/empty EODs and never overwrites advisor drafts/submitted EODs.
+- Preserved V12.1 bilingual UI, MonaCashflow English-only behavior, help ? definitions, reconciliation, Qualified/Fit alias, and No responde vs Seguimiento split.

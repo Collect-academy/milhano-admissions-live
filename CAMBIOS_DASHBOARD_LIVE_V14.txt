@@ -1,0 +1,11 @@
+MILHANO DASHBOARD LIVE | V14
+
+- Added previous-EOD entry from the EOD page.
+- Advisors can select a prior date for their own report.
+- Admins can select advisor + date.
+- Reopening an existing advisor/date does not duplicate the submission.
+- Submitted historical EODs stay read-only for advisors.
+- Missing/draft historical EODs refresh system evidence; submitted/validated EODs open without silently changing their closed snapshot.
+- Meaningful Conversations remains a manual simple-EOD KPI.
+- No n8n workflow added for Meaningful Conversations.
+- Added n8n periodic-workflow execution budget recommendations.

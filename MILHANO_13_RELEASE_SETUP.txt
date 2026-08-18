@@ -1,0 +1,175 @@
+MILHANO | V13 | RESPONDED + MEANINGFUL CONVERSATIONS
+Date: 2026-08-14
+
+============================================================
+A. PIPELINE / GHL
+============================================================
+
+DO NOT create a Responded stage.
+DO NOT create a Meaningful Conversation stage.
+
+Stages represent current operational state / next action.
+Interaction scorecards represent events that happened during the period.
+
+Recommended early-stage interpretation:
+
+Cliente potencial
+No responde
+Seguimiento
+No fit
+Lost / Sin continuidad
+Fit (dashboard: Qualified / Fit)
+School Tour agendado
+...
+
+Examples:
+- Lead replies "call me tomorrow": Responded KPI + current stage Seguimiento.
+- Lead provides relevant admissions info but there is still not enough to decide
+  Fit vs No Fit: Meaningful Conversation KPI + current stage Seguimiento.
+- Enough information and criteria met: Fit / Qualified.
+- Enough information and criteria not met: No fit.
+
+This avoids moving a card into a temporary interaction stage and then moving it
+again just to represent its real current state.
+
+============================================================
+B. V13 CASCADE
+============================================================
+
+New Leads
+-> Number of Dials
+-> Unique Contacted Leads
+-> Responded
+-> Meaningful Conversations
+-> Qualified / Fit
+-> ST Booked
+-> ST Today
+-> ST Attended
+-> Trial Day Booked
+-> Trial Day Showed
+-> Closed
+
+Unique Contacted Leads (system)
+Distinct admissions leads with at least one observable human outbound attempt:
+- outbound GHL call attempt, OR
+- manual/countable outbound WhatsApp.
+
+This is NOT the same as EOD Contactados. EOD Contactados is attempts and can
+count multiple actions to the same lead.
+
+Responded (system + reported reconciliation)
+Distinct admissions leads with at least one observable response:
+- inbound WhatsApp linked to an admissions opportunity, OR
+- connected GHL call (outbound answered or inbound connected when available).
+
+The EOD # Responses field is mapped to this scorecard as the advisor-reported
+reference. The system count and reported count remain visible separately.
+
+Meaningful Conversations (reported/manual-primary)
+Distinct leads who provided admissions-relevant information, even if the
+information is still insufficient to decide Fit vs No Fit. Can be WhatsApp or
+phone. It is not inferred from duration or number of messages.
+
+The Calls page keeps the old 3+ minute calculation, but V13 labels it explicitly
+as Calls 3+ min (GHL), not Meaningful Conversations.
+
+============================================================
+C. WEEK EOD CHECK / BACKFILL
+============================================================
+
+1) RUN READ-ONLY FIRST:
+MILHANO_13_CHECK_PATHI_EODS_AUG10_13_READ_ONLY.sql
+
+Interpretation:
+- ALREADY_SUBMITTED_EXACT = do nothing.
+- DRAFT_EXACT_NOT_SUBMITTED = values are saved but advisor has not submitted.
+  Prefer asking Pathi to press Submit. Do not backfill over the draft.
+- EMPTY_SNAPSHOT_CAN_BACKFILL = safe to load supplied EOD.
+- MISSING = safe to load supplied EOD.
+- REVIEW_VALUES_BEFORE_TOUCHING = stop and inspect the mismatch.
+
+Known supplied EODs:
+
+Monday Aug 10
+Total 13 | Ads 13 | Organic 0 | Contacted 33 | Responses 9 |
+Qualified/Fit 3 | ST Booked 1 | ST Attended 1
+
+Tuesday Aug 11
+Total 14 | Ads 14 | Organic 0 | Contacted 26 | Responses 7 |
+Qualified/Fit 6 | ST Booked 2 | ST Attended 2
+
+Wednesday Aug 12
+Total 19 | Ads 18 | Organic 1 | Contacted 19 | Responses 7 |
+Qualified/Fit 3 | ST Booked 1 | ST Attended 1
+
+Thursday Aug 13
+Total 23 | Ads 22 | Organic 1 | Contacted 23 | Responses 4 |
+Qualified/Fit 3 | ST Booked 1 | ST Attended 1
+Note: Tenemos en proceso de inscripción (Hermano de Elian)
+
+The supplied Thursday screenshot visibly shows Borrador. The database query is
+the source of truth for whether it has since been submitted.
+
+2) SAFE BACKFILL:
+MILHANO_13_PATHI_WEEK_SAFE_BACKFILL.sql
+
+This script NEVER overwrites:
+- submitted/validated EODs;
+- drafts containing advisor-entered values.
+
+It only fills a missing EOD or an empty system-created snapshot. It is safe to
+re-run and does not double-load the same day.
+
+Meaningful Conversations is intentionally left unreported for Aug 10-13 because
+Pathi did not supply that KPI in those four historical EODs. Do not backfill 0.
+
+============================================================
+D. SUPABASE V13
+============================================================
+
+Run complete:
+MILHANO_13_RESPONDED_MEANINGFUL_CASCADE.sql
+
+Expected validation:
+- responded_leads active, display order 4, selected_period.
+- meaningful_conversations active, display order 5, manual_only.
+- Qualified / Fit display order 6.
+- meaningful_conversations_reported active in EOD catalog.
+
+No GHL stage changes are required by V13.
+No new n8n workflow is required by V13.
+
+V13 uses the existing communication-event data already populated by the current
+GHL calls + WhatsApp reconciliation. WhatsApp response attribution is most
+reliable at team/admissions-lead level; shared WhatsApp messages may not always
+identify the exact advisor.
+
+============================================================
+E. DASHBOARD DEPLOY
+============================================================
+
+Deploy:
+MILHANO_ADMISSIONS_LIVE_DASHBOARD_V13_RESPONDED_MEANINGFUL.zip
+
+Recommended commit:
+Dashboard V13: Responded + meaningful conversation model
+
+Expected UI:
+- New Responded scorecard between Unique Contacted and Meaningful Conversations.
+- Meaningful Conversations uses advisor-reported semantic count.
+- EOD adds Meaningful Conversations between # Responses and Qualified / Fit.
+- Calls 3+ min is no longer mislabeled as Meaningful Conversations.
+- Existing ES/EN switch, Mona English lock, ? definitions and reconciliation
+  remain intact.
+
+============================================================
+F. QUICK VALIDATION
+============================================================
+
+1. Open Summary for a recent period.
+2. Confirm scorecard order:
+   Unique Contacted -> Responded -> Meaningful -> Qualified / Fit.
+3. Click Responded and confirm GHL/System lead records are available.
+4. Open EOD and confirm Meaningful Conversations appears as a simple field.
+5. Open Calls and confirm old duration KPI says Calls 3+ min (GHL).
+6. Do not create a Responded or Meaningful stage in GHL.

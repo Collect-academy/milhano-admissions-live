@@ -149,7 +149,10 @@ export async function getOperationalReconciliation(
   return rows.map((row) => ({
     ...row,
     metric_value: Number(
-      row.operational_total ?? row.system_value ?? 0,
+      row.operational_total ??
+      row.system_value ??
+      (row.metric_scope === "manual_only" ? row.reported_value : null) ??
+      0,
     ),
   }));
 }
