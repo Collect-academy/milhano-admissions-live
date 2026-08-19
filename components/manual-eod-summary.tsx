@@ -9,6 +9,7 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 
+import { HelpTip } from "@/components/help-tip";
 import { KpiCard } from "@/components/kpi-card";
 import { conceptDefinition } from "@/lib/concepts";
 import type { ManualEodTotals } from "@/lib/eod-manual";
@@ -43,6 +44,7 @@ export function ManualEodSummary({
 }: {
   totals: ManualEodTotals;
   levelTotals: ManualLevelTotals;
+  locale: Locale;
 }) {
   const funnel = [
     {

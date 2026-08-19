@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 
+import { HelpTip } from "@/components/help-tip";
 import type { OperationalCascadeMetric } from "@/lib/cascade";
 import { conceptDefinition, metricLabel } from "@/lib/concepts";
 import { dateRangeQuery, type DateRange } from "@/lib/date-range";
