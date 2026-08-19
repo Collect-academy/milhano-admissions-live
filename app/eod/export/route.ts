@@ -23,6 +23,8 @@ const LABELS: Record<ManualEodMetricKey, { en: string; es: string }> = {
   qualified_leads: { en: "Qualified / Fit", es: "Qualified / Fit" },
   school_tours_scheduled: { en: "ST Booked", es: "ST Booked" },
   school_tours_attended: { en: "ST Attended", es: "ST Attended" },
+  trial_days_booked: { en: "Trial Day Booked", es: "Pasadía Agendada" },
+  trial_days_showed: { en: "Trial Day Attended", es: "Pasadía Asistida" },
   closed_leads: { en: "Closed", es: "Closed / Inscrito" },
 };
 
