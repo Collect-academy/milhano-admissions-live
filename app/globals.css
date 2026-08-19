@@ -3341,10 +3341,11 @@ tbody tr:hover {
   align-items: center;
   column-gap: 10px;
   row-gap: 6px;
-  min-width: 112px;
-  min-height: 64px;
-  flex: 0 0 112px;
-  padding: 12px 16px;
+  min-width: 100px;
+  min-height: 58px;
+  flex: 0 0 100px;
+  align-self: center;
+  padding: 10px 14px;
   border: 1px solid rgba(23, 107, 82, 0.18);
   border-radius: 18px;
   background: linear-gradient(180deg, rgba(231, 245, 239, 0.96), rgba(222, 240, 233, 0.96));
@@ -3381,8 +3382,8 @@ tbody tr:hover {
 .flow-arrow > strong {
   grid-area: percent;
   justify-self: center;
-  font-size: 0.92rem;
-  font-weight: 800;
+  font-size: 0.88rem;
+  font-weight: 850;
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
@@ -3401,35 +3402,46 @@ tbody tr:hover {
 @media (max-width: 900px) {
   .cascade-flow-arrow,
   .flow-arrow {
-    min-width: 98px;
-    flex-basis: 98px;
-    padding: 10px 14px;
+    min-width: 92px;
+    flex-basis: 92px;
+    padding: 9px 12px;
   }
 
   .cascade-flow-arrow > strong,
   .flow-arrow > strong {
-    font-size: 0.84rem;
+    font-size: 0.82rem;
+  }
+
+  .manual-funnel-step .kpi-card,
+  .cascade-scorecard {
+    width: 178px;
+    min-width: 178px;
+    flex-basis: 178px;
   }
 }
 
 .manual-funnel-flow {
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: 14px;
   overflow-x: auto;
-  padding: 3px 2px 9px;
+  padding: 6px 4px 12px;
+  scroll-behavior: smooth;
 }
 
 .manual-funnel-step {
   display: flex;
-  min-width: 166px;
-  align-items: center;
-  gap: 8px;
+  flex: 0 0 auto;
+  width: max-content;
+  align-items: stretch;
+  gap: 14px;
 }
 
 .manual-funnel-step .kpi-card {
-  min-width: 166px;
+  width: 184px;
+  min-width: 184px;
   min-height: 164px;
+  flex: 0 0 184px;
   margin: 0;
 }
 
