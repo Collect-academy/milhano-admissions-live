@@ -1,6 +1,6 @@
 # Milhano Admissions — Project Notes
 
-**Current checkpoint:** V16.2  
+**Current checkpoint:** V16.4  
 **Dashboard:** Next.js + Supabase  
 **Primary CRM:** GoHighLevel (GHL)  
 **Timezone:** America/Merida
@@ -259,6 +259,7 @@ already exists. It is a project checkpoint, not a from-zero database bootstrap.
 - **V16.1:** dedicated Today's EOD UX.
 - **V16.2:** structured School Tour detail, Closed in Manual Summary, funnel arrows/ratios,
   school level reporting, tooltip overflow fix, 2+ minute call signal for Meaningful.
+- **V16.4:** clean repository checkpoint. Keeps the complete V16.2 feature set while consolidating project SQL/docs into the maintained current files.
 
 Going forward, update this section in place instead of adding another changelog document.
 

@@ -1789,21 +1789,22 @@ tbody tr:hover {
 .operational-cascade {
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: 14px;
   overflow-x: auto;
-  padding: 3px 2px 10px;
+  padding: 6px 4px 12px;
+  scroll-behavior: smooth;
 }
 
 .cascade-step-wrapper {
   display: flex;
-  min-width: 170px;
-  align-items: center;
-  gap: 8px;
+  flex: 0 0 auto;
+  align-items: stretch;
+  gap: 14px;
 }
 
 .cascade-scorecard {
   display: flex;
-  min-width: 170px;
+  min-width: 196px;
   min-height: 162px;
   flex: 1;
   flex-direction: column;
@@ -2079,12 +2080,8 @@ tbody tr:hover {
 }
 
 @media (max-width: 650px) {
-  .cascade-step-wrapper {
-    min-width: 155px;
-  }
-
   .cascade-scorecard {
-    min-width: 155px;
+    min-width: 184px;
   }
 
   .cascade-arrow {
@@ -3335,35 +3332,84 @@ tbody tr:hover {
 
 .cascade-flow-arrow,
 .flow-arrow {
-  display: flex;
-  min-width: 58px;
-  flex: 0 0 58px;
-  flex-direction: column;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "percent arrow"
+    "tip tip";
   align-items: center;
-  justify-content: center;
-  gap: 1px;
+  column-gap: 10px;
+  row-gap: 6px;
+  min-width: 112px;
+  min-height: 64px;
+  flex: 0 0 112px;
+  padding: 12px 16px;
+  border: 1px solid rgba(23, 107, 82, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(231, 245, 239, 0.96), rgba(222, 240, 233, 0.96));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
   color: var(--green-dark);
   text-align: center;
 }
 
+.cascade-flow-arrow::after,
+.flow-arrow::after {
+  content: "";
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  border-top: 1px solid rgba(23, 107, 82, 0.18);
+  border-right: 1px solid rgba(23, 107, 82, 0.18);
+  border-radius: 0 6px 0 0;
+  background: rgba(222, 240, 233, 0.96);
+  transform: translateY(-50%) rotate(45deg);
+}
+
 .cascade-flow-arrow > span,
 .flow-arrow > span {
-  font-size: 1.25rem;
+  grid-area: arrow;
+  justify-self: end;
+  font-size: 1.15rem;
   line-height: 1;
+  opacity: 0.9;
 }
 
 .cascade-flow-arrow > strong,
 .flow-arrow > strong {
-  font-size: 0.63rem;
+  grid-area: percent;
+  justify-self: center;
+  font-size: 0.92rem;
+  font-weight: 800;
   letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 
 .cascade-flow-arrow .help-tip,
 .flow-arrow .help-tip {
-  margin: 2px 0 0;
-  width: 14px;
-  height: 14px;
-  font-size: 0.5rem;
+  grid-area: tip;
+  justify-self: center;
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  font-size: 0.56rem;
+}
+
+
+@media (max-width: 900px) {
+  .cascade-flow-arrow,
+  .flow-arrow {
+    min-width: 98px;
+    flex-basis: 98px;
+    padding: 10px 14px;
+  }
+
+  .cascade-flow-arrow > strong,
+  .flow-arrow > strong {
+    font-size: 0.84rem;
+  }
 }
 
 .manual-funnel-flow {
