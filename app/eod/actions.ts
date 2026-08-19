@@ -47,13 +47,21 @@ function errorMessage(error: unknown): string {
 function historicalRedirect(
   eodDate: string,
   values: Record<string, string>,
+  options: {
+    history?: boolean;
+    edit?: string;
+    advisor?: string;
+  } = {},
 ): string {
   const params = new URLSearchParams({
     range: "custom",
     from: eodDate,
     to: eodDate,
-    history: "1",
   });
+
+  if (options.history) params.set("history", "1");
+  if (options.edit) params.set("edit", options.edit);
+  if (options.advisor) params.set("advisor", options.advisor);
 
   for (const [key, value] of Object.entries(values)) {
     if (value) params.set(key, value);
@@ -106,6 +114,9 @@ export async function openHistoricalEod(
   const currentUser = await requireCurrentAppUser();
   const actorId = await actorAppUserId(currentUser);
   const eodDate = safeString(formData.get("historical_eod_date"));
+  const context = safeString(formData.get("eod_context")) === "today"
+    ? "today"
+    : "historical";
 
   if (!isIsoDate(eodDate)) {
     redirect(`/eod?error=${encodeURIComponent("Select a valid EOD date.")}`);
@@ -115,7 +126,7 @@ export async function openHistoricalEod(
     redirect(
       historicalRedirect(eodDate, {
         error: "A future EOD cannot be created.",
-      }),
+      }, { history: context === "historical" }),
     );
   }
 
@@ -123,7 +134,7 @@ export async function openHistoricalEod(
     redirect(
       historicalRedirect(eodDate, {
         error: "Your role cannot create an EOD.",
-      }),
+      }, { history: context === "historical" }),
     );
   }
 
@@ -135,7 +146,7 @@ export async function openHistoricalEod(
     redirect(
       historicalRedirect(eodDate, {
         error: "Select an advisor.",
-      }),
+      }, { history: context === "historical" }),
     );
   }
 
@@ -153,7 +164,7 @@ export async function openHistoricalEod(
     redirect(
       historicalRedirect(eodDate, {
         error: errorMessage(result.error),
-      }),
+      }, { history: context === "historical", advisor: targetUserId }),
     );
   }
 
@@ -161,10 +172,24 @@ export async function openHistoricalEod(
   revalidatePath("/logs");
   revalidatePath("/reconciliation");
 
+  const payload = result.data as {
+    submission_id?: string;
+  } | null;
+
   redirect(
-    historicalRedirect(eodDate, {
-      notice: "historical-opened",
-    }),
+    historicalRedirect(
+      eodDate,
+      {
+        notice: context === "today"
+          ? "today-opened"
+          : "historical-opened",
+      },
+      {
+        history: context === "historical",
+        edit: payload?.submission_id ?? "",
+        advisor: currentUser.role === "admin" ? targetUserId : "",
+      },
+    ),
   );
 }
 

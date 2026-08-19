@@ -1,0 +1,11 @@
+MILHANO Admissions Dashboard — V16.1
+
+HOTFIX: Today-first EOD entry
+
+- Restores a prominent "Today's EOD / EOD de hoy" action at the top of /eod.
+- Advisors can fill, continue, view or edit today's EOD without treating it like a historical report.
+- Admins can choose an advisor directly in the Today's EOD card when no advisor filter is selected.
+- Opening a new/current EOD now takes the user directly into the pre-filled EOD modal.
+- "Add previous EOD" is now explicitly historical and its date picker stops at yesterday.
+- Existing daily/weekly/monthly EOD history, CSV export, pre-filled editing and Logs remain unchanged.
+- No SQL migration required.

@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   CalendarPlus,
   CheckCircle2,
+  Clock3,
   Download,
   PencilLine,
   Save,
@@ -112,7 +113,17 @@ export default async function EodPage({
   const locale = await getDashboardLocale();
   const params = await searchParams;
   const range = resolveDateRange(params);
-  const data = await getEodData(range);
+  const today = meridaToday();
+  const todayRange = {
+    key: "today" as const,
+    start: today,
+    end: today,
+    label: "Today",
+  };
+  const [data, todayData] = await Promise.all([
+    getEodData(range),
+    getEodData(todayRange),
+  ]);
 
   const advisorOptions = currentUser.role !== "advisor"
     ? await createSupabaseAdmin()
@@ -137,7 +148,18 @@ export default async function EodPage({
     : roleScopedRows;
   const visibleRecords = buildManualEodRecords(visibleRawRows);
   const groupedMonths = groupManualEodRecords(visibleRecords);
-  const today = meridaToday();
+
+  const todayRoleRows = currentUser.role === "advisor"
+    ? todayData.rows.filter((row) => row.app_user_id === currentUser.id)
+    : todayData.rows;
+  const todayVisibleRows = currentUser.role !== "advisor" && selectedAdvisorId
+    ? todayRoleRows.filter((row) => row.app_user_id === selectedAdvisorId)
+    : todayRoleRows;
+  const todayRecords = buildManualEodRecords(todayVisibleRows);
+  const todayRecord = currentUser.role === "advisor" || selectedAdvisorId
+    ? todayRecords[0] ?? null
+    : null;
+
   const latestDate = visibleRecords.at(-1)?.eodDate ?? null;
   const editSubmissionId = first(params.edit);
   const editRecord = visibleRecords.find((record) => record.submissionId === editSubmissionId) ?? null;
@@ -150,6 +172,18 @@ export default async function EodPage({
   const notice = first(params.notice);
   const error = first(params.error);
   const closeParams = new URLSearchParams(preservedRange);
+  const yesterdayDate = (() => {
+    const value = new Date(`${today}T12:00:00Z`);
+    value.setUTCDate(value.getUTCDate() - 1);
+    return value.toISOString().slice(0, 10);
+  })();
+  const todayEditParams = new URLSearchParams({
+    range: "custom",
+    from: today,
+    to: today,
+    ...(selectedAdvisorId ? { advisor: selectedAdvisorId } : {}),
+    ...(todayRecord ? { edit: todayRecord.submissionId } : {}),
+  });
 
   const editAllowed = editRecord
     ? currentUser.role === "admin" || (
@@ -177,6 +211,56 @@ export default async function EodPage({
       statusLabel={latestDate ? `${tr(locale, "Latest EOD", "Último EOD")} ${dateLabel(latestDate)}` : tr(locale, "No EOD", "Sin EOD")}
     >
       <DateRangeFilter basePath="/eod" range={range} locale={locale} preserve={{ advisor: selectedAdvisorId || undefined }} />
+
+      {currentUser.role === "advisor" || currentUser.role === "admin" ? (
+        <section className="eod-today-panel">
+          <div className="eod-today-copy">
+            <span className="eod-today-icon"><Clock3 size={20} /></span>
+            <div>
+              <p className="eyebrow">{tr(locale, "Today's EOD", "EOD de hoy")}</p>
+              <h2>{dateLabel(today)}</h2>
+              <span>{tr(locale, "Use this area for today's normal EOD. Previous dates are handled separately below.", "Usa esta sección para el EOD normal de hoy. Las fechas anteriores se manejan aparte abajo.")}</span>
+            </div>
+          </div>
+
+          {todayRecord ? (
+            <div className="eod-today-action">
+              <span className="eod-table-status">{statusLabel(todayRecord.status, locale)}</span>
+              <Link className="primary-button" href={`/eod?${todayEditParams.toString()}`}>
+                <PencilLine size={16} />
+                {todayRecord.status === "draft" || todayRecord.status === "blocked"
+                  ? tr(locale, "Continue today's EOD", "Continuar EOD de hoy")
+                  : todayRecord.status === "validated" && currentUser.role === "advisor"
+                    ? tr(locale, "View today's EOD", "Ver EOD de hoy")
+                    : tr(locale, "Edit today's EOD", "Editar EOD de hoy")}
+              </Link>
+            </div>
+          ) : (
+            <form action={openHistoricalEod} className="eod-today-action eod-today-create">
+              <input name="historical_eod_date" type="hidden" value={today} />
+              <input name="eod_context" type="hidden" value="today" />
+              {currentUser.role === "admin" ? (
+                selectedAdvisorId ? (
+                  <input name="historical_advisor_id" type="hidden" value={selectedAdvisorId} />
+                ) : (
+                  <label>
+                    <span>{tr(locale, "Advisor", "Asesora")}</span>
+                    <select name="historical_advisor_id" required defaultValue="">
+                      <option disabled value="">{tr(locale, "Select advisor", "Selecciona asesora")}</option>
+                      {historicalAdvisors.map((advisor) => (
+                        <option key={advisor.id} value={advisor.id}>{advisor.display_name}</option>
+                      ))}
+                    </select>
+                  </label>
+                )
+              ) : null}
+              <button className="primary-button" type="submit">
+                <Send size={16} /> {tr(locale, "Fill today's EOD", "Subir EOD de hoy")}
+              </button>
+            </form>
+          )}
+        </section>
+      ) : null}
 
       {currentUser.role !== "advisor" ? (
         <form action="/eod" className="eod-advisor-filter" method="get">
@@ -215,7 +299,8 @@ export default async function EodPage({
           <form action={openHistoricalEod} className="historical-eod-form">
             <label>
               <span>{tr(locale, "EOD date", "Fecha del EOD")}</span>
-              <input max={today} name="historical_eod_date" required type="date" />
+              <input max={yesterdayDate} name="historical_eod_date" required type="date" />
+              <input name="eod_context" type="hidden" value="historical" />
             </label>
 
             {currentUser.role === "admin" ? (

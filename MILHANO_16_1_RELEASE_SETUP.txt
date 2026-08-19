@@ -1,0 +1,35 @@
+MILHANO | V16.1 | TODAY-FIRST EOD HOTFIX
+
+No SQL is required.
+
+DEPLOY
+1. Replace V16 with the V16.1 dashboard package in GitHub/Vercel.
+2. Let Vercel deploy normally.
+
+TEST AS PATHI
+1. Open /eod.
+2. At the top, confirm a prominent "EOD de hoy" card is visible.
+3. If today's EOD does not exist, click "Subir EOD de hoy".
+4. The current-day EOD modal should open immediately.
+5. Save Draft or Submit EOD.
+6. Re-open /eod and confirm the button now says Continue/Edit/View depending on status.
+
+TEST HISTORICAL
+1. Expand "Subir EOD anterior".
+2. Confirm the maximum selectable date is yesterday, not today.
+3. Pick a previous date.
+4. The selected EOD should open directly in the modal.
+
+ADMIN
+- With an advisor filter selected, Today's EOD acts on that advisor.
+- Without an advisor filter, the Today card asks the admin to choose an advisor.
+
+V16 FEATURES PRESERVED
+- daily EOD table
+- weekly totals
+- monthly totals
+- click-day editing modal
+- pre-filled total replacement behavior
+- EOD audit Logs
+- manual CSV export
+- Summary Manual/GHL switch
