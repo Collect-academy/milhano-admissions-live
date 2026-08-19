@@ -2908,3 +2908,297 @@ tbody tr:hover {
     grid-column: 2;
   }
 }
+
+/* ==========================================================
+   V16 EOD history table + summary source switch
+========================================================== */
+
+.summary-source-shell,
+.eod-history-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 11px 13px;
+  box-shadow: 0 8px 24px rgba(25, 61, 48, 0.04);
+}
+
+.summary-source-copy,
+.eod-history-toolbar > div {
+  display: grid;
+  gap: 3px;
+}
+
+.summary-source-copy strong,
+.eod-history-toolbar strong {
+  color: var(--text);
+  font-size: 0.7rem;
+}
+
+.summary-source-copy span,
+.eod-history-toolbar span {
+  color: var(--muted);
+  font-size: 0.61rem;
+  line-height: 1.4;
+}
+
+.summary-source-toggle {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(115px, 1fr));
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  padding: 3px;
+}
+
+.summary-source-option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border-radius: 999px;
+  padding: 6px 11px;
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.summary-source-option-active {
+  background: var(--green);
+  color: #fff;
+  box-shadow: 0 3px 12px rgba(23, 107, 82, 0.18);
+}
+
+.manual-summary-flow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(135px, 1fr));
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.manual-summary-flow .kpi-card {
+  min-width: 135px;
+  margin: 0;
+}
+
+.manual-acquisition-panel {
+  padding-top: 17px;
+  padding-bottom: 17px;
+}
+
+.compact-panel-heading {
+  margin-bottom: 12px;
+}
+
+.manual-acquisition-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manual-acquisition-grid > div {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.manual-acquisition-grid strong {
+  font-size: 1.45rem;
+  letter-spacing: -0.035em;
+}
+
+.manual-acquisition-grid span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.capitalize-label {
+  text-transform: capitalize;
+}
+
+.eod-history-panel {
+  padding-bottom: 16px;
+}
+
+.eod-history-scroll {
+  max-height: none;
+}
+
+.eod-history-table {
+  min-width: 1220px;
+}
+
+.eod-history-table th,
+.eod-history-table td {
+  white-space: nowrap;
+  font-size: 0.61rem;
+}
+
+.eod-history-table th {
+  vertical-align: middle;
+}
+
+.eod-week-heading-row td {
+  border-top: 10px solid var(--surface);
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 0.59rem;
+  font-weight: 850;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.eod-week-total-row td {
+  background: #f4f7f4;
+  color: var(--green-dark);
+  border-top: 1px solid var(--border);
+}
+
+.eod-month-total-row td {
+  border-top: 2px solid rgba(23, 107, 82, 0.28);
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.eod-day-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 8px;
+  padding: 5px 7px;
+  color: var(--green-dark);
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.eod-day-link:hover,
+.eod-day-link:focus-visible {
+  background: var(--green-soft);
+  outline: none;
+}
+
+.eod-table-status {
+  display: inline-flex;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  padding: 3px 7px;
+  color: var(--muted);
+  font-size: 0.55rem;
+  font-weight: 800;
+}
+
+.eod-modal-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  background: rgba(11, 29, 23, 0.48);
+  padding: 24px;
+  backdrop-filter: blur(4px);
+}
+
+.eod-modal {
+  width: min(980px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  padding: 20px;
+  box-shadow: 0 28px 80px rgba(10, 36, 27, 0.24);
+}
+
+.eod-modal-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 13px;
+}
+
+.eod-modal-heading h2 {
+  margin-bottom: 7px;
+}
+
+.eod-modal-close {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .summary-source-shell,
+  .eod-history-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .summary-source-toggle {
+    width: 100%;
+  }
+
+  .manual-acquisition-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .eod-modal-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .eod-modal {
+    width: 100%;
+    max-height: 92vh;
+    border-radius: 20px 20px 0 0;
+  }
+}
+
+.eod-advisor-filter {
+  display: flex;
+  align-items: end;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.eod-advisor-filter label {
+  display: grid;
+  gap: 4px;
+}
+
+.eod-advisor-filter label > span {
+  color: var(--muted);
+  font-size: 0.57rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.eod-advisor-filter select {
+  min-width: 220px;
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  padding: 6px 9px;
+  color: var(--text);
+}

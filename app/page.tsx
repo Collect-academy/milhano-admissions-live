@@ -13,6 +13,8 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { KpiCard } from "@/components/kpi-card";
 import { OperationalCascade } from "@/components/operational-cascade";
+import { ManualEodSummary } from "@/components/manual-eod-summary";
+import { SummarySourceToggle, type SummarySource } from "@/components/summary-source-toggle";
 import { getOperationalReconciliation } from "@/lib/cascade";
 import {
   dateRangeQuery,
@@ -25,6 +27,7 @@ import { tr } from "@/lib/locale";
 import { HelpTip } from "@/components/help-tip";
 import { conceptDefinition, stageConceptDefinition } from "@/lib/concepts";
 import { getSystemHealthData } from "@/lib/system-health";
+import { getSubmittedManualEodTotals } from "@/lib/eod-manual";
 import {
   ownerLabel,
   stageLabel,
@@ -45,11 +48,14 @@ export default async function DashboardPage({
   const params = await searchParams;
   const range = resolveDateRange(params);
   const locale = await getDashboardLocale();
+  const requestedSource = Array.isArray(params.source) ? params.source[0] : params.source;
+  const summarySource: SummarySource = requestedSource === "ghl" ? "ghl" : "manual";
 
-  const [data, health, reconciliation] = await Promise.all([
+  const [data, health, reconciliation, manualTotals] = await Promise.all([
     getDashboardData(range),
     getSystemHealthData(),
     getOperationalReconciliation(range),
+    getSubmittedManualEodTotals(range),
   ]);
   const cascade = reconciliation.filter((metric) => metric.show_in_cascade);
 
@@ -62,24 +68,13 @@ export default async function DashboardPage({
   const cascadeByKey = new Map(
     reconciliation.map((metric) => [metric.metric_key, metric]),
   );
-  const adsReported = cascadeByKey.get("ads_leads")?.reported_value ?? null;
-  const organicReported = cascadeByKey.get("organic_leads")?.reported_value ?? null;
-
-  const reconciled = (metricKey: string, fallback: number) =>
-    cascadeByKey.get(metricKey)?.metric_value ?? fallback;
+  const systemValue = (metricKey: string, fallback: number) =>
+    cascadeByKey.get(metricKey)?.system_value ?? fallback;
 
   const sourceHelper = (metricKey: string, fallback: string) => {
     const metric = cascadeByKey.get(metricKey);
-    if (!metric) return fallback;
-
-    const parts = [`GHL ${number(metric.system_value)}`];
-    if (metric.manual_extra_value > 0) {
-      parts.push(`+${number(metric.manual_extra_value)} manual`);
-    }
-    if (metric.gap !== null && metric.gap !== 0) {
-      parts.push(`gap ${metric.gap > 0 ? "+" : ""}${number(metric.gap)}`);
-    }
-    return parts.join(" · ");
+    if (!metric || metric.system_value === null) return fallback;
+    return `GHL/System ${number(metric.system_value)}`;
   };
 
   return (
@@ -111,18 +106,30 @@ export default async function DashboardPage({
         <strong>{tr(locale, "View monitoring →", "Ver monitoreo →")}</strong>
       </Link>
 
-      <DateRangeFilter basePath="/" range={range} locale={locale} />
-
-      <OperationalCascade
-        metrics={cascade}
+      <DateRangeFilter
+        basePath="/"
         range={range}
         locale={locale}
+        preserve={{ source: summarySource }}
       />
 
-      <section
-        aria-label="Period indicators"
-        className="kpi-grid"
-      >
+      <SummarySourceToggle source={summarySource} range={range} locale={locale} />
+
+      {summarySource === "manual" ? (
+        <ManualEodSummary totals={manualTotals} locale={locale} />
+      ) : (
+        <>
+          <OperationalCascade
+            metrics={cascade}
+            range={range}
+            locale={locale}
+            mode="system"
+          />
+
+          <section
+            aria-label="Period indicators"
+            className="kpi-grid"
+          >
         <KpiCard
           helper={sourceHelper("new_leads", range.label)}
           icon={Activity}
@@ -130,7 +137,7 @@ export default async function DashboardPage({
           definitionKey="new_leads"
           locale={locale}
           value={number(
-            reconciled("new_leads", data.period.new_leads),
+            systemValue("new_leads", data.period.new_leads),
           )}
         />
         <KpiCard
@@ -143,7 +150,7 @@ export default async function DashboardPage({
           definitionKey="school_tours_booked"
           locale={locale}
           value={number(
-            reconciled(
+            systemValue(
               "school_tours_booked",
               data.period.tours_scheduled,
             ),
@@ -159,7 +166,7 @@ export default async function DashboardPage({
           definitionKey="school_tours_attended"
           locale={locale}
           value={number(
-            reconciled(
+            systemValue(
               "school_tours_attended",
               data.period.tours_attended,
             ),
@@ -175,7 +182,7 @@ export default async function DashboardPage({
           definitionKey="closed"
           locale={locale}
           value={number(
-            reconciled("closed", data.period.enrolled),
+            systemValue("closed", data.period.enrolled),
           )}
         />
         <KpiCard
@@ -198,45 +205,15 @@ export default async function DashboardPage({
           definitionKey="number_of_dials"
           locale={locale}
           value={number(
-            reconciled(
+            systemValue(
               "number_of_dials",
               data.period.call_attempts,
             ),
           )}
         />
-      </section>
-
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">{tr(locale, "Reported acquisition", "Adquisición reportada")}</p>
-            <h2>{tr(locale, "Ads vs Organic", "Ads vs Orgánico")}</h2>
-          </div>
-          <p className="panel-note">
-            {tr(locale,
-              "This is reported attribution, not inferred from raw Facebook/Instagram Source values.",
-              "Esta atribución es reportada; no se infiere del Source crudo Facebook/Instagram.")}
-          </p>
-        </div>
-        <div className="kpi-grid pipeline-kpi-grid">
-          <KpiCard
-            label={tr(locale, "Ads Leads", "Leads Ads")}
-            value={adsReported === null ? "—" : number(adsReported)}
-            helper={tr(locale, "Advisor/EOD reported", "Reportado por asesora/EOD")}
-            icon={Activity}
-            definitionKey="ads_leads"
-            locale={locale}
-          />
-          <KpiCard
-            label={tr(locale, "Organic Leads", "Leads Orgánicos")}
-            value={organicReported === null ? "—" : number(organicReported)}
-            helper={tr(locale, "Advisor/EOD reported", "Reportado por asesora/EOD")}
-            icon={Activity}
-            definitionKey="organic_leads"
-            locale={locale}
-          />
-        </div>
-      </section>
+          </section>
+        </>
+      )}
 
       <section className="panel">
         <div className="panel-heading">

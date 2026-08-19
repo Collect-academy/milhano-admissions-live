@@ -1,0 +1,18 @@
+MILHANO DASHBOARD LIVE — V16
+
+- EOD redesigned as a period history table.
+- Added advisor filter for leadership/admin so Pathi can be reviewed/exported separately.
+- Daily EOD values shown in rows.
+- Weekly subtotal inserted after every weekly block.
+- Monthly total inserted after each month.
+- Clicking an EOD date opens a pre-filled edit popup.
+- EOD corrections continue to replace final totals, never add deltas.
+- Existing V15 Logs continue tracking only real before -> after changes.
+- Added CSV export for manual EOD metrics with daily, weekly and monthly rows.
+- Added Summary source switch: Manual (EOD) / GHL.
+- Manual (EOD) is the default Summary view.
+- Manual Summary uses submitted/validated EOD data only.
+- GHL Summary shows raw automated System/GHL counts instead of operational/manual-adjusted totals.
+- Current GHL Stages and GHL-only detail sections remain CRM-based regardless of the Summary switch.
+- No Supabase migration required.
+- No n8n changes in this release.

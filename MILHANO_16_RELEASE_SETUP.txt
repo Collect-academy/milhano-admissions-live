@@ -1,0 +1,68 @@
+MILHANO | DASHBOARD V16 | EOD HISTORY + MANUAL/GHL SUMMARY
+
+PREREQUISITE
+- V15 must already be installed and working.
+- V16 requires NO new Supabase SQL migration.
+- V16 adds no n8n workflows and does not modify the planned Dashboard Refresh Orchestrator.
+
+WHAT V16 ADDS
+1) EOD history table
+   - Daily rows for every visible EOD in the selected period.
+   - Weekly subtotal after every week block.
+   - Monthly total at the end of each month block.
+   - Admin/viewer can see team rows or filter to one advisor; advisors see their own rows.
+
+2) Click-to-edit EOD popup
+   - Click the date in the EOD table.
+   - Existing values open pre-filled in a popup.
+   - Values are final totals, never deltas.
+   - Example: 20 -> 22 means type 22, not +2.
+   - Saving still uses V15 audit logs; only actual field changes are logged.
+
+3) Manual EOD CSV
+   - EOD > Export manual CSV.
+   - Includes daily rows plus weekly_total and monthly_total rows.
+   - Uses the selected date range and advisor filter.
+   - Opens normally in Excel (UTF-8 BOM included).
+
+4) Summary source switch
+   - Manual (EOD) is the default front view.
+   - GHL switches to raw automated System/GHL counts.
+   - Manual summary uses submitted/validated EODs only.
+   - Switching views changes presentation only; it does not modify stored data.
+
+DEPLOY
+1. Upload/merge the V16 ZIP into the GitHub repo used by Vercel.
+2. Deploy normally.
+3. No SQL step is required.
+
+TESTS
+A) EOD table
+- Open EOD > This Month.
+- Confirm daily rows appear.
+- Confirm weekly subtotal rows appear.
+- Confirm monthly total appears.
+
+B) Popup correction
+- Click a date.
+- Confirm all existing fields are pre-filled.
+- Change only one value, e.g. Responses 7 -> 8.
+- Click Update EOD.
+- Check Logs: only Responses 7 -> 8 should appear.
+
+C) CSV
+- EOD > Export manual CSV.
+- Confirm daily rows and weekly/monthly totals.
+
+D) Summary switch
+- Open Summary.
+- Default should be Manual (EOD).
+- Manual should show Total Leads, Contacted, Responded, Meaningful, Qualified/Fit, ST Booked and ST Attended from submitted/validated EODs.
+- Switch to GHL.
+- Primary counts should change to raw System/GHL counts.
+- Current GHL Stages remain GHL regardless of the switch.
+
+NOTES
+- Manual summary is not a strict funnel: Contacted is a count of contact attempts while Responded/Meaningful/Fit are lead counts.
+- Draft EODs appear in the EOD history table but are excluded from the Manual Summary until submitted/validated.
+- The CSV export includes visible records for the current role and current advisor filter. Advisors export only their own EODs; leadership/admin can export the team or one selected advisor such as Pathi.
