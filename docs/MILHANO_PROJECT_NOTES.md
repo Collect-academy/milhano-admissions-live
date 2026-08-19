@@ -1,6 +1,6 @@
 # Milhano Admissions — Project Notes
 
-**Current checkpoint:** V16.4.1  
+**Current checkpoint:** V16.4.3  
 **Dashboard:** Next.js + Supabase  
 **Primary CRM:** GoHighLevel (GHL)  
 **Timezone:** America/Merida

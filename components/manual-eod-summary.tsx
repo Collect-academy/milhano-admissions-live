@@ -9,7 +9,6 @@ import {
   UserRoundCheck,
 } from "lucide-react";
 
-import { HelpTip } from "@/components/help-tip";
 import { KpiCard } from "@/components/kpi-card";
 import { conceptDefinition } from "@/lib/concepts";
 import type { ManualEodTotals } from "@/lib/eod-manual";
@@ -26,21 +25,13 @@ function flowPercent(from: number, to: number): string {
 function FlowArrow({
   from,
   to,
-  locale,
 }: {
   from: number;
   to: number;
-  locale: Locale;
 }) {
   return (
     <div className="flow-arrow" aria-label={`${to} / ${from}`}>
-      <span>→</span>
       <strong>{flowPercent(from, to)}</strong>
-      <HelpTip text={tr(
-        locale,
-        "Period progression ratio = next reported KPI ÷ previous reported KPI. It is directional, not a strict cohort conversion: an attended tour this week may have been booked in a previous week.",
-        "Ratio de avance del periodo = siguiente KPI reportado ÷ KPI anterior. Es direccional, no una conversión estricta de cohorte: un ST atendido esta semana pudo haberse agendado en una semana anterior.",
-      )} />
     </div>
   );
 }
@@ -52,7 +43,6 @@ export function ManualEodSummary({
 }: {
   totals: ManualEodTotals;
   levelTotals: ManualLevelTotals;
-  locale: Locale;
 }) {
   const funnel = [
     {
@@ -142,7 +132,7 @@ export function ManualEodSummary({
                 value={number(metric.value)}
               />
               {index < funnel.length - 1 ? (
-                <FlowArrow from={metric.value} locale={locale} to={funnel[index + 1].value} />
+                <FlowArrow from={metric.value} to={funnel[index + 1].value} />
               ) : null}
             </div>
           ))}

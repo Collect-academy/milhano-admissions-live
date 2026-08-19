@@ -3332,84 +3332,73 @@ tbody tr:hover {
 
 .cascade-flow-arrow,
 .flow-arrow {
+  --flow-outline: rgba(20, 82, 64, 0.72);
+  --flow-fill: rgba(225, 242, 235, 0.98);
   position: relative;
   display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas:
-    "percent arrow"
-    "tip tip";
-  align-items: center;
-  column-gap: 10px;
-  row-gap: 6px;
-  min-width: 100px;
-  min-height: 58px;
-  flex: 0 0 100px;
+  place-items: center;
+  min-width: 104px;
+  min-height: 56px;
+  flex: 0 0 104px;
   align-self: center;
-  padding: 10px 14px;
-  border: 1px solid rgba(23, 107, 82, 0.18);
-  border-radius: 18px;
-  background: linear-gradient(180deg, rgba(231, 245, 239, 0.96), rgba(222, 240, 233, 0.96));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  padding: 10px 18px 10px 14px;
+  background: var(--flow-outline);
   color: var(--green-dark);
   text-align: center;
+  clip-path: polygon(
+    0 0,
+    calc(100% - 20px) 0,
+    100% 50%,
+    calc(100% - 20px) 100%,
+    0 100%,
+    9px 50%
+  );
+  filter: drop-shadow(0 3px 7px rgba(25, 61, 48, 0.08));
 }
 
-.cascade-flow-arrow::after,
-.flow-arrow::after {
+.cascade-flow-arrow::before,
+.flow-arrow::before {
   content: "";
   position: absolute;
-  right: -10px;
-  top: 50%;
-  width: 20px;
-  height: 20px;
-  border-top: 1px solid rgba(23, 107, 82, 0.18);
-  border-right: 1px solid rgba(23, 107, 82, 0.18);
-  border-radius: 0 6px 0 0;
-  background: rgba(222, 240, 233, 0.96);
-  transform: translateY(-50%) rotate(45deg);
-}
-
-.cascade-flow-arrow > span,
-.flow-arrow > span {
-  grid-area: arrow;
-  justify-self: end;
-  font-size: 1.15rem;
-  line-height: 1;
-  opacity: 0.9;
+  inset: 1.5px;
+  z-index: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(234, 247, 241, 0.99),
+    var(--flow-fill)
+  );
+  clip-path: polygon(
+    0 0,
+    calc(100% - 20px) 0,
+    100% 50%,
+    calc(100% - 20px) 100%,
+    0 100%,
+    9px 50%
+  );
 }
 
 .cascade-flow-arrow > strong,
 .flow-arrow > strong {
-  grid-area: percent;
-  justify-self: center;
-  font-size: 0.88rem;
+  position: relative;
+  z-index: 1;
+  font-size: 0.9rem;
   font-weight: 850;
   letter-spacing: -0.02em;
   white-space: nowrap;
 }
 
-.cascade-flow-arrow .help-tip,
-.flow-arrow .help-tip {
-  grid-area: tip;
-  justify-self: center;
-  margin: 0;
-  width: 16px;
-  height: 16px;
-  font-size: 0.56rem;
-}
-
-
 @media (max-width: 900px) {
   .cascade-flow-arrow,
   .flow-arrow {
-    min-width: 92px;
-    flex-basis: 92px;
-    padding: 9px 12px;
+    min-width: 96px;
+    flex-basis: 96px;
+    min-height: 52px;
+    padding: 9px 17px 9px 13px;
   }
 
   .cascade-flow-arrow > strong,
   .flow-arrow > strong {
-    font-size: 0.82rem;
+    font-size: 0.84rem;
   }
 
   .manual-funnel-step .kpi-card,

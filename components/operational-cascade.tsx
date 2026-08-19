@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 
-import { HelpTip } from "@/components/help-tip";
 import type { OperationalCascadeMetric } from "@/lib/cascade";
 import { conceptDefinition, metricLabel } from "@/lib/concepts";
 import { dateRangeQuery, type DateRange } from "@/lib/date-range";
@@ -115,13 +114,7 @@ export function OperationalCascade({
                 const nextValue = Number(mode === "system" ? (nextMetric.system_value ?? 0) : nextMetric.metric_value);
                 return (
                   <div className="cascade-flow-arrow" aria-label={`${nextValue} / ${currentValue}`}>
-                    <span>→</span>
                     <strong>{transitionPercent(currentValue, nextValue)}</strong>
-                    <HelpTip text={tr(
-                      locale,
-                      "Period progression ratio = next KPI ÷ previous KPI. It shows directional flow for the selected period, not a strict same-cohort conversion; later-stage activity may originate from leads created or booked earlier.",
-                      "Ratio de avance del periodo = siguiente KPI ÷ KPI anterior. Muestra flujo direccional del periodo seleccionado, no una conversión estricta de la misma cohorte; actividad de stages posteriores puede venir de leads creados o agendados antes.",
-                    )} />
                   </div>
                 );
               })() : null}
