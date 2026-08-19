@@ -16,6 +16,7 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { EmptyState } from "@/components/empty-state";
 import { HelpTip } from "@/components/help-tip";
+import { EodSchoolTourReporter } from "@/components/eod-school-tour-reporter";
 import { conceptDefinition } from "@/lib/concepts";
 import { requireCurrentAppUser } from "@/lib/auth";
 import { dateRangeParams, resolveDateRange } from "@/lib/date-range";
@@ -29,6 +30,7 @@ import {
 } from "@/lib/eod-manual";
 import { dateLabel, dateTimeLabel, number } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
+import { getEodTourOpportunityCandidates, getEodTourRecordsForEditor } from "@/lib/eod-tours";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { tr, type Locale } from "@/lib/locale";
 
@@ -50,7 +52,14 @@ const EOD_COPY: Record<ManualEodMetricKey, {
   qualified_leads: { definitionKey: "qualified_leads", en: "Qualified / Fit", es: "Qualified / Fit" },
   school_tours_scheduled: { definitionKey: "school_tours_booked", en: "ST Booked", es: "ST Booked" },
   school_tours_attended: { definitionKey: "school_tours_attended", en: "ST Attended", es: "ST Attended" },
+  closed_leads: { definitionKey: "closed", en: "Closed", es: "Closed / Inscrito" },
 };
+
+const STRUCTURED_TOUR_KEYS = new Set<ManualEodMetricKey>([
+  "school_tours_scheduled",
+  "school_tours_attended",
+  "closed_leads",
+]);
 
 function first(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -192,6 +201,17 @@ export default async function EodPage({
         editRecord.status !== "validated"
       )
     : false;
+
+  const [tourCandidates, tourEditorData] = editRecord
+    ? await Promise.all([
+        getEodTourOpportunityCandidates(),
+        getEodTourRecordsForEditor({
+          submissionId: editRecord.submissionId,
+          advisorAppUserId: editRecord.appUserId,
+          eodDate: editRecord.eodDate,
+        }),
+      ])
+    : [[], { currentBookings: [], availableBookings: [] }];
 
   const totalRule = tr(
     locale,
@@ -415,6 +435,7 @@ export default async function EodPage({
 
               <div className="eod-simple-grid">
                 {MANUAL_EOD_KEYS.map((key) => {
+                  if (STRUCTURED_TOUR_KEYS.has(key)) return null;
                   const row = editRowMap.get(key);
                   if (!row) return null;
                   return (
@@ -434,6 +455,19 @@ export default async function EodPage({
                   );
                 })}
               </div>
+
+              <EodSchoolTourReporter
+                availableBookings={tourEditorData.availableBookings}
+                candidates={tourCandidates}
+                currentRecords={tourEditorData.currentBookings}
+                disabled={!editAllowed}
+                eodDate={editRecord.eodDate}
+                legacyAttendedCount={Number(editRowMap.get("school_tours_attended")?.declared_value ?? 0)}
+                legacyBookedCount={Number(editRowMap.get("school_tours_scheduled")?.declared_value ?? 0)}
+                legacyClosedCount={Number(editRowMap.get("closed_leads")?.declared_value ?? 0)}
+                locale={locale}
+                submissionId={editRecord.submissionId}
+              />
 
               <label className="eod-comments-field">
                 <span>{tr(locale, "Notes / breakdown (optional)", "Notas / desglose (opcional)")}</span>
@@ -471,7 +505,7 @@ function FragmentWeek({
   rangeQuery: string;
   currentUserRole: string;
 }) {
-  const columnSpan = currentUserRole !== "advisor" ? 12 : 11;
+  const columnSpan = MANUAL_EOD_KEYS.length + (currentUserRole !== "advisor" ? 3 : 2);
   return (
     <>
       <tr className="eod-week-heading-row">

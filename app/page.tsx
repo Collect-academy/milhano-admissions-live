@@ -1,9 +1,7 @@
 import Link from "next/link";
 import {
-  Activity,
   AlertTriangle,
   Clock3,
-  GraduationCap,
   MessageCircleMore,
   PhoneCall,
 } from "lucide-react";
@@ -28,6 +26,7 @@ import { HelpTip } from "@/components/help-tip";
 import { conceptDefinition, stageConceptDefinition } from "@/lib/concepts";
 import { getSystemHealthData } from "@/lib/system-health";
 import { getSubmittedManualEodTotals } from "@/lib/eod-manual";
+import { getManualTourLevelTotals } from "@/lib/eod-tours";
 import {
   ownerLabel,
   stageLabel,
@@ -51,18 +50,27 @@ export default async function DashboardPage({
   const requestedSource = Array.isArray(params.source) ? params.source[0] : params.source;
   const summarySource: SummarySource = requestedSource === "ghl" ? "ghl" : "manual";
 
-  const [data, health, reconciliation, manualTotals] = await Promise.all([
+  const [data, health, reconciliation, manualTotals, manualLevelTotals] = await Promise.all([
     getDashboardData(range),
     getSystemHealthData(),
     getOperationalReconciliation(range),
     getSubmittedManualEodTotals(range),
+    getManualTourLevelTotals(range.start, range.end),
   ]);
-  const cascade = reconciliation.filter((metric) => metric.show_in_cascade);
 
-  const leadToClosed =
-    data.funnel.find(
-      (row) => row.stage_name === "Inscrito",
-    )?.conversion_from_lead_pct ?? null;
+  const systemFunnelKeys = [
+    "new_leads",
+    "unique_contacted_leads",
+    "responded_leads",
+    "meaningful_conversations",
+    "qualified_leads",
+    "school_tours_booked",
+    "school_tours_attended",
+    "closed",
+  ];
+  const cascade = systemFunnelKeys
+    .map((key) => reconciliation.find((metric) => metric.metric_key === key))
+    .filter((metric): metric is NonNullable<typeof metric> => Boolean(metric));
 
   const rangeQuery = dateRangeQuery(range);
   const cascadeByKey = new Map(
@@ -116,7 +124,7 @@ export default async function DashboardPage({
       <SummarySourceToggle source={summarySource} range={range} locale={locale} />
 
       {summarySource === "manual" ? (
-        <ManualEodSummary totals={manualTotals} locale={locale} />
+        <ManualEodSummary levelTotals={manualLevelTotals} totals={manualTotals} locale={locale} />
       ) : (
         <>
           <OperationalCascade
@@ -126,91 +134,44 @@ export default async function DashboardPage({
             mode="system"
           />
 
-          <section
-            aria-label="Period indicators"
-            className="kpi-grid"
-          >
-        <KpiCard
-          helper={sourceHelper("new_leads", range.label)}
-          icon={Activity}
-          label={tr(locale, "New Leads", "Leads Totales")}
-          definitionKey="new_leads"
-          locale={locale}
-          value={number(
-            systemValue("new_leads", data.period.new_leads),
-          )}
-        />
-        <KpiCard
-          helper={sourceHelper(
-            "school_tours_booked",
-            "School Tour stage entries",
-          )}
-          icon={Clock3}
-          label={tr(locale, "School Tours Booked", "ST Booked")}
-          definitionKey="school_tours_booked"
-          locale={locale}
-          value={number(
-            systemValue(
-              "school_tours_booked",
-              data.period.tours_scheduled,
-            ),
-          )}
-        />
-        <KpiCard
-          helper={sourceHelper(
-            "school_tours_attended",
-            `${number(data.period.tours_attended)} attended`,
-          )}
-          icon={GraduationCap}
-          label={tr(locale, "School Tours Attended", "ST Attended")}
-          definitionKey="school_tours_attended"
-          locale={locale}
-          value={number(
-            systemValue(
-              "school_tours_attended",
-              data.period.tours_attended,
-            ),
-          )}
-        />
-        <KpiCard
-          helper={sourceHelper(
-            "closed",
-            `${percent(leadToClosed)} lead-to-closed`,
-          )}
-          icon={GraduationCap}
-          label={tr(locale, "Closed", "Inscritos / Closed")}
-          definitionKey="closed"
-          locale={locale}
-          value={number(
-            systemValue("closed", data.period.enrolled),
-          )}
-        />
-        <KpiCard
-          helper={tr(locale, "Shared institutional channel", "Canal institucional compartido")}
-          icon={MessageCircleMore}
-          label={tr(locale, "WhatsApp Messages", "Mensajes WhatsApp")}
-          definitionKey="whatsapp_messages"
-          locale={locale}
-          value={number(data.period.whatsapp_messages)}
-        />
-        <KpiCard
-          helper={sourceHelper(
-            "number_of_dials",
-            `${number(
-              data.period.outbound_call_attempts,
-            )} outbound attempts`,
-          )}
-          icon={PhoneCall}
-          label={tr(locale, "Number of Dials", "Llamadas GHL")}
-          definitionKey="number_of_dials"
-          locale={locale}
-          value={number(
-            systemValue(
-              "number_of_dials",
-              data.period.call_attempts,
-            ),
-          )}
-        />
+          <section className="panel ghl-support-panel">
+            <div className="panel-heading compact-panel-heading">
+              <div>
+                <p className="eyebrow">{tr(locale, "Activity + schedule", "Actividad + agenda")}</p>
+                <h2>{tr(locale, "Supporting GHL Metrics", "Métricas GHL de Apoyo")}</h2>
+              </div>
+              <p className="panel-note">
+                {tr(locale,
+                  "Dials are actions, not unique leads, so they stay outside the lead funnel. School Tours Today is a current-day schedule indicator.",
+                  "Las llamadas son acciones, no leads únicos, por eso quedan fuera de la cascada de leads. School Tours Hoy es un indicador de agenda del día actual.")}
+              </p>
+            </div>
+            <div className="kpi-grid ghl-support-grid">
+              <KpiCard
+                helper={sourceHelper("number_of_dials", `${number(data.period.outbound_call_attempts)} outbound attempts`)}
+                icon={PhoneCall}
+                label={tr(locale, "Number of Dials", "Llamadas GHL")}
+                definitionKey="number_of_dials"
+                locale={locale}
+                value={number(systemValue("number_of_dials", data.period.call_attempts))}
+              />
+              <KpiCard
+                helper={tr(locale, "Shared institutional channel", "Canal institucional compartido")}
+                icon={MessageCircleMore}
+                label={tr(locale, "WhatsApp Messages", "Mensajes WhatsApp")}
+                definitionKey="whatsapp_messages"
+                locale={locale}
+                value={number(data.period.whatsapp_messages)}
+              />
+              <KpiCard
+                helper={sourceHelper("school_tours_today", tr(locale, "Current day", "Día actual"))}
+                icon={Clock3}
+                label={tr(locale, "School Tours Today", "School Tours Hoy")}
+                definitionKey="school_tours_today"
+                locale={locale}
+                value={number(systemValue("school_tours_today", 0))}
+              />
+            </div>
           </section>
         </>
       )}

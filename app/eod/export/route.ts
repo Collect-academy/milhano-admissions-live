@@ -23,6 +23,7 @@ const LABELS: Record<ManualEodMetricKey, { en: string; es: string }> = {
   qualified_leads: { en: "Qualified / Fit", es: "Qualified / Fit" },
   school_tours_scheduled: { en: "ST Booked", es: "ST Booked" },
   school_tours_attended: { en: "ST Attended", es: "ST Attended" },
+  closed_leads: { en: "Closed", es: "Closed / Inscrito" },
 };
 
 function csvCell(value: unknown): string {

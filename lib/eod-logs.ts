@@ -85,3 +85,44 @@ export async function getEodChangeLogs(range: DateRange): Promise<EodChangeLog[]
     };
   });
 }
+
+export type EodTourChangeLog = {
+  id: string;
+  submission_id: string;
+  created_at: string;
+  eod_date: string;
+  actor_app_user_id: string | null;
+  actor_name: string | null;
+  target_app_user_id: string;
+  advisor_name: string;
+  before_state: Record<string, unknown>[];
+  after_state: Record<string, unknown>[];
+};
+
+export async function getEodTourChangeLogs(range: DateRange): Promise<EodTourChangeLog[]> {
+  const supabase = createSupabaseAdmin();
+  const result = await supabase
+    .from("vw_milhano_eod_school_tour_change_logs")
+    .select("*")
+    .gte("eod_date", range.start)
+    .lte("eod_date", range.end)
+    .order("created_at", { ascending: false })
+    .limit(1000);
+
+  // Allow a short deployment window where frontend V16.2 is live before the
+  // migration has been applied. Regular EOD logs remain available.
+  if (result.error) return [];
+
+  return ((result.data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: String(row.id),
+    submission_id: String(row.submission_id),
+    created_at: String(row.created_at),
+    eod_date: String(row.eod_date),
+    actor_app_user_id: row.actor_app_user_id ? String(row.actor_app_user_id) : null,
+    actor_name: row.actor_name ? String(row.actor_name) : null,
+    target_app_user_id: String(row.target_app_user_id),
+    advisor_name: String(row.advisor_name ?? "Unknown"),
+    before_state: Array.isArray(row.before_state) ? row.before_state as Record<string, unknown>[] : [],
+    after_state: Array.isArray(row.after_state) ? row.after_state as Record<string, unknown>[] : [],
+  }));
+}

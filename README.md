@@ -1,55 +1,39 @@
 # Milhano Admissions Live
 
-Dashboard operativo de admisiones construido con Next.js, Supabase y Recharts.
+Operational admissions dashboard built with **Next.js + Supabase**.
 
-## Secciones
+## Current checkpoint
 
-- `/` — Resumen, pipeline, funnel, fuentes, asesoras e inactividad.
-- `/pipeline` — Detalle operativo, filtros, búsqueda y exportación CSV.
-- `/whatsapp` — Volumen institucional completo, manual vs automático y admisiones vs atención general.
-- `/llamadas` — Intentos, inbound, pickup, duración y movimientos observados después de la llamada.
-- `/eod` — Snapshot diario individual, métricas compartidas y salud de sincronizaciones.
+**V16.2**
 
-## Requisitos
+Main areas:
 
-- Node.js LTS.
-- Proyecto de Supabase con la semilla y los módulos Live Sync, WhatsApp, Calls y EOD cargados.
-- Variables server-side de Supabase.
+- `/` — Summary with Manual (EOD) / GHL source switch.
+- `/pipeline` — current GHL pipeline.
+- `/eod` — today's EOD, historical EODs, weekly/monthly totals and CSV export.
+- `/logs` — simple audit trail for EOD edits.
+- `/reconciliation` — System vs Reported vs Verified Outside GHL.
+- `/whatsapp` — WhatsApp reporting.
+- `/llamadas` — call reporting.
 
-## Instalación local
+## Project documentation
+
+Use the two maintained project documents:
+
+- [`database/MILHANO_DATABASE_CURRENT.sql`](database/MILHANO_DATABASE_CURRENT.sql)
+- [`docs/MILHANO_PROJECT_NOTES.md`](docs/MILHANO_PROJECT_NOTES.md)
+
+Old per-version setup, changelog, audit and backfill files are intentionally not
+kept in the current repository checkpoint. Git history is the archive.
+
+## Local development
 
 ```bash
 npm install
-```
-
-Copia el archivo de variables:
-
-**Windows PowerShell**
-
-```powershell
-Copy-Item .env.example .env.local
-```
-
-**macOS/Linux**
-
-```bash
-cp .env.example .env.local
-```
-
-Completa `.env.local`:
-
-```env
-SUPABASE_URL=https://TU_PROJECT_REF.supabase.co
-SUPABASE_SECRET_KEY=sb_secret_...
-DASHBOARD_USERNAME=milhano
-DASHBOARD_PASSWORD=una-clave-larga
-```
-
-Ejecuta:
-
-```bash
 npm run dev
 ```
+
+Copy `.env.example` to `.env.local` and provide the required Supabase variables.
 
 ## Build
 
@@ -57,164 +41,10 @@ npm run dev
 npm run build
 ```
 
-## Despliegue en Vercel
+## Deployment
 
-1. Sube los cambios al repositorio privado conectado a Vercel.
-2. Conserva en Vercel las cuatro variables de entorno.
-3. Vercel desplegará automáticamente la rama conectada.
+Push to the private GitHub repository connected to Vercel.
 
-## Seguridad actual
-
-- Las consultas se ejecutan server-side con `SUPABASE_SECRET_KEY`.
-- La llave no se envía al navegador.
-- `proxy.ts` protege todas las rutas con Basic Auth.
-- El EOD es de lectura hasta habilitar Supabase Auth individual.
-
-## Fuentes principales
-
-Pipeline:
-
-- `vw_milhano_pipeline_summary_current`
-- `vw_milhano_funnel_summary_standard`
-- `vw_milhano_daily_kpis`
-- `vw_milhano_source_performance`
-- `vw_milhano_owner_performance`
-- `vw_milhano_exit_summary`
-- `vw_milhano_pipeline_current`
-
-WhatsApp:
-
-- `vw_milhano_whatsapp_daily`
-- `vw_milhano_whatsapp_channel_summary`
-
-Calls:
-
-- `vw_milhano_calls_daily`
-- `vw_milhano_calls_daily_user`
-- `vw_milhano_call_outcome_bridge`
-
-EOD:
-
-- `vw_milhano_eod_dashboard`
-- `milhano_eod_team_snapshots`
-- `milhano_sync_runs`
-
-
-## Dashboard V3
-
-- Drill-down del pipeline desde cada stage del resumen.
-- Filtros por etapa, asesora, fuente, status e inactividad.
-- Búsqueda por nombre, alumno, teléfono, email y grado.
-- Exportación CSV respetando los filtros activos.
-- Avance del backfill histórico visible en `/whatsapp`.
-
-
-## Dashboard V4 — filtros temporales
-
-Todas las áreas operativas soportan:
-
-- Hoy.
-- Últimos 7 días.
-- Últimos 30 días.
-- Este mes.
-- Mes pasado.
-- Este año.
-- Rango personalizado.
-
-Semántica:
-
-- Resumen y Pipeline: cohorte definida por la fecha original/entrada del lead.
-- WhatsApp y Llamadas: actividad ocurrida dentro del periodo.
-- EOD: snapshots y sincronizaciones ocurridos dentro del periodo.
-- Las cards del Pipeline muestran el stage actual de la cohorte captada.
-
-
-## Dashboard V5 — Supabase Auth
-
-- Login individual por correo y contraseña.
-- Sesión SSR mediante cookies con `@supabase/ssr`.
-- Validación contra `milhano_app_users`.
-- Acceso bloqueado para usuarios inactivos o no vinculados.
-- Nombre y rol visibles en la navegación.
-- Cierre de sesión.
-- Fallback temporal a Basic Auth si las variables públicas aún no existen.
-
-
-
-MILHANO ADMISSIONS LIVE | V9 MONA RELEASE
-
-GOAL
-
-Use one English nomenclature across Summary, Pipeline, Calls, EOD,
-scorecards and lead drill-downs.
-
-UNIFIED OPERATIONAL CASCADE
-
-1. New Leads
-2. Number of Dials
-3. Unique Contacted Leads
-4. Meaningful Conversations
-5. School Tours Booked
-6. School Tours Today
-7. School Tours Attended
-8. Trial Days Booked
-9. Trial Days Showed
-10. Closed
-
-The same cascade appears in:
-- Summary
-- Pipeline
-- EOD
-
-Every cascade scorecard is clickable.
-
-CLICK PATH
-
-Scorecard
-→ Lead List
-→ Lead Details
-→ School Tour attendance
-→ Objection
-→ School Tour notes
-→ Stage history
-→ Recent calls
-
-SCHOOL TOUR DATA
-
-A structured Supabase layer was added because the current database only
-had general historical comments and stage-event notes.
-
-Existing data is seeded safely:
-- Legacy explicit School Tour date events populate Scheduled For.
-- School Tour Attended events populate Showed / Attended At.
-- Historical comments remain visible as legacy context.
-- Historical comments are not rewritten or automatically classified
-  as objections.
-
-EOD
-
-A new team metric is included:
-
-Trial Day+ / Closed
-
-It counts each lead once per EOD window when it enters any of:
-- Trial Day Booked
-- Trial Day Showed
-- Feedback
-- Under Evaluation
-- Enrollment in Progress
-- Closed
-
-PERMISSIONS
-
-- Admin and Advisor can edit School Tour details.
-- Leadership / Viewer can review but cannot edit.
-- Dashboard visibility remains team-wide.
-- No per-advisor opportunity scoping was introduced.
-
-NO NEW N8N WORKFLOW
-
-This release uses:
-- One Supabase SQL migration.
-- One dashboard deployment.
-- Existing Opportunity, Calls, WhatsApp and EOD workflows.
+If a release changes Supabase, update/run the relevant section of
+`database/MILHANO_DATABASE_CURRENT.sql` and document the behavior in
+`docs/MILHANO_PROJECT_NOTES.md`.

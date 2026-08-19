@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarDays } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 
 import { HelpTip } from "@/components/help-tip";
 import type { OperationalCascadeMetric } from "@/lib/cascade";
@@ -8,6 +8,13 @@ import { dateRangeQuery, type DateRange } from "@/lib/date-range";
 import { number } from "@/lib/format";
 import type { Locale } from "@/lib/locale";
 import { tr } from "@/lib/locale";
+
+
+function transitionPercent(from: number, to: number): string {
+  if (from <= 0) return "—";
+  const value = (to / from) * 100;
+  return `${value.toFixed(value > 100 ? 0 : 1)}%`;
+}
 
 function statusLabel(status: string, locale: Locale): string {
   const labels: Record<string, [string, string]> = {
@@ -102,7 +109,22 @@ export function OperationalCascade({
                 <p>{metric.metric_scope === "today" ? tr(locale, "Current day", "Día actual") : range.label}</p>
               </Link>
 
-              {index < metrics.length - 1 ? <ArrowRight aria-hidden="true" className="cascade-arrow" size={18} /> : null}
+              {index < metrics.length - 1 ? (() => {
+                const currentValue = Number(mode === "system" ? (metric.system_value ?? 0) : metric.metric_value);
+                const nextMetric = metrics[index + 1];
+                const nextValue = Number(mode === "system" ? (nextMetric.system_value ?? 0) : nextMetric.metric_value);
+                return (
+                  <div className="cascade-flow-arrow" aria-label={`${nextValue} / ${currentValue}`}>
+                    <span>→</span>
+                    <strong>{transitionPercent(currentValue, nextValue)}</strong>
+                    <HelpTip text={tr(
+                      locale,
+                      "Period progression ratio = next KPI ÷ previous KPI. It shows directional flow for the selected period, not a strict same-cohort conversion; later-stage activity may originate from leads created or booked earlier.",
+                      "Ratio de avance del periodo = siguiente KPI ÷ KPI anterior. Muestra flujo direccional del periodo seleccionado, no una conversión estricta de la misma cohorte; actividad de stages posteriores puede venir de leads creados o agendados antes.",
+                    )} />
+                  </div>
+                );
+              })() : null}
             </div>
           );
         })}

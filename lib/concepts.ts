@@ -98,8 +98,8 @@ const DEFINITIONS: Record<string, { en: string; es: string }> = {
     es: "Leads únicos de admisiones que dieron una respuesta simple observable: un WhatsApp entrante o una llamada GHL conectada. Responder no significa que ya haya información suficiente para calificar al lead.",
   },
   meaningful_conversations: {
-    en: "Unique leads who provided admissions-relevant information, even if the information is still insufficient to decide Fit vs No Fit. It can happen by WhatsApp or phone and is reported by the advisor; it is not inferred from call duration or message count.",
-    es: "Leads únicos que proporcionaron información relevante para admisiones, aunque todavía sea insuficiente para decidir Fit vs No Fit. Puede ocurrir por WhatsApp o llamada y lo reporta la asesora; no se infiere por duración de llamada ni cantidad de mensajes.",
+    en: "Unique leads who reached a relevant admissions conversation. Manual EOD: advisor judgment. GHL/System in V16.2: connected call lasting at least 2 minutes, plus WhatsApp conversations explicitly classified as school-information provided. The WhatsApp classifier remains conservative until the existing sync/orchestrator supplies that semantic flag.",
+    es: "Leads únicos que llegaron a una conversación relevante de admisiones. EOD manual: criterio de la asesora. GHL/System en V16.2: llamada conectada de al menos 2 minutos, más conversaciones WhatsApp clasificadas explícitamente como informes de la escuela proporcionados. La clasificación de WhatsApp se mantiene conservadora hasta que el sync/orchestrator existente envíe esa señal semántica.",
   },
   calls_3min: {
     en: "GHL calls lasting at least 3 minutes. This is a duration-based call metric only and is no longer treated as Meaningful Conversations.",

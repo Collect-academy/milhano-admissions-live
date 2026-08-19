@@ -193,6 +193,16 @@ export async function openHistoricalEod(
   );
 }
 
+function safeJsonArray(value: FormDataEntryValue | null): unknown[] {
+  if (typeof value !== "string" || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function saveEodSubmission(
   formData: FormData,
 ): Promise<never> {
@@ -227,13 +237,15 @@ export async function saveEodSubmission(
 
   const supabase = createSupabaseAdmin();
   const result = await supabase.rpc(
-    "milhano_save_eod_submission",
+    "milhano_save_eod_v162",
     {
       p_submission_id: submissionId,
       p_actor_app_user_id: actorId,
       p_metrics: metrics,
       p_comments: safeString(formData.get("comments")),
       p_submit: intent === "submit",
+      p_bookings: safeJsonArray(formData.get("school_tour_bookings_json")),
+      p_attendance: safeJsonArray(formData.get("school_tour_attendance_json")),
     },
   );
 

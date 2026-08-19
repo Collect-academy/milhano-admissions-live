@@ -14,6 +14,7 @@ export const MANUAL_EOD_KEYS = [
   "qualified_leads",
   "school_tours_scheduled",
   "school_tours_attended",
+  "closed_leads",
 ] as const;
 
 export type ManualEodMetricKey = (typeof MANUAL_EOD_KEYS)[number];
