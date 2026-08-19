@@ -51,6 +51,23 @@ export function OperationalCascade({
   mode?: "operational" | "system";
 }) {
   const query = dateRangeQuery(range);
+  const stagePriority: Record<string, number> = {
+    new_leads: 10,
+    responded: 20,
+    meaningful_conversations: 30,
+    qualified_leads: 40,
+    school_tours_booked: 50,
+    school_tours_attended: 60,
+    trial_days_booked: 70,
+    trial_days_showed: 80,
+    closed: 90,
+  };
+  const orderedMetrics = [...metrics].sort((a, b) => {
+    const left = stagePriority[a.metric_key] ?? (1000 + a.display_order);
+    const right = stagePriority[b.metric_key] ?? (1000 + b.display_order);
+    if (left !== right) return left - right;
+    return a.display_order - b.display_order;
+  });
 
   return (
     <section className="panel">
@@ -73,7 +90,7 @@ export function OperationalCascade({
       </div>
 
       <div className="operational-cascade">
-        {metrics.map((metric, index) => {
+        {orderedMetrics.map((metric, index) => {
           const definition = conceptDefinition(metric.metric_key, locale) ?? metric.definition;
           return (
             <div className="cascade-step-wrapper" key={metric.metric_key}>
@@ -109,9 +126,9 @@ export function OperationalCascade({
                 <p>{metric.metric_scope === "today" ? tr(locale, "Current day", "Día actual") : range.label}</p>
               </Link>
 
-              {index < metrics.length - 1 ? (() => {
+              {index < orderedMetrics.length - 1 ? (() => {
                 const currentValue = Number(mode === "system" ? (metric.system_value ?? 0) : metric.metric_value);
-                const nextMetric = metrics[index + 1];
+                const nextMetric = orderedMetrics[index + 1];
                 const nextValue = Number(mode === "system" ? (nextMetric.system_value ?? 0) : nextMetric.metric_value);
                 return (
                   <div className="cascade-flow-arrow" aria-label={`${nextValue} / ${currentValue}`}>

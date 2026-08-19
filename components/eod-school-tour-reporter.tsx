@@ -334,8 +334,8 @@ export function EodSchoolTourReporter({
           <p className="eyebrow">School Tours</p>
           <h3>{locale === "es" ? "Detalle manual por contacto" : "Manual contact detail"}</h3>
           <span>{locale === "es"
-            ? "Los conteos de ST y Closed se guardan junto con el contacto, teléfono, horario, nivel y outcome."
-            : "ST and Closed totals are saved together with contact, phone, schedule, level and outcome."}</span>
+            ? "Booked / Agendado = se programó la visita. Attended / Asistido = la visita sí ocurrió. Se reportan por separado para evitar confusión."
+            : "Booked means the visit was scheduled. Attended means the visit actually happened. They are reported separately to avoid confusion."}</span>
         </div>
         <div className="tour-outcome-totals">
           <span><b>{bookings.length}</b> Booked</span>
@@ -345,11 +345,11 @@ export function EodSchoolTourReporter({
         </div>
       </div>
 
-      <div className="tour-section">
+      <div className="tour-section tour-section-planned">
         <div className="tour-section-title">
           <div>
             <CalendarClock size={18} />
-            <div><strong>ST Booked</strong><span>{locale === "es" ? "Escribe el total y completa un contacto por cada booking." : "Enter the total and complete one contact per booking."}</span></div>
+            <div><strong>{locale === "es" ? "School Tour agendado" : "School Tour booked"}</strong><span>{locale === "es" ? "Agendado = la visita se programó. Completa un contacto por cada booking." : "Booked = the visit was scheduled. Complete one contact per booking."}</span></div>
           </div>
           <label className="tour-booked-count">
             <span>Total</span>
@@ -405,15 +405,15 @@ export function EodSchoolTourReporter({
         ) : <p className="tour-empty-state">{locale === "es" ? "Sin School Tours booked en este EOD." : "No School Tours booked in this EOD."}</p>}
       </div>
 
-      <div className="tour-section">
+      <div className="tour-section tour-section-outcome">
         <div className="tour-section-title">
           <div>
             <UserRoundCheck size={18} />
             <div>
-              <strong>{locale === "es" ? "Resultado de School Tours" : "School Tour outcomes"}</strong>
+              <strong>{locale === "es" ? "School Tour asistido / outcome" : "School Tour attended / outcome"}</strong>
               <span>{locale === "es"
-                ? "Elige un booking existente. Show cuenta como ST Attended; Closed cuenta también en Closed."
-                : "Choose an existing booking. Show counts as ST Attended; Closed also counts in Closed."}</span>
+                ? "Asistido = la visita sí ocurrió. Show cuenta como ST Attended; Closed también suma a Closed."
+                : "Attended means the visit actually happened. Show counts as ST Attended; Closed also contributes to Closed."}</span>
             </div>
           </div>
           {!disabled ? (

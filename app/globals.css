@@ -3332,48 +3332,43 @@ tbody tr:hover {
 
 .cascade-flow-arrow,
 .flow-arrow {
-  --flow-outline: rgba(20, 82, 64, 0.72);
-  --flow-fill: rgba(225, 242, 235, 0.98);
+  --flow-outline: rgba(22, 78, 62, 0.68);
   position: relative;
   display: grid;
   place-items: center;
-  min-width: 104px;
-  min-height: 56px;
-  flex: 0 0 104px;
+  min-width: 76px;
+  min-height: 36px;
+  flex: 0 0 76px;
   align-self: center;
-  padding: 10px 18px 10px 14px;
-  background: var(--flow-outline);
+  padding: 7px 10px 7px 8px;
   color: var(--green-dark);
   text-align: center;
+  background: var(--surface);
+  border: 1.5px solid var(--flow-outline);
   clip-path: polygon(
     0 0,
-    calc(100% - 20px) 0,
+    calc(100% - 10px) 0,
     100% 50%,
-    calc(100% - 20px) 100%,
+    calc(100% - 10px) 100%,
     0 100%,
-    9px 50%
+    8px 50%
   );
-  filter: drop-shadow(0 3px 7px rgba(25, 61, 48, 0.08));
 }
 
 .cascade-flow-arrow::before,
 .flow-arrow::before {
   content: "";
   position: absolute;
-  inset: 1.5px;
+  inset: 1px;
   z-index: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(234, 247, 241, 0.99),
-    var(--flow-fill)
-  );
+  background: linear-gradient(180deg, rgba(239, 248, 244, 0.98), rgba(231, 243, 237, 0.98));
   clip-path: polygon(
     0 0,
-    calc(100% - 20px) 0,
+    calc(100% - 10px) 0,
     100% 50%,
-    calc(100% - 20px) 100%,
+    calc(100% - 10px) 100%,
     0 100%,
-    9px 50%
+    8px 50%
   );
 }
 
@@ -3381,7 +3376,7 @@ tbody tr:hover {
 .flow-arrow > strong {
   position: relative;
   z-index: 1;
-  font-size: 0.9rem;
+  font-size: 0.86rem;
   font-weight: 850;
   letter-spacing: -0.02em;
   white-space: nowrap;
@@ -3390,15 +3385,15 @@ tbody tr:hover {
 @media (max-width: 900px) {
   .cascade-flow-arrow,
   .flow-arrow {
-    min-width: 96px;
-    flex-basis: 96px;
-    min-height: 52px;
-    padding: 9px 17px 9px 13px;
+    min-width: 70px;
+    flex-basis: 70px;
+    min-height: 34px;
+    padding: 6px 9px 6px 8px;
   }
 
   .cascade-flow-arrow > strong,
   .flow-arrow > strong {
-    font-size: 0.84rem;
+    font-size: 0.8rem;
   }
 
   .manual-funnel-step .kpi-card,
@@ -3809,6 +3804,81 @@ tbody tr:hover {
 
   .ghl-support-grid,
   .manual-support-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.eod-metric-group {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  border: 1px solid rgba(23, 107, 82, 0.16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 14px;
+}
+
+.eod-metric-group-trial {
+  border-color: rgba(23, 107, 82, 0.22);
+  background: linear-gradient(180deg, rgba(244, 249, 246, 0.9), rgba(255, 255, 255, 0.92));
+}
+
+.eod-metric-group-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.eod-metric-group-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.eod-metric-group-heading strong {
+  color: var(--green-dark);
+  font-size: 0.78rem;
+}
+
+.eod-metric-group-heading span,
+.eod-simple-field small {
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.45;
+}
+
+.eod-simple-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.eod-simple-field-planned {
+  border-color: rgba(37, 99, 235, 0.18);
+  background: rgba(242, 247, 255, 0.78);
+}
+
+.eod-simple-field-outcome {
+  border-color: rgba(22, 101, 52, 0.18);
+  background: rgba(242, 250, 244, 0.78);
+}
+
+.tour-section-planned {
+  border-top-color: rgba(37, 99, 235, 0.18);
+  background: linear-gradient(180deg, rgba(244, 248, 255, 0.88), rgba(255, 255, 255, 0));
+  border-radius: 14px;
+  padding: 14px 12px 0;
+}
+
+.tour-section-outcome {
+  border-top-color: rgba(22, 101, 52, 0.2);
+  background: linear-gradient(180deg, rgba(243, 250, 245, 0.88), rgba(255, 255, 255, 0));
+  border-radius: 14px;
+  padding: 14px 12px 0;
+}
+
+
+@media (max-width: 700px) {
+  .eod-simple-grid-2 {
     grid-template-columns: 1fr;
   }
 }

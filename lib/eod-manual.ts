@@ -14,6 +14,8 @@ export const MANUAL_EOD_KEYS = [
   "qualified_leads",
   "school_tours_scheduled",
   "school_tours_attended",
+  "trial_days_booked",
+  "trial_days_showed",
   "closed_leads",
 ] as const;
 

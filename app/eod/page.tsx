@@ -52,6 +52,8 @@ const EOD_COPY: Record<ManualEodMetricKey, {
   qualified_leads: { definitionKey: "qualified_leads", en: "Qualified / Fit", es: "Qualified / Fit" },
   school_tours_scheduled: { definitionKey: "school_tours_booked", en: "ST Booked", es: "ST Booked" },
   school_tours_attended: { definitionKey: "school_tours_attended", en: "ST Attended", es: "ST Attended" },
+  trial_days_booked: { definitionKey: "trial_days_booked", en: "Trial Day Booked", es: "Pasadía Agendada" },
+  trial_days_showed: { definitionKey: "trial_days_showed", en: "Trial Day Attended", es: "Pasadía Asistida" },
   closed_leads: { definitionKey: "closed", en: "Closed", es: "Closed / Inscrito" },
 };
 
@@ -60,6 +62,21 @@ const STRUCTURED_TOUR_KEYS = new Set<ManualEodMetricKey>([
   "school_tours_attended",
   "closed_leads",
 ]);
+
+const SIMPLE_EOD_BASE_KEYS: ManualEodMetricKey[] = [
+  "new_leads_received",
+  "ads_leads_reported",
+  "organic_leads_reported",
+  "contacted_reported",
+  "responses_reported",
+  "meaningful_conversations_reported",
+  "qualified_leads",
+];
+
+const SIMPLE_TRIAL_KEYS: ManualEodMetricKey[] = [
+  "trial_days_booked",
+  "trial_days_showed",
+];
 
 function first(value: string | string[] | undefined): string {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -112,6 +129,12 @@ function formatShortDate(value: string, locale: Locale): string {
 function totalCell(totals: ManualEodTotals, key: ManualEodMetricKey): string {
   return number(totals[key]);
 }
+
+function fieldValue(editRowMap: Map<string, { declared_value: number | null; description?: string | null }>, key: ManualEodMetricKey): string {
+  const value = editRowMap.get(key)?.declared_value;
+  return value === null || value === undefined ? "" : String(value);
+}
+
 
 export default async function EodPage({
   searchParams,
@@ -433,17 +456,20 @@ export default async function EodPage({
                 <input key={key} name={key} type="hidden" value={value} />
               ))}
 
-              <div className="eod-simple-grid">
-                {MANUAL_EOD_KEYS.map((key) => {
-                  if (STRUCTURED_TOUR_KEYS.has(key)) return null;
-                  const row = editRowMap.get(key);
-                  if (!row) return null;
-                  return (
+              <section className="eod-metric-group">
+                <div className="eod-metric-group-heading">
+                  <div>
+                    <strong>{tr(locale, "Core daily metrics", "Métricas base del día")}</strong>
+                    <span>{tr(locale, "Lead intake, contact activity and qualification reported by the advisor.", "Ingreso de leads, actividad de contacto y calificación reportados por la asesora.")}</span>
+                  </div>
+                </div>
+                <div className="eod-simple-grid">
+                  {SIMPLE_EOD_BASE_KEYS.map((key) => (
                     <label className="eod-simple-field" key={key}>
                       <input name="metric_key" type="hidden" value={key} />
-                      <span>{labelFor(key, locale)} <HelpTip text={`${conceptDefinition(EOD_COPY[key].definitionKey, locale) ?? row.description ?? ""} ${totalRule}`} /></span>
+                      <span>{labelFor(key, locale)} <HelpTip text={`${conceptDefinition(EOD_COPY[key].definitionKey, locale) ?? ""} ${totalRule}`} /></span>
                       <input
-                        defaultValue={row.declared_value ?? ""}
+                        defaultValue={fieldValue(editRowMap, key)}
                         disabled={!editAllowed}
                         min="0"
                         name={`declared__${key}`}
@@ -452,9 +478,9 @@ export default async function EodPage({
                         type="number"
                       />
                     </label>
-                  );
-                })}
-              </div>
+                  ))}
+                </div>
+              </section>
 
               <EodSchoolTourReporter
                 availableBookings={tourEditorData.availableBookings}
@@ -468,6 +494,37 @@ export default async function EodPage({
                 locale={locale}
                 submissionId={editRecord.submissionId}
               />
+
+              <section className="eod-metric-group eod-metric-group-trial">
+                <div className="eod-metric-group-heading">
+                  <div>
+                    <strong>{tr(locale, "Trial Days", "Pasadías")}</strong>
+                    <span>{tr(locale, "Booked means it was scheduled. Attended means it actually happened. Report them separately.", "Agendada significa que se programó. Asistida significa que realmente ocurrió. Repórtalas por separado.")}</span>
+                  </div>
+                </div>
+                <div className="eod-simple-grid eod-simple-grid-2">
+                  {SIMPLE_TRIAL_KEYS.map((key) => (
+                    <label className={`eod-simple-field ${key === "trial_days_booked" ? "eod-simple-field-planned" : "eod-simple-field-outcome"}`} key={key}>
+                      <input name="metric_key" type="hidden" value={key} />
+                      <span>{labelFor(key, locale)} <HelpTip text={`${conceptDefinition(EOD_COPY[key].definitionKey, locale) ?? ""} ${totalRule}`} /></span>
+                      <input
+                        defaultValue={fieldValue(editRowMap, key)}
+                        disabled={!editAllowed}
+                        min="0"
+                        name={`declared__${key}`}
+                        placeholder="0"
+                        step="1"
+                        type="number"
+                      />
+                      <small>
+                        {key === "trial_days_booked"
+                          ? tr(locale, "Scheduled trial days.", "Pasadías programadas.")
+                          : tr(locale, "Trial days that were actually attended.", "Pasadías que sí se realizaron.")}
+                      </small>
+                    </label>
+                  ))}
+                </div>
+              </section>
 
               <label className="eod-comments-field">
                 <span>{tr(locale, "Notes / breakdown (optional)", "Notas / desglose (opcional)")}</span>
