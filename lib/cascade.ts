@@ -1,5 +1,7 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
+
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import type { DateRange } from "@/lib/date-range";
 
@@ -122,7 +124,7 @@ function normalizeNumbers<T extends Record<string, unknown>>(
   });
 }
 
-export async function getOperationalReconciliation(
+async function loadOperationalReconciliation(
   range: DateRange,
 ): Promise<OperationalCascadeMetric[]> {
   const supabase = createSupabaseAdmin();
@@ -157,6 +159,23 @@ export async function getOperationalReconciliation(
   }));
 }
 
+const cachedOperationalReconciliation = unstable_cache(
+  async (start: string, end: string) => loadOperationalReconciliation({
+    key: "custom",
+    start,
+    end,
+    label: `${start} – ${end}`,
+  }),
+  ["milhano-operational-reconciliation-v17"],
+  { revalidate: 60 },
+);
+
+export async function getOperationalReconciliation(
+  range: DateRange,
+): Promise<OperationalCascadeMetric[]> {
+  return cachedOperationalReconciliation(range.start, range.end);
+}
+
 export async function getOperationalCascade(
   range: DateRange,
 ): Promise<OperationalCascadeMetric[]> {
@@ -165,7 +184,7 @@ export async function getOperationalCascade(
   return rows.filter((row) => row.show_in_cascade);
 }
 
-export async function getCascadeLeads(
+async function loadCascadeLeads(
   metricKey: string,
   range: DateRange,
 ): Promise<CascadeLead[]> {
@@ -188,6 +207,22 @@ export async function getCascadeLeads(
   return normalizeNumbers(
     result.data,
   ) as unknown as CascadeLead[];
+}
+
+const cachedCascadeLeads = unstable_cache(
+  async (metricKey: string, start: string, end: string) => loadCascadeLeads(
+    metricKey,
+    { key: "custom", start, end, label: `${start} – ${end}` },
+  ),
+  ["milhano-cascade-leads-v17"],
+  { revalidate: 60 },
+);
+
+export async function getCascadeLeads(
+  metricKey: string,
+  range: DateRange,
+): Promise<CascadeLead[]> {
+  return cachedCascadeLeads(metricKey, range.start, range.end);
 }
 
 export async function getLeadDetail(

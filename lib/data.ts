@@ -1,5 +1,7 @@
 import "server-only";
 
+import { unstable_cache } from "next/cache";
+
 import { canonicalAdvisorName } from "@/lib/identity";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import {
@@ -694,32 +696,33 @@ function normalizeFilter(
   return value?.trim().toLocaleLowerCase("es") ?? "";
 }
 
-export async function getPipelineOperationalData(
-  filters: PipelineFilters,
-  range: DateRange,
-  paginate = true,
-): Promise<PipelineOperationalData> {
+async function loadPipelineBaseRows(): Promise<PipelineOpportunity[]> {
   const supabase = createSupabaseAdmin();
-
   const result = await supabase
     .from("vw_milhano_pipeline_current")
     .select(
       "ghl_opportunity_id, opportunity_name, contact_name, student_name, phone, email, source, current_stage, status, operational_owner, created_at, original_lead_date, updated_at, days_since_update, inactivity_bucket, grade_interest, level, school_cycle, priority",
     )
     .order("stage_display_order")
-    .order("days_since_update", {
-      ascending: false,
-      nullsFirst: false,
-    })
+    .order("days_since_update", { ascending: false, nullsFirst: false })
     .limit(2000);
 
   assertResult(result, "Unable to query pipeline details");
+  return normalizeNumbers(result.data) as unknown as PipelineOpportunity[];
+}
 
-  const allRows = (
-    normalizeNumbers(
-      result.data,
-    ) as unknown as PipelineOpportunity[]
-  )
+const cachedPipelineBaseRows = unstable_cache(
+  loadPipelineBaseRows,
+  ["milhano-pipeline-base-v17"],
+  { revalidate: 60 },
+);
+
+export async function getPipelineOperationalData(
+  filters: PipelineFilters,
+  range: DateRange,
+  paginate = true,
+): Promise<PipelineOperationalData> {
+  const allRows = (await cachedPipelineBaseRows())
     .filter((row) =>
       dateInRange(
         row.original_lead_date || row.created_at,

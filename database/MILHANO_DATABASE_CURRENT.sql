@@ -1,7 +1,7 @@
 -- =============================================================================
 -- MILHANO ADMISSIONS | DATABASE CURRENT CHECKPOINT
--- Current dashboard checkpoint: V16.5.3
--- Generated: 2026-08-19
+-- Current dashboard checkpoint: V17
+-- Generated: 2026-08-20
 -- =============================================================================
 --
 -- PURPOSE
@@ -4910,3 +4910,1595 @@ select
 from information_schema.routines
 where routine_schema = 'public'
   and routine_name = 'milhano_save_eod_v162';
+
+
+-- ============================================================================
+-- CURRENT SECTION: GHL APPOINTMENT SYNC
+-- ============================================================================
+
+-- =============================================================================
+-- MILHANO | 09 v2 | GHL APPOINTMENT SYNC
+-- Run once in Supabase BEFORE activating the appointment-enabled orchestrator.
+-- =============================================================================
+
+begin;
+
+create table if not exists public.milhano_ghl_appointments (
+    appointment_id text primary key,
+    location_id text not null,
+    calendar_id text not null,
+    calendar_name text,
+    appointment_type text not null default 'other'
+        check (appointment_type in ('school_tour', 'trial_day', 'other')),
+    ghl_contact_id text,
+    ghl_opportunity_id text,
+    title text,
+    appointment_status text not null default 'unknown',
+    start_time timestamptz,
+    end_time timestamptz,
+    assigned_user_id text,
+    address text,
+    notes text,
+    date_added timestamptz,
+    date_updated timestamptz,
+    raw_payload jsonb not null default '{}'::jsonb,
+    first_synced_at timestamptz not null default now(),
+    last_synced_at timestamptz not null default now()
+);
+
+create index if not exists idx_milhano_ghl_appointments_contact
+    on public.milhano_ghl_appointments (ghl_contact_id, start_time desc);
+
+create index if not exists idx_milhano_ghl_appointments_opportunity
+    on public.milhano_ghl_appointments (ghl_opportunity_id, start_time desc);
+
+create index if not exists idx_milhano_ghl_appointments_calendar
+    on public.milhano_ghl_appointments (calendar_id, start_time desc);
+
+create index if not exists idx_milhano_ghl_appointments_type_status
+    on public.milhano_ghl_appointments (
+        appointment_type,
+        appointment_status,
+        start_time desc
+    );
+
+alter table public.milhano_ghl_appointments enable row level security;
+
+
+create or replace function public.milhano_reconcile_appointments(
+    p_location_id text,
+    p_events jsonb,
+    p_reconciled_at timestamptz default now()
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_item jsonb;
+    v_appointment_id text;
+    v_calendar_id text;
+    v_calendar_name text;
+    v_type text;
+    v_contact_id text;
+    v_opportunity_id text;
+    v_status text;
+    v_tour_status text;
+    v_start timestamptz;
+    v_end timestamptz;
+    v_date_added timestamptz;
+    v_date_updated timestamptz;
+
+    v_processed integer := 0;
+    v_school_tours integer := 0;
+    v_trial_days integer := 0;
+    v_mapped integer := 0;
+    v_unmapped integer := 0;
+    v_showed integer := 0;
+    v_no_show integer := 0;
+    v_cancelled integer := 0;
+begin
+    if nullif(trim(p_location_id), '') is null then
+        raise exception 'location_id is required';
+    end if;
+
+    if p_events is null or jsonb_typeof(p_events) <> 'array' then
+        raise exception 'p_events must be a JSON array';
+    end if;
+
+    for v_item in
+        select value from jsonb_array_elements(p_events)
+    loop
+        v_appointment_id := nullif(trim(v_item ->> 'appointment_id'), '');
+        v_calendar_id := nullif(trim(v_item ->> 'calendar_id'), '');
+        v_calendar_name := nullif(trim(v_item ->> 'calendar_name'), '');
+        v_type := lower(coalesce(nullif(trim(v_item ->> 'appointment_type'), ''), 'other'));
+        v_contact_id := nullif(trim(v_item ->> 'contact_id'), '');
+        v_status := lower(coalesce(nullif(trim(v_item ->> 'appointment_status'), ''), 'unknown'));
+
+        if v_appointment_id is null or v_calendar_id is null then
+            continue;
+        end if;
+
+        if v_type not in ('school_tour', 'trial_day', 'other') then
+            v_type := 'other';
+        end if;
+
+        begin
+            v_start := nullif(trim(v_item ->> 'start_time'), '')::timestamptz;
+        exception when others then
+            v_start := null;
+        end;
+
+        begin
+            v_end := nullif(trim(v_item ->> 'end_time'), '')::timestamptz;
+        exception when others then
+            v_end := null;
+        end;
+
+        begin
+            v_date_added := nullif(trim(v_item ->> 'date_added'), '')::timestamptz;
+        exception when others then
+            v_date_added := null;
+        end;
+
+        begin
+            v_date_updated := nullif(trim(v_item ->> 'date_updated'), '')::timestamptz;
+        exception when others then
+            v_date_updated := null;
+        end;
+
+        v_opportunity_id := null;
+
+        if v_contact_id is not null then
+            select o.ghl_opportunity_id
+            into v_opportunity_id
+            from public.milhano_opportunities o
+            where o.ghl_contact_id = v_contact_id
+            order by
+                o.updated_at desc nulls last,
+                o.created_at desc nulls last
+            limit 1;
+        end if;
+
+        insert into public.milhano_ghl_appointments (
+            appointment_id,
+            location_id,
+            calendar_id,
+            calendar_name,
+            appointment_type,
+            ghl_contact_id,
+            ghl_opportunity_id,
+            title,
+            appointment_status,
+            start_time,
+            end_time,
+            assigned_user_id,
+            address,
+            notes,
+            date_added,
+            date_updated,
+            raw_payload,
+            first_synced_at,
+            last_synced_at
+        )
+        values (
+            v_appointment_id,
+            p_location_id,
+            v_calendar_id,
+            v_calendar_name,
+            v_type,
+            v_contact_id,
+            v_opportunity_id,
+            nullif(trim(v_item ->> 'title'), ''),
+            v_status,
+            v_start,
+            v_end,
+            nullif(trim(v_item ->> 'assigned_user_id'), ''),
+            nullif(trim(v_item ->> 'address'), ''),
+            nullif(trim(v_item ->> 'notes'), ''),
+            v_date_added,
+            v_date_updated,
+            coalesce(v_item -> 'raw_payload', '{}'::jsonb),
+            coalesce(p_reconciled_at, now()),
+            coalesce(p_reconciled_at, now())
+        )
+        on conflict (appointment_id)
+        do update set
+            location_id = excluded.location_id,
+            calendar_id = excluded.calendar_id,
+            calendar_name = excluded.calendar_name,
+            appointment_type = excluded.appointment_type,
+            ghl_contact_id = excluded.ghl_contact_id,
+            ghl_opportunity_id = excluded.ghl_opportunity_id,
+            title = excluded.title,
+            appointment_status = excluded.appointment_status,
+            start_time = excluded.start_time,
+            end_time = excluded.end_time,
+            assigned_user_id = excluded.assigned_user_id,
+            address = excluded.address,
+            notes = excluded.notes,
+            date_added = excluded.date_added,
+            date_updated = excluded.date_updated,
+            raw_payload = excluded.raw_payload,
+            last_synced_at = excluded.last_synced_at;
+
+        v_processed := v_processed + 1;
+
+        if v_opportunity_id is null then
+            v_unmapped := v_unmapped + 1;
+        else
+            v_mapped := v_mapped + 1;
+        end if;
+
+        if v_type = 'school_tour' then
+            v_school_tours := v_school_tours + 1;
+
+            if v_status in ('showed', 'completed') then
+                v_tour_status := 'showed';
+                v_showed := v_showed + 1;
+            elsif v_status = 'noshow' then
+                v_tour_status := 'no_show';
+                v_no_show := v_no_show + 1;
+            elsif v_status in ('cancelled', 'invalid') then
+                v_tour_status := 'cancelled';
+                v_cancelled := v_cancelled + 1;
+            elsif v_status in ('new', 'confirmed', 'active') then
+                v_tour_status := 'scheduled';
+            else
+                v_tour_status := 'unknown';
+            end if;
+
+            -- This table already drives School Tours Today and the fallback
+            -- School Tours Attended logic in the current dashboard.
+            if v_opportunity_id is not null then
+                insert into public.milhano_school_tour_details (
+                    ghl_opportunity_id,
+                    scheduled_for,
+                    attendance_status,
+                    attended_at,
+                    updated_at
+                )
+                values (
+                    v_opportunity_id,
+                    v_start,
+                    v_tour_status,
+                    case
+                        when v_tour_status = 'showed' then v_start
+                        else null
+                    end,
+                    coalesce(p_reconciled_at, now())
+                )
+                on conflict (ghl_opportunity_id)
+                do update set
+                    scheduled_for = excluded.scheduled_for,
+                    attendance_status = excluded.attendance_status,
+                    attended_at = excluded.attended_at,
+                    updated_at = excluded.updated_at;
+            end if;
+
+        elsif v_type = 'trial_day' then
+            v_trial_days := v_trial_days + 1;
+        end if;
+    end loop;
+
+    return jsonb_build_object(
+        'ok', true,
+        'processed', v_processed,
+        'school_tours', v_school_tours,
+        'trial_days', v_trial_days,
+        'mapped_to_opportunity', v_mapped,
+        'unmapped_contact', v_unmapped,
+        'school_tour_showed', v_showed,
+        'school_tour_no_show', v_no_show,
+        'school_tour_cancelled', v_cancelled,
+        'reconciled_at', coalesce(p_reconciled_at, now())
+    );
+end;
+$$;
+
+revoke all on function public.milhano_reconcile_appointments(
+    text, jsonb, timestamptz
+) from public;
+
+grant execute on function public.milhano_reconcile_appointments(
+    text, jsonb, timestamptz
+) to service_role;
+
+
+-- Convenience audit view.
+create or replace view public.vw_milhano_ghl_appointments
+with (security_invoker = true)
+as
+select
+    a.appointment_id,
+    a.appointment_type,
+    a.calendar_id,
+    a.calendar_name,
+    a.ghl_contact_id,
+    a.ghl_opportunity_id,
+    coalesce(
+        nullif(trim(o.student_name), ''),
+        nullif(trim(o.contact_name), ''),
+        nullif(trim(o.opportunity_name), ''),
+        a.ghl_contact_id,
+        'Unmapped appointment'
+    ) as lead_name,
+    o.phone,
+    o.current_stage,
+    a.appointment_status,
+    a.start_time,
+    a.end_time,
+    a.date_added,
+    a.date_updated,
+    a.last_synced_at
+from public.milhano_ghl_appointments a
+left join public.milhano_opportunities o
+    on o.ghl_opportunity_id = a.ghl_opportunity_id;
+
+
+commit;
+
+-- Verification
+select
+    to_regclass('public.milhano_ghl_appointments') is not null
+        as appointment_table_exists,
+    to_regprocedure(
+        'public.milhano_reconcile_appointments(text,jsonb,timestamptz)'
+    ) is not null as appointment_rpc_exists,
+    to_regclass('public.vw_milhano_ghl_appointments') is not null
+        as appointment_view_exists;
+
+
+-- ============================================================================
+-- CURRENT SECTION: V17 STABILIZATION & PERFORMANCE
+-- ============================================================================
+
+-- =============================================================================
+-- MILHANO ADMISSIONS | V17 STABILIZATION & PERFORMANCE
+-- Generated: 2026-08-20
+--
+-- Goals
+--   * Make GHL funnel metrics use one canonical activity layer.
+--   * Responded = real response after human outreach OR connected call.
+--   * Meaningful call threshold = 120 seconds.
+--   * School Tour / Trial Day system metrics = synchronized GHL appointments.
+--   * Exclude future-dated legacy stage events from operational KPIs.
+--   * Add missing indexes responsible for excessive sequential scans.
+--   * Provide true same-lead GHL transition percentages.
+--   * Provide a single home-page payload RPC to reduce round trips.
+--
+-- Safe to run on the existing Milhano Supabase project after the appointment
+-- sync migration. It does not delete historical records.
+-- =============================================================================
+
+begin;
+
+do $$
+begin
+  if to_regclass('public.milhano_ghl_appointments') is null then
+    raise exception 'V17 requires the GHL appointment sync migration first';
+  end if;
+  if to_regclass('public.milhano_eod_school_tour_records') is null then
+    raise exception 'V17 requires the V16.2 structured EOD migration first';
+  end if;
+end $$;
+
+-- -----------------------------------------------------------------------------
+-- 1. Performance indexes
+-- -----------------------------------------------------------------------------
+create index if not exists idx_milhano_opportunities_contact_updated
+  on public.milhano_opportunities (ghl_contact_id, updated_at desc, created_at desc)
+  where ghl_contact_id is not null;
+
+create index if not exists idx_milhano_communication_contact_time
+  on public.milhano_communication_events (ghl_contact_id, event_timestamp desc)
+  where ghl_contact_id is not null;
+
+create index if not exists idx_milhano_communication_opportunity_time
+  on public.milhano_communication_events (ghl_opportunity_id, event_timestamp desc)
+  where ghl_opportunity_id is not null;
+
+create index if not exists idx_milhano_communication_channel_direction_time
+  on public.milhano_communication_events (lower(channel), direction, event_timestamp desc);
+
+create index if not exists idx_milhano_stage_events_opportunity_stage_time
+  on public.milhano_stage_events (ghl_opportunity_id, to_stage, event_timestamp desc)
+  where is_valid = true;
+
+-- -----------------------------------------------------------------------------
+-- 2. Resolve communication events to the current admissions opportunity once.
+--    This replaces repeated lateral scans throughout downstream views.
+-- -----------------------------------------------------------------------------
+create or replace view public.vw_milhano_mapped_communication_events
+with (security_invoker = true)
+as
+select
+  c.*,
+  coalesce(c.ghl_opportunity_id, mapped.ghl_opportunity_id) as resolved_ghl_opportunity_id
+from public.milhano_communication_events c
+left join lateral (
+  select o.ghl_opportunity_id
+  from public.milhano_opportunities o
+  where c.ghl_opportunity_id is null
+    and c.ghl_contact_id is not null
+    and o.ghl_contact_id = c.ghl_contact_id
+  order by o.updated_at desc nulls last, o.created_at desc nulls last
+  limit 1
+) mapped on true;
+
+create or replace view public.vw_milhano_first_human_outbound
+with (security_invoker = true)
+as
+select
+  resolved_ghl_opportunity_id as ghl_opportunity_id,
+  ghl_contact_id,
+  min(event_timestamp) as first_human_outbound_at
+from public.vw_milhano_mapped_communication_events
+where resolved_ghl_opportunity_id is not null
+  and (
+    (
+      lower(channel) = 'call'
+      and direction = 'outbound'
+      and coalesce(is_call_attempt, false) = true
+    )
+    or
+    (
+      lower(channel) = 'whatsapp'
+      and direction = 'outbound'
+      and coalesce(is_eod_countable, false) = true
+    )
+  )
+group by resolved_ghl_opportunity_id, ghl_contact_id;
+
+-- -----------------------------------------------------------------------------
+-- 3. Qualified / Fit canonical event.
+--    Future-dated legacy rows are retained for audit but excluded operationally.
+-- -----------------------------------------------------------------------------
+create or replace view public.vw_milhano_qualification_events
+with (security_invoker = true)
+as
+with ranked as (
+  select
+    e.event_id,
+    e.ghl_opportunity_id,
+    e.ghl_contact_id,
+    e.attributed_ghl_user_id,
+    e.attributed_app_user_id,
+    e.event_timestamp as qualified_at,
+    e.to_stage as evidence_stage,
+    'fit'::text as qualification_source,
+    row_number() over (
+      partition by e.ghl_opportunity_id
+      order by e.event_timestamp, e.event_id
+    ) as rn
+  from public.milhano_stage_events e
+  where e.is_valid = true
+    and e.to_stage = 'Fit'
+    and e.ghl_opportunity_id is not null
+    and e.event_timestamp <= now() + interval '5 minutes'
+)
+select
+  event_id,
+  ghl_opportunity_id,
+  ghl_contact_id,
+  attributed_ghl_user_id,
+  attributed_app_user_id,
+  qualified_at,
+  evidence_stage,
+  qualification_source
+from ranked
+where rn = 1;
+
+-- -----------------------------------------------------------------------------
+-- 4. Canonical automated funnel activity.
+-- -----------------------------------------------------------------------------
+create or replace view public.vw_milhano_operational_cascade_activity
+with (security_invoker = true)
+as
+
+-- New Lead
+select
+  'new_leads'::text as metric_key,
+  coalesce(o.original_lead_date, o.created_at) as activity_at,
+  o.ghl_opportunity_id,
+  o.ghl_contact_id,
+  ('lead:' || o.ghl_opportunity_id)::text as activity_id
+from public.milhano_opportunities o
+where coalesce(o.original_lead_date, o.created_at) is not null
+
+union all
+
+-- Number of Dials = actions, not unique leads.
+select
+  'number_of_dials',
+  c.event_timestamp,
+  c.resolved_ghl_opportunity_id,
+  c.ghl_contact_id,
+  c.event_id
+from public.vw_milhano_mapped_communication_events c
+where lower(c.channel) = 'call'
+  and c.direction = 'outbound'
+  and coalesce(c.is_call_attempt, false) = true
+
+union all
+
+-- Connected outbound calls (support metric).
+select
+  'answered_calls',
+  c.event_timestamp,
+  c.resolved_ghl_opportunity_id,
+  c.ghl_contact_id,
+  c.event_id
+from public.vw_milhano_mapped_communication_events c
+where lower(c.channel) = 'call'
+  and c.direction = 'outbound'
+  and coalesce(c.is_call_attempt, false) = true
+  and coalesce(c.is_connected_raw, false) = true
+
+union all
+
+-- Unique Contacted = at least one human/countable outbound call or WhatsApp.
+select
+  'unique_contacted_leads',
+  c.event_timestamp,
+  c.resolved_ghl_opportunity_id,
+  c.ghl_contact_id,
+  ('contact:' || c.event_id)::text
+from public.vw_milhano_mapped_communication_events c
+where c.resolved_ghl_opportunity_id is not null
+  and (
+    (
+      lower(c.channel) = 'call'
+      and c.direction = 'outbound'
+      and coalesce(c.is_call_attempt, false) = true
+    )
+    or
+    (
+      lower(c.channel) = 'whatsapp'
+      and c.direction = 'outbound'
+      and coalesce(c.is_eod_countable, false) = true
+    )
+  )
+
+union all
+
+-- Responded via WhatsApp only when the inbound message happened AFTER human
+-- outreach. This excludes the initial Click-to-WhatsApp inquiry message.
+select
+  'responded_leads',
+  c.event_timestamp,
+  c.resolved_ghl_opportunity_id,
+  c.ghl_contact_id,
+  ('response-wa:' || c.event_id)::text
+from public.vw_milhano_mapped_communication_events c
+join public.vw_milhano_first_human_outbound first_out
+  on first_out.ghl_opportunity_id = c.resolved_ghl_opportunity_id
+where lower(c.channel) = 'whatsapp'
+  and c.direction = 'inbound'
+  and c.event_timestamp > first_out.first_human_outbound_at
+
+union all
+
+-- A connected call is also a response regardless of call direction.
+select
+  'responded_leads',
+  c.event_timestamp,
+  c.resolved_ghl_opportunity_id,
+  c.ghl_contact_id,
+  ('response-call:' || c.event_id)::text
+from public.vw_milhano_mapped_communication_events c
+where lower(c.channel) = 'call'
+  and c.direction in ('outbound', 'inbound')
+  and coalesce(c.is_connected_raw, false) = true
+  and c.resolved_ghl_opportunity_id is not null
+
+union all
+
+-- Meaningful = connected 2+ minute call OR WhatsApp explicitly classified as
+-- school-information-provided. WhatsApp semantic classification can be populated
+-- by the orchestrator later without changing dashboard SQL.
+select
+  'meaningful_conversations',
+  c.event_timestamp,
+  c.resolved_ghl_opportunity_id,
+  c.ghl_contact_id,
+  ('meaningful:' || c.event_id)::text
+from public.vw_milhano_mapped_communication_events c
+where c.resolved_ghl_opportunity_id is not null
+  and (
+    (
+      lower(c.channel) = 'call'
+      and coalesce(c.is_connected_raw, false) = true
+      and coalesce(c.call_duration_seconds, 0) >= 120
+    )
+    or
+    (
+      lower(c.channel) = 'whatsapp'
+      and coalesce(c.is_meaningful_whatsapp, false) = true
+    )
+  )
+
+union all
+
+-- Qualified / Fit.
+select
+  'qualified_leads',
+  q.qualified_at,
+  q.ghl_opportunity_id,
+  q.ghl_contact_id,
+  q.event_id
+from public.vw_milhano_qualification_events q
+
+union all
+
+-- School Tour Booked = unique lead with a non-cancelled GHL appointment.
+select
+  'school_tours_booked',
+  a.start_time,
+  a.ghl_opportunity_id,
+  a.ghl_contact_id,
+  ('appt-st-booked:' || a.appointment_id)::text
+from public.milhano_ghl_appointments a
+where a.appointment_type = 'school_tour'
+  and a.start_time is not null
+  and lower(coalesce(a.appointment_status, 'unknown')) not in (
+    'cancelled', 'canceled', 'invalid'
+  )
+
+union all
+
+-- Current-day schedule indicator.
+select
+  'school_tours_today',
+  a.start_time,
+  a.ghl_opportunity_id,
+  a.ghl_contact_id,
+  ('appt-st-today:' || a.appointment_id)::text
+from public.milhano_ghl_appointments a
+where a.appointment_type = 'school_tour'
+  and a.start_time is not null
+  and lower(coalesce(a.appointment_status, 'unknown')) not in (
+    'cancelled', 'canceled', 'invalid'
+  )
+
+union all
+
+-- School Tour Attended = appointment itself says the visit happened.
+select
+  'school_tours_attended',
+  a.start_time,
+  a.ghl_opportunity_id,
+  a.ghl_contact_id,
+  ('appt-st-show:' || a.appointment_id)::text
+from public.milhano_ghl_appointments a
+where a.appointment_type = 'school_tour'
+  and a.start_time is not null
+  and lower(coalesce(a.appointment_status, '')) in (
+    'showed', 'completed', 'show', 'attended'
+  )
+
+union all
+
+select
+  'trial_days_booked',
+  a.start_time,
+  a.ghl_opportunity_id,
+  a.ghl_contact_id,
+  ('appt-trial-booked:' || a.appointment_id)::text
+from public.milhano_ghl_appointments a
+where a.appointment_type = 'trial_day'
+  and a.start_time is not null
+  and lower(coalesce(a.appointment_status, 'unknown')) not in (
+    'cancelled', 'canceled', 'invalid'
+  )
+
+union all
+
+select
+  'trial_days_showed',
+  a.start_time,
+  a.ghl_opportunity_id,
+  a.ghl_contact_id,
+  ('appt-trial-show:' || a.appointment_id)::text
+from public.milhano_ghl_appointments a
+where a.appointment_type = 'trial_day'
+  and a.start_time is not null
+  and lower(coalesce(a.appointment_status, '')) in (
+    'showed', 'completed', 'show', 'attended'
+  )
+
+union all
+
+-- Closed / enrolled. Future-dated Excel legacy events are audit data only.
+select
+  'closed',
+  e.event_timestamp,
+  e.ghl_opportunity_id,
+  e.ghl_contact_id,
+  e.event_id
+from public.milhano_stage_events e
+where e.is_valid = true
+  and e.to_stage = 'Inscrito'
+  and e.event_timestamp <= now() + interval '5 minutes';
+
+-- -----------------------------------------------------------------------------
+-- 5. Daily KPI view uses the same canonical sources as the GHL funnel.
+-- -----------------------------------------------------------------------------
+create or replace view public.vw_milhano_daily_kpis
+with (security_invoker = true)
+as
+with
+lead_days as (
+  select
+    (coalesce(o.original_lead_date, o.created_at) at time zone 'America/Merida')::date as metric_date,
+    count(distinct o.ghl_opportunity_id)::bigint as new_leads
+  from public.milhano_opportunities o
+  where coalesce(o.original_lead_date, o.created_at) is not null
+  group by 1
+),
+stage_days as (
+  select
+    (e.event_timestamp at time zone 'America/Merida')::date as metric_date,
+    count(distinct e.ghl_opportunity_id) filter (
+      where e.to_stage in ('No responde','Seguimiento','No responde / Seguimiento')
+    )::bigint as entered_followup,
+    count(distinct e.ghl_opportunity_id) filter (where e.to_stage = 'Retroalimentación')::bigint as feedbacks,
+    count(distinct e.ghl_opportunity_id) filter (where e.to_stage = 'En evaluación')::bigint as evaluations,
+    count(distinct e.ghl_opportunity_id) filter (where e.to_stage = 'Inscripción en proceso')::bigint as enrollment_process_started,
+    count(distinct e.ghl_opportunity_id) filter (where e.to_stage = 'Inscrito')::bigint as enrolled,
+    count(distinct e.ghl_opportunity_id) filter (where e.to_stage = 'No fit')::bigint as no_fit,
+    count(distinct e.ghl_opportunity_id) filter (where e.to_stage = 'Lost / Sin continuidad')::bigint as lost
+  from public.milhano_stage_events e
+  where e.is_valid = true
+    and e.event_timestamp <= now() + interval '5 minutes'
+  group by 1
+),
+fit_days as (
+  select
+    (q.qualified_at at time zone 'America/Merida')::date as metric_date,
+    count(distinct q.ghl_opportunity_id)::bigint as fits
+  from public.vw_milhano_qualification_events q
+  group by 1
+),
+appointment_days as (
+  select
+    (a.start_time at time zone 'America/Merida')::date as metric_date,
+    count(distinct coalesce(a.ghl_opportunity_id,a.ghl_contact_id,a.appointment_id)) filter (
+      where a.appointment_type='school_tour'
+        and lower(coalesce(a.appointment_status,'unknown')) not in ('cancelled','canceled','invalid')
+    )::bigint as tours_scheduled,
+    count(distinct coalesce(a.ghl_opportunity_id,a.ghl_contact_id,a.appointment_id)) filter (
+      where a.appointment_type='school_tour'
+        and lower(coalesce(a.appointment_status,'')) in ('showed','completed','show','attended')
+    )::bigint as tours_attended,
+    count(distinct coalesce(a.ghl_opportunity_id,a.ghl_contact_id,a.appointment_id)) filter (
+      where a.appointment_type='trial_day'
+        and lower(coalesce(a.appointment_status,'unknown')) not in ('cancelled','canceled','invalid')
+    )::bigint as passdays_scheduled,
+    count(distinct coalesce(a.ghl_opportunity_id,a.ghl_contact_id,a.appointment_id)) filter (
+      where a.appointment_type='trial_day'
+        and lower(coalesce(a.appointment_status,'')) in ('showed','completed','show','attended')
+    )::bigint as passdays_attended
+  from public.milhano_ghl_appointments a
+  where a.start_time is not null
+  group by 1
+),
+call_days as (
+  select
+    (c.activity_timestamp at time zone 'America/Merida')::date as metric_date,
+    count(*)::bigint as calls,
+    count(distinct c.ghl_opportunity_id)::bigint as opportunities_called
+  from public.milhano_call_events c
+  group by 1
+),
+bounds as (
+  select
+    least(
+      coalesce((select min(metric_date) from lead_days), current_date),
+      coalesce((select min(metric_date) from stage_days), current_date),
+      coalesce((select min(metric_date) from appointment_days), current_date),
+      coalesce((select min(metric_date) from call_days), current_date)
+    ) as min_date,
+    greatest(
+      coalesce((select max(metric_date) from lead_days), current_date),
+      coalesce((select max(metric_date) from stage_days), current_date),
+      coalesce((select max(metric_date) from appointment_days), current_date),
+      coalesce((select max(metric_date) from call_days), current_date),
+      current_date
+    ) as max_date
+),
+calendar as (
+  select generate_series(
+    (select min_date from bounds),
+    (select max_date from bounds),
+    interval '1 day'
+  )::date as metric_date
+)
+select
+  cal.metric_date,
+  coalesce(ld.new_leads,0) as new_leads,
+  coalesce(sd.entered_followup,0) as entered_followup,
+  coalesce(fd.fits,0) as fits,
+  coalesce(ad.tours_scheduled,0) as tours_scheduled,
+  coalesce(ad.tours_attended,0) as tours_attended,
+  coalesce(ad.passdays_scheduled,0) as passdays_scheduled,
+  coalesce(ad.passdays_attended,0) as passdays_attended,
+  coalesce(sd.feedbacks,0) as feedbacks,
+  coalesce(sd.evaluations,0) as evaluations,
+  coalesce(sd.enrollment_process_started,0) as enrollment_process_started,
+  coalesce(sd.enrolled,0) as enrolled,
+  coalesce(sd.no_fit,0) as no_fit,
+  coalesce(sd.lost,0) as lost,
+  coalesce(cd.calls,0) as calls,
+  coalesce(cd.opportunities_called,0) as opportunities_called
+from calendar cal
+left join lead_days ld on ld.metric_date=cal.metric_date
+left join stage_days sd on sd.metric_date=cal.metric_date
+left join fit_days fd on fd.metric_date=cal.metric_date
+left join appointment_days ad on ad.metric_date=cal.metric_date
+left join call_days cd on cd.metric_date=cal.metric_date
+order by cal.metric_date;
+
+-- -----------------------------------------------------------------------------
+-- 6. Canonical scorecard function.
+-- -----------------------------------------------------------------------------
+create or replace function public.milhano_get_operational_cascade(
+  p_start date,
+  p_end date
+)
+returns table (
+  metric_key text,
+  label text,
+  display_order integer,
+  metric_value bigint,
+  metric_scope text,
+  definition text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with bounds as (
+    select
+      p_start::timestamp at time zone 'America/Merida' as start_at,
+      (p_end + 1)::timestamp at time zone 'America/Merida' as end_at,
+      (now() at time zone 'America/Merida')::date as local_today
+  ),
+  catalog as (
+    select metric_key, label, display_order, metric_scope, definition
+    from public.milhano_reconciliation_metric_catalog
+    where is_active = true
+      and show_in_cascade = true
+  ),
+  filtered as (
+    select a.*
+    from public.vw_milhano_operational_cascade_activity a
+    cross join bounds b
+    where (
+      a.metric_key = 'school_tours_today'
+      and (a.activity_at at time zone 'America/Merida')::date = b.local_today
+    )
+    or (
+      a.metric_key <> 'school_tours_today'
+      and a.activity_at >= b.start_at
+      and a.activity_at < b.end_at
+    )
+  )
+  select
+    c.metric_key,
+    c.label,
+    c.display_order,
+    case
+      when c.metric_key = 'number_of_dials'
+        then count(f.activity_id)
+      else count(distinct coalesce(f.ghl_opportunity_id, f.ghl_contact_id, f.activity_id))
+    end::bigint as metric_value,
+    c.metric_scope,
+    c.definition
+  from catalog c
+  left join filtered f on f.metric_key = c.metric_key
+  group by c.metric_key, c.label, c.display_order, c.metric_scope, c.definition
+  order by c.display_order;
+$$;
+
+revoke all on function public.milhano_get_operational_cascade(date, date) from public;
+grant execute on function public.milhano_get_operational_cascade(date, date) to service_role;
+
+-- -----------------------------------------------------------------------------
+-- 7. Drill-down uses the exact same activity layer as scorecards.
+-- -----------------------------------------------------------------------------
+create or replace function public.milhano_get_operational_cascade_leads(
+  p_metric_key text,
+  p_start date,
+  p_end date
+)
+returns table (
+  metric_key text,
+  ghl_opportunity_id text,
+  ghl_contact_id text,
+  lead_name text,
+  contact_name text,
+  student_name text,
+  phone text,
+  email text,
+  source text,
+  current_stage text,
+  opportunity_status text,
+  operational_owner text,
+  grade_interest text,
+  activity_at timestamptz,
+  activity_count bigint,
+  scheduled_for timestamptz,
+  attendance_status text,
+  attended_at timestamptz,
+  has_objection boolean,
+  objection_summary text,
+  school_tour_notes text,
+  no_show_reason text,
+  historical_comments text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with bounds as (
+    select
+      p_start::timestamp at time zone 'America/Merida' as start_at,
+      (p_end + 1)::timestamp at time zone 'America/Merida' as end_at,
+      (now() at time zone 'America/Merida')::date as local_today
+  ),
+  filtered as (
+    select a.*
+    from public.vw_milhano_operational_cascade_activity a
+    cross join bounds b
+    where a.metric_key = p_metric_key
+      and (
+        (
+          a.metric_key = 'school_tours_today'
+          and (a.activity_at at time zone 'America/Merida')::date = b.local_today
+        )
+        or (
+          a.metric_key <> 'school_tours_today'
+          and a.activity_at >= b.start_at
+          and a.activity_at < b.end_at
+        )
+      )
+  ),
+  grouped as (
+    select
+      f.metric_key,
+      coalesce(f.ghl_opportunity_id, mapped.ghl_opportunity_id) as resolved_opportunity_id,
+      f.ghl_contact_id,
+      max(f.activity_at) as activity_at,
+      count(*)::bigint as activity_count
+    from filtered f
+    left join lateral (
+      select o.ghl_opportunity_id
+      from public.milhano_opportunities o
+      where f.ghl_opportunity_id is null
+        and f.ghl_contact_id is not null
+        and o.ghl_contact_id = f.ghl_contact_id
+      order by o.updated_at desc nulls last, o.created_at desc nulls last
+      limit 1
+    ) mapped on true
+    group by f.metric_key, coalesce(f.ghl_opportunity_id, mapped.ghl_opportunity_id), f.ghl_contact_id
+  )
+  select
+    g.metric_key,
+    coalesce(g.resolved_opportunity_id, o.ghl_opportunity_id),
+    coalesce(g.ghl_contact_id, o.ghl_contact_id),
+    coalesce(
+      nullif(trim(o.student_name), ''),
+      nullif(trim(o.contact_name), ''),
+      nullif(trim(o.opportunity_name), ''),
+      g.ghl_contact_id,
+      'Unidentified lead'
+    ) as lead_name,
+    o.contact_name,
+    o.student_name,
+    o.phone,
+    o.email,
+    o.source,
+    o.current_stage,
+    o.status,
+    coalesce(nullif(trim(o.assigned_user), ''), nullif(trim(o.historical_advisor), ''), 'Unassigned'),
+    o.grade_interest,
+    g.activity_at,
+    g.activity_count,
+    case
+      when g.metric_key in ('school_tours_booked','school_tours_attended','school_tours_today','trial_days_booked','trial_days_showed')
+        then appt.start_time
+      else detail.scheduled_for
+    end as scheduled_for,
+    case
+      when appt.appointment_id is not null then
+        case
+          when lower(coalesce(appt.appointment_status,'')) in ('showed','completed','show','attended') then 'showed'
+          when lower(coalesce(appt.appointment_status,'')) in ('noshow','no_show','no show') then 'no_show'
+          when lower(coalesce(appt.appointment_status,'')) in ('cancelled','canceled','invalid') then 'cancelled'
+          else 'scheduled'
+        end
+      else coalesce(detail.attendance_status, 'unknown')
+    end as attendance_status,
+    case
+      when appt.appointment_id is not null
+        and lower(coalesce(appt.appointment_status,'')) in ('showed','completed','show','attended')
+        then appt.start_time
+      else detail.attended_at
+    end as attended_at,
+    coalesce(detail.has_objection, false),
+    detail.objection_summary,
+    detail.school_tour_notes,
+    detail.no_show_reason,
+    o.historical_comments
+  from grouped g
+  left join lateral (
+    select candidate.*
+    from public.milhano_opportunities candidate
+    where candidate.ghl_opportunity_id = g.resolved_opportunity_id
+       or (
+         g.resolved_opportunity_id is null
+         and g.ghl_contact_id is not null
+         and candidate.ghl_contact_id = g.ghl_contact_id
+       )
+    order by candidate.updated_at desc nulls last, candidate.created_at desc nulls last
+    limit 1
+  ) o on true
+  left join lateral (
+    select a.*
+    from public.milhano_ghl_appointments a
+    where (
+      a.ghl_opportunity_id = coalesce(g.resolved_opportunity_id, o.ghl_opportunity_id)
+      or (
+        a.ghl_opportunity_id is null
+        and a.ghl_contact_id = coalesce(g.ghl_contact_id, o.ghl_contact_id)
+      )
+    )
+      and (
+        (g.metric_key like 'school_tours_%' and a.appointment_type = 'school_tour')
+        or (g.metric_key like 'trial_days_%' and a.appointment_type = 'trial_day')
+      )
+      and a.start_time >= (select start_at from bounds)
+      and a.start_time < (select end_at from bounds)
+      and (
+        g.metric_key not in ('school_tours_attended','trial_days_showed')
+        or lower(coalesce(a.appointment_status,'')) in ('showed','completed','show','attended')
+      )
+    order by a.start_time desc
+    limit 1
+  ) appt on true
+  left join public.milhano_school_tour_details detail
+    on detail.ghl_opportunity_id = o.ghl_opportunity_id
+  order by g.activity_at desc nulls last;
+$$;
+
+revoke all on function public.milhano_get_operational_cascade_leads(text, date, date) from public;
+grant execute on function public.milhano_get_operational_cascade_leads(text, date, date) to service_role;
+
+-- -----------------------------------------------------------------------------
+-- 8. Catalog order / definitions. Both cascades now use the same sequence.
+-- -----------------------------------------------------------------------------
+update public.milhano_reconciliation_metric_catalog
+set display_order = case metric_key
+  when 'new_leads' then 1
+  when 'unique_contacted_leads' then 2
+  when 'responded_leads' then 3
+  when 'meaningful_conversations' then 4
+  when 'qualified_leads' then 5
+  when 'school_tours_booked' then 6
+  when 'school_tours_attended' then 7
+  when 'trial_days_booked' then 8
+  when 'trial_days_showed' then 9
+  when 'closed' then 10
+  else display_order
+end,
+updated_at = now()
+where metric_key in (
+  'new_leads','unique_contacted_leads','responded_leads','meaningful_conversations',
+  'qualified_leads','school_tours_booked','school_tours_attended',
+  'trial_days_booked','trial_days_showed','closed'
+);
+
+update public.milhano_reconciliation_metric_catalog
+set definition = 'Distinct admissions leads with at least one human/countable outbound call or WhatsApp during the selected period.', updated_at = now()
+where metric_key = 'unique_contacted_leads';
+
+update public.milhano_reconciliation_metric_catalog
+set definition = 'Distinct leads that responded after human outreach: an inbound WhatsApp after a human/countable outbound touch, or a connected GHL call. The initial Click-to-WhatsApp inquiry does not count as Responded.', updated_at = now()
+where metric_key = 'responded_leads';
+
+update public.milhano_reconciliation_metric_catalog
+set definition = 'Distinct leads with a connected call lasting at least 2 minutes, or a WhatsApp conversation explicitly classified as school-information-provided.', updated_at = now()
+where metric_key = 'meaningful_conversations';
+
+update public.milhano_reconciliation_metric_catalog
+set definition = 'Distinct leads with a non-cancelled School Tour appointment scheduled inside the selected period. GHL appointments are the automated source of truth.', updated_at = now()
+where metric_key = 'school_tours_booked';
+
+update public.milhano_reconciliation_metric_catalog
+set definition = 'Distinct leads whose School Tour appointment inside the selected period is marked Showed/Completed in GHL.', updated_at = now()
+where metric_key = 'school_tours_attended';
+
+update public.milhano_reconciliation_metric_catalog
+set definition = 'Distinct leads with a non-cancelled Trial Day appointment scheduled inside the selected period. GHL appointments are the automated source of truth.', updated_at = now()
+where metric_key = 'trial_days_booked';
+
+update public.milhano_reconciliation_metric_catalog
+set definition = 'Distinct leads whose Trial Day appointment inside the selected period is marked Showed/Completed in GHL.', updated_at = now()
+where metric_key = 'trial_days_showed';
+
+-- -----------------------------------------------------------------------------
+-- 9. Same-lead conversion rates for the GHL cascade.
+--    Cohort = leads created during the selected date range.
+-- -----------------------------------------------------------------------------
+create or replace function public.milhano_get_funnel_transition_rates_v17(
+  p_start date,
+  p_end date
+)
+returns table (
+  from_metric_key text,
+  to_metric_key text,
+  cohort_leads bigint,
+  from_reached bigint,
+  to_reached bigint,
+  conversion_pct numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with bounds as (
+    select
+      p_start::timestamp at time zone 'America/Merida' as start_at,
+      (p_end + 1)::timestamp at time zone 'America/Merida' as end_at
+  ),
+  cohort as (
+    select o.ghl_opportunity_id
+    from public.milhano_opportunities o
+    cross join bounds b
+    where coalesce(o.original_lead_date, o.created_at) >= b.start_at
+      and coalesce(o.original_lead_date, o.created_at) < b.end_at
+  ),
+  milestone as (
+    select
+      c.ghl_opportunity_id,
+      v.metric_key,
+      min(a.activity_at) as reached_at
+    from cohort c
+    cross join (values
+      ('new_leads', 1),
+      ('unique_contacted_leads', 2),
+      ('responded_leads', 3),
+      ('meaningful_conversations', 4),
+      ('qualified_leads', 5),
+      ('school_tours_booked', 6),
+      ('school_tours_attended', 7),
+      ('trial_days_booked', 8),
+      ('trial_days_showed', 9),
+      ('closed', 10)
+    ) v(metric_key, stage_order)
+    left join public.vw_milhano_operational_cascade_activity a
+      on a.ghl_opportunity_id = c.ghl_opportunity_id
+     and a.metric_key = v.metric_key
+     and a.activity_at < (select end_at from bounds)
+    group by c.ghl_opportunity_id, v.metric_key
+  ),
+  transitions as (
+    select * from (values
+      ('new_leads','unique_contacted_leads',1),
+      ('unique_contacted_leads','responded_leads',2),
+      ('responded_leads','meaningful_conversations',3),
+      ('meaningful_conversations','qualified_leads',4),
+      ('qualified_leads','school_tours_booked',5),
+      ('school_tours_booked','school_tours_attended',6),
+      ('school_tours_attended','trial_days_booked',7),
+      ('trial_days_booked','trial_days_showed',8),
+      ('trial_days_showed','closed',9)
+    ) x(from_key,to_key,transition_order)
+  ),
+  evaluated as (
+    select
+      t.from_key,
+      t.to_key,
+      t.transition_order,
+      c.ghl_opportunity_id,
+      f.reached_at as from_at,
+      n.reached_at as to_at
+    from transitions t
+    cross join cohort c
+    left join milestone f
+      on f.ghl_opportunity_id = c.ghl_opportunity_id
+     and f.metric_key = t.from_key
+    left join milestone n
+      on n.ghl_opportunity_id = c.ghl_opportunity_id
+     and n.metric_key = t.to_key
+  )
+  select
+    e.from_key,
+    e.to_key,
+    (select count(*) from cohort)::bigint,
+    count(*) filter (where e.from_at is not null)::bigint,
+    count(*) filter (
+      where e.from_at is not null
+        and e.to_at is not null
+        and e.to_at >= e.from_at
+    )::bigint,
+    case
+      when count(*) filter (where e.from_at is not null) = 0 then null
+      else round(
+        100.0 * count(*) filter (
+          where e.from_at is not null
+            and e.to_at is not null
+            and e.to_at >= e.from_at
+        ) / count(*) filter (where e.from_at is not null),
+        1
+      )
+    end as conversion_pct
+  from evaluated e
+  group by e.from_key, e.to_key, e.transition_order
+  order by e.transition_order;
+$$;
+
+revoke all on function public.milhano_get_funnel_transition_rates_v17(date, date) from public;
+grant execute on function public.milhano_get_funnel_transition_rates_v17(date, date) to service_role;
+
+-- -----------------------------------------------------------------------------
+-- 10. One RPC for the Home page. The previous page made ~11 Supabase requests
+--    and downloaded raw Opportunities/Stage Events to aggregate in Next.js.
+-- -----------------------------------------------------------------------------
+create or replace function public.milhano_get_home_payload_v17(
+  p_start date,
+  p_end date
+)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+with
+bounds as (
+  select
+    p_start::timestamp at time zone 'America/Merida' as start_at,
+    (p_end + 1)::timestamp at time zone 'America/Merida' as end_at,
+    least((p_end + 1)::timestamp at time zone 'America/Merida', now() + interval '5 minutes') as operational_end
+),
+stage_catalog(stage_name, display_order, stage_group) as (
+  values
+    ('Cliente potencial',1,'Entrada'),
+    ('No responde',2,'Seguimiento'),
+    ('Seguimiento',3,'Seguimiento'),
+    ('No responde / Seguimiento',4,'Legacy'),
+    ('No fit',5,'Salida'),
+    ('Lost / Sin continuidad',6,'Salida'),
+    ('Fit',7,'Hito'),
+    ('School Tour agendado',8,'Hito'),
+    ('School Tour atendido',9,'Hito'),
+    ('Pasadía agendada',10,'Hito'),
+    ('Pasadía asistida',11,'Hito'),
+    ('Retroalimentación',12,'Hito'),
+    ('En evaluación',13,'Hito'),
+    ('Inscripción en proceso',14,'Hito'),
+    ('Inscrito',15,'Resultado')
+),
+cohort_base as (
+  select
+    o.*,
+    coalesce(
+      (
+        select min(e.event_timestamp)
+        from public.milhano_stage_events e
+        where e.ghl_opportunity_id = o.ghl_opportunity_id
+          and e.is_valid = true
+          and e.to_stage = 'Cliente potencial'
+          and e.event_timestamp <= now() + interval '5 minutes'
+      ),
+      o.original_lead_date,
+      o.created_at
+    ) as lead_date,
+    case
+      when lower(trim(coalesce(o.assigned_user, o.historical_advisor, ''))) in ('cinthia','cinthia esquivel')
+        then 'Cinthia Esquivel'
+      else coalesce(nullif(trim(o.assigned_user),''), nullif(trim(o.historical_advisor),''), 'Sin asignar')
+    end as operational_owner
+  from public.milhano_opportunities o
+),
+cohort as (
+  select c.*
+  from cohort_base c
+  cross join bounds b
+  where c.lead_date >= b.start_at
+    and c.lead_date < b.end_at
+),
+cohort_flags as (
+  select
+    c.*,
+    exists (
+      select 1 from public.vw_milhano_qualification_events q
+      cross join bounds b
+      where q.ghl_opportunity_id = c.ghl_opportunity_id
+        and q.qualified_at < b.end_at
+    ) as reached_fit,
+    exists (
+      select 1 from public.milhano_ghl_appointments a
+      cross join bounds b
+      where (
+        a.ghl_opportunity_id = c.ghl_opportunity_id
+        or (a.ghl_opportunity_id is null and a.ghl_contact_id = c.ghl_contact_id)
+      )
+        and a.appointment_type = 'school_tour'
+        and a.start_time < b.end_at
+        and lower(coalesce(a.appointment_status,'unknown')) not in ('cancelled','canceled','invalid')
+    ) as reached_st_booked,
+    exists (
+      select 1 from public.milhano_ghl_appointments a
+      cross join bounds b
+      where (
+        a.ghl_opportunity_id = c.ghl_opportunity_id
+        or (a.ghl_opportunity_id is null and a.ghl_contact_id = c.ghl_contact_id)
+      )
+        and a.appointment_type = 'school_tour'
+        and a.start_time < b.end_at
+        and lower(coalesce(a.appointment_status,'')) in ('showed','completed','show','attended')
+    ) as reached_st_attended,
+    exists (
+      select 1 from public.milhano_ghl_appointments a
+      cross join bounds b
+      where (
+        a.ghl_opportunity_id = c.ghl_opportunity_id
+        or (a.ghl_opportunity_id is null and a.ghl_contact_id = c.ghl_contact_id)
+      )
+        and a.appointment_type = 'trial_day'
+        and a.start_time < b.end_at
+        and lower(coalesce(a.appointment_status,'unknown')) not in ('cancelled','canceled','invalid')
+    ) as reached_trial_booked,
+    exists (
+      select 1 from public.milhano_ghl_appointments a
+      cross join bounds b
+      where (
+        a.ghl_opportunity_id = c.ghl_opportunity_id
+        or (a.ghl_opportunity_id is null and a.ghl_contact_id = c.ghl_contact_id)
+      )
+        and a.appointment_type = 'trial_day'
+        and a.start_time < b.end_at
+        and lower(coalesce(a.appointment_status,'')) in ('showed','completed','show','attended')
+    ) as reached_trial_attended,
+    exists (
+      select 1 from public.milhano_stage_events e
+      cross join bounds b
+      where e.ghl_opportunity_id = c.ghl_opportunity_id
+        and e.is_valid = true
+        and e.to_stage = 'Inscrito'
+        and e.event_timestamp < b.operational_end
+    ) as reached_closed
+  from cohort c
+),
+pipeline as (
+  select
+    s.display_order,
+    s.stage_name,
+    s.stage_group,
+    count(c.ghl_opportunity_id)::bigint as opportunity_count,
+    count(c.ghl_opportunity_id) filter (where lower(coalesce(c.status,'')) = 'open')::bigint as open_count,
+    count(c.ghl_opportunity_id) filter (where lower(coalesce(c.status,'')) = 'won')::bigint as won_count,
+    count(c.ghl_opportunity_id) filter (where lower(coalesce(c.status,'')) = 'lost')::bigint as lost_count,
+    count(c.ghl_opportunity_id) filter (
+      where lower(coalesce(c.status,'')) = 'open'
+        and c.updated_at <= now() - interval '8 days'
+    )::bigint as open_8_plus_days
+  from stage_catalog s
+  left join cohort c on c.current_stage = s.stage_name
+  group by s.display_order, s.stage_name, s.stage_group
+  order by s.display_order
+),
+source_perf as (
+  select
+    coalesce(nullif(trim(source),''),'Sin fuente') as source,
+    count(*)::bigint as leads,
+    count(*) filter (where reached_fit)::bigint as fits,
+    count(*) filter (where reached_st_booked)::bigint as tours_scheduled,
+    count(*) filter (where reached_st_attended)::bigint as tours_attended,
+    count(*) filter (where reached_trial_booked)::bigint as passdays_scheduled,
+    count(*) filter (where reached_trial_attended)::bigint as passdays_attended,
+    count(*) filter (where reached_closed)::bigint as enrollment_process_started,
+    count(*) filter (where reached_closed)::bigint as enrolled,
+    case when count(*) = 0 then null else 100.0 * count(*) filter (where reached_fit) / count(*) end as lead_to_fit_pct,
+    case when count(*) = 0 then null else 100.0 * count(*) filter (where reached_closed) / count(*) end as lead_to_enrolled_pct
+  from cohort_flags
+  where coalesce(admission_route,'') <> 'Ingreso directo'
+  group by coalesce(nullif(trim(source),''),'Sin fuente')
+  order by leads desc
+),
+owner_perf as (
+  select
+    operational_owner,
+    count(*)::bigint as leads,
+    count(*) filter (where reached_fit)::bigint as fits,
+    count(*) filter (where reached_st_booked)::bigint as tours_scheduled,
+    count(*) filter (where reached_st_attended)::bigint as tours_attended,
+    count(*) filter (where reached_trial_booked)::bigint as passdays_scheduled,
+    count(*) filter (where reached_trial_attended)::bigint as passdays_attended,
+    count(*) filter (where reached_closed)::bigint as enrollment_process_started,
+    count(*) filter (where reached_closed)::bigint as enrolled,
+    case when count(*) = 0 then null else 100.0 * count(*) filter (where reached_fit) / count(*) end as lead_to_fit_pct,
+    case when count(*) = 0 then null else 100.0 * count(*) filter (where reached_closed) / count(*) end as lead_to_enrolled_pct
+  from cohort_flags
+  where coalesce(admission_route,'') <> 'Ingreso directo'
+  group by operational_owner
+  order by leads desc
+),
+exit_rows as (
+  select
+    e.to_stage as exit_type,
+    coalesce(e.from_stage,'Stage Not Reconstructed') as exit_from_stage,
+    coalesce(
+      nullif(trim(case when e.to_stage = 'No fit' then o.no_fit_reason else o.lost_reason end),''),
+      'No Reason Specified'
+    ) as exit_reason,
+    count(*)::bigint as opportunity_count
+  from public.milhano_stage_events e
+  join public.milhano_opportunities o on o.ghl_opportunity_id = e.ghl_opportunity_id
+  cross join bounds b
+  where e.is_valid = true
+    and e.to_stage in ('No fit','Lost / Sin continuidad')
+    and e.event_timestamp >= b.start_at
+    and e.event_timestamp < b.operational_end
+  group by e.to_stage, coalesce(e.from_stage,'Stage Not Reconstructed'),
+    coalesce(nullif(trim(case when e.to_stage = 'No fit' then o.no_fit_reason else o.lost_reason end),''),'No Reason Specified')
+  order by opportunity_count desc
+),
+stale as (
+  select
+    c.ghl_opportunity_id,
+    c.opportunity_name,
+    c.student_name,
+    c.current_stage,
+    c.operational_owner,
+    greatest(0, floor(extract(epoch from (now() - c.updated_at)) / 86400))::integer as days_since_update,
+    c.source
+  from cohort c
+  where lower(coalesce(c.status,'')) = 'open'
+  order by c.updated_at asc nulls first
+  limit 15
+),
+daily as (
+  select *
+  from public.vw_milhano_daily_kpis d
+  where d.metric_date >= p_start and d.metric_date <= p_end
+  order by d.metric_date
+),
+period_daily as (
+  select
+    coalesce(sum(new_leads),0)::bigint as new_leads,
+    coalesce(sum(fits),0)::bigint as fits,
+    coalesce(sum(tours_scheduled),0)::bigint as tours_scheduled,
+    coalesce(sum(tours_attended),0)::bigint as tours_attended,
+    coalesce(sum(enrolled),0)::bigint as enrolled
+  from daily
+),
+period_whatsapp as (
+  select
+    coalesce(sum(total_messages),0)::bigint as whatsapp_messages,
+    coalesce(sum(active_conversations),0)::bigint as whatsapp_conversations_daily_sum
+  from public.vw_milhano_whatsapp_daily w
+  where w.activity_date >= p_start and w.activity_date <= p_end
+),
+period_calls as (
+  select
+    coalesce(sum(total_call_attempts),0)::bigint as call_attempts,
+    coalesce(sum(outbound_attempts),0)::bigint as outbound_call_attempts
+  from public.vw_milhano_calls_daily c
+  where c.activity_date >= p_start and c.activity_date <= p_end
+),
+reconciliation as (
+  select
+    r.*,
+    coalesce(
+      r.operational_total,
+      r.system_value,
+      case when r.metric_scope = 'manual_only' then r.reported_value else null end,
+      0
+    )::bigint as metric_value
+  from public.milhano_get_operational_reconciliation(p_start,p_end) r
+),
+manual_totals as (
+  select
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='new_leads_received'),0)::bigint as new_leads_received,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='ads_leads_reported'),0)::bigint as ads_leads_reported,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='organic_leads_reported'),0)::bigint as organic_leads_reported,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='contacted_reported'),0)::bigint as contacted_reported,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='responses_reported'),0)::bigint as responses_reported,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='meaningful_conversations_reported'),0)::bigint as meaningful_conversations_reported,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='qualified_leads'),0)::bigint as qualified_leads,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='school_tours_scheduled'),0)::bigint as school_tours_scheduled,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='school_tours_attended'),0)::bigint as school_tours_attended,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='trial_days_booked'),0)::bigint as trial_days_booked,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='trial_days_showed'),0)::bigint as trial_days_showed,
+    coalesce(sum(mv.declared_value) filter (where mv.metric_key='closed_leads'),0)::bigint as closed_leads,
+    count(distinct s.id)::bigint as "eodCount",
+    count(distinct s.eod_date)::bigint as "reportedDays"
+  from public.milhano_eod_submissions s
+  left join public.milhano_eod_metric_values mv on mv.submission_id = s.id
+  where s.status in ('submitted','validated')
+    and s.eod_date between p_start and p_end
+),
+level_totals as (
+  select
+    count(*) filter (where school_level='primaria')::bigint as primaria,
+    count(*) filter (where school_level='secundaria')::bigint as secundaria,
+    count(*) filter (where school_level='prepa')::bigint as prepa,
+    count(*) filter (where school_level not in ('primaria','secundaria','prepa') or school_level is null)::bigint as unknown
+  from public.milhano_eod_school_tour_records
+  where is_active = true
+    and booking_eod_date between p_start and p_end
+),
+transition_rates as (
+  select * from public.milhano_get_funnel_transition_rates_v17(p_start,p_end)
+),
+health as (
+  select * from public.vw_milhano_system_health
+),
+quality as (
+  select * from public.vw_milhano_data_quality
+)
+select jsonb_build_object(
+  'dashboard', jsonb_build_object(
+    'pipeline', coalesce((select jsonb_agg(to_jsonb(x) order by x.display_order) from pipeline x),'[]'::jsonb),
+    'daily', coalesce((select jsonb_agg(to_jsonb(x) order by x.metric_date) from daily x),'[]'::jsonb),
+    'sources', coalesce((select jsonb_agg(to_jsonb(x)) from source_perf x),'[]'::jsonb),
+    'owners', coalesce((select jsonb_agg(to_jsonb(x)) from owner_perf x),'[]'::jsonb),
+    'exits', coalesce((select jsonb_agg(to_jsonb(x)) from exit_rows x),'[]'::jsonb),
+    'stale', coalesce((select jsonb_agg(to_jsonb(x)) from stale x),'[]'::jsonb),
+    'period', (
+      select to_jsonb(d) || to_jsonb(w) || to_jsonb(c)
+      from period_daily d cross join period_whatsapp w cross join period_calls c
+    )
+  ),
+  'reconciliation', coalesce((select jsonb_agg(to_jsonb(x) order by x.display_order) from reconciliation x),'[]'::jsonb),
+  'manualTotals', (select to_jsonb(x) from manual_totals x),
+  'manualLevelTotals', (select to_jsonb(x) from level_totals x),
+  'transitionRates', coalesce((select jsonb_agg(to_jsonb(x)) from transition_rates x),'[]'::jsonb),
+  'health', coalesce((select jsonb_agg(to_jsonb(x)) from health x),'[]'::jsonb),
+  'quality', coalesce((select jsonb_agg(to_jsonb(x)) from quality x),'[]'::jsonb)
+);
+$$;
+
+revoke all on function public.milhano_get_home_payload_v17(date, date) from public;
+grant execute on function public.milhano_get_home_payload_v17(date, date) to service_role;
+
+commit;
+
+-- =============================================================================
+-- Verification — expected highlights after deployment
+-- * has_contact_updated_index = true
+-- * school_tours_booked full month = 9 for Aug 2026 at current data state
+-- * school_tours_attended full month = 3
+-- * Responded should be far below the old 139 because initial inquiries are excluded
+-- =============================================================================
+select
+  to_regprocedure('public.milhano_get_home_payload_v17(date,date)') is not null as home_payload_exists,
+  to_regprocedure('public.milhano_get_funnel_transition_rates_v17(date,date)') is not null as transition_rates_exists,
+  exists (
+    select 1 from pg_indexes
+    where schemaname='public'
+      and tablename='milhano_opportunities'
+      and indexname='idx_milhano_opportunities_contact_updated'
+  ) as has_contact_updated_index;
+
+with bounds as (
+  select date '2026-08-01' as start_date, date '2026-08-31' as end_date
+)
+select metric_key, metric_value
+from bounds
+cross join lateral public.milhano_get_operational_cascade(start_date,end_date)
+where metric_key in (
+  'new_leads','unique_contacted_leads','responded_leads','meaningful_conversations',
+  'qualified_leads','school_tours_booked','school_tours_attended',
+  'trial_days_booked','trial_days_showed','closed'
+)
+order by display_order;

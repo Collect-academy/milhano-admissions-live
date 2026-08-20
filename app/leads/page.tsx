@@ -34,6 +34,24 @@ export default async function LeadsPage({
   const metric = first(params.metric) || "school_tours_attended";
   const query = first(params.q).toLowerCase();
   const rows = await getCascadeLeads(metric, range);
+  const appointmentMetrics = new Set([
+    "school_tours_booked",
+    "school_tours_attended",
+    "school_tours_today",
+    "trial_days_booked",
+    "trial_days_showed",
+  ]);
+  const communicationMetrics = new Set([
+    "unique_contacted_leads",
+    "responded_leads",
+    "meaningful_conversations",
+    "number_of_dials",
+  ]);
+  const evidenceLabel = appointmentMetrics.has(metric)
+    ? "GHL Appointment"
+    : communicationMetrics.has(metric)
+      ? "GHL Communication"
+      : "GHL CRM";
   const filtered = query
     ? rows.filter((row) =>
         [
@@ -53,9 +71,9 @@ export default async function LeadsPage({
 
   return (
     <DashboardLayout
-      eyebrow={tr(locale, "Clickable scorecard", "Scorecard clickeable")}
+      eyebrow="GHL / SYSTEM"
       title={cascadeMetricLabel(metric, locale)}
-      subtitle={tr(locale, "Lead-level detail for the selected operational metric.", "Detalle por lead de la métrica operativa seleccionada.")}
+      subtitle={tr(locale, "System-evidence drill-down for the selected GHL metric. These rows do not come from manual EOD totals.", "Detalle de evidencia del sistema para la métrica GHL seleccionada. Estas filas no provienen de los totales manuales del EOD.")}
       statusLabel={`${number(filtered.length)} ${tr(locale, "lead rows", "leads")}`}
     >
       <Link className="secondary-button inline-back-link" href="/">
@@ -101,8 +119,9 @@ export default async function LeadsPage({
                 <tr>
                   <th>Lead</th>
                   <th>{tr(locale, "Current Stage", "Stage Actual")}</th>
+                  <th>{tr(locale, "Evidence", "Evidencia")}</th>
                   <th>{tr(locale, "Activity", "Actividad")}</th>
-                  <th>School Tour</th>
+                  <th>{appointmentMetrics.has(metric) ? tr(locale, "Appointment", "Cita") : "School Tour"}</th>
                   <th>{tr(locale, "Objection", "Objeción")}</th>
                   <th>{tr(locale, "Notes", "Notas")}</th>
                   <th>{tr(locale, "Owner", "Asesora")}</th>
@@ -127,6 +146,7 @@ export default async function LeadsPage({
                       </span>
                     </td>
                     <td>{stageLabel(row.current_stage, locale)}</td>
+                    <td><span className="source-ambiguity-badge ghl-evidence-badge">{evidenceLabel}</span></td>
                     <td>
                       {dateTimeLabel(row.activity_at)}
                       {row.activity_count > 1 ? (

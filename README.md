@@ -4,7 +4,7 @@ Operational admissions dashboard built with **Next.js + Supabase**.
 
 ## Current checkpoint
 
-**V16.5.3**
+**V17**
 
 Main areas:
 

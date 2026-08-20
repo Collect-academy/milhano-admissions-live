@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import {
   AlertTriangle,
   Clock3,
@@ -12,21 +13,17 @@ import { DateRangeFilter } from "@/components/date-range-filter";
 import { KpiCard } from "@/components/kpi-card";
 import { OperationalCascade } from "@/components/operational-cascade";
 import { ManualEodSummary } from "@/components/manual-eod-summary";
-import { SummarySourceToggle, type SummarySource } from "@/components/summary-source-toggle";
-import { getOperationalReconciliation } from "@/lib/cascade";
+import { SummarySourceSwitcher, type SummarySource } from "@/components/summary-source-switcher";
 import {
   dateRangeQuery,
   resolveDateRange,
 } from "@/lib/date-range";
-import { getDashboardData } from "@/lib/data";
 import { dateLabel, number, percent } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr } from "@/lib/locale";
+import { getHomePayloadV17, healthFromPayload } from "@/lib/home-v17";
 import { HelpTip } from "@/components/help-tip";
 import { conceptDefinition, stageConceptDefinition } from "@/lib/concepts";
-import { getSystemHealthData } from "@/lib/system-health";
-import { getSubmittedManualEodTotals } from "@/lib/eod-manual";
-import { getManualTourLevelTotals } from "@/lib/eod-tours";
 import {
   ownerLabel,
   stageLabel,
@@ -47,16 +44,21 @@ export default async function DashboardPage({
   const params = await searchParams;
   const range = resolveDateRange(params);
   const locale = await getDashboardLocale();
+  const cookieStore = await cookies();
   const requestedSource = Array.isArray(params.source) ? params.source[0] : params.source;
-  const summarySource: SummarySource = requestedSource === "ghl" ? "ghl" : "manual";
+  const savedSource = cookieStore.get("milhano_summary_source")?.value;
+  const summarySource: SummarySource = requestedSource === "ghl" || requestedSource === "manual"
+    ? requestedSource
+    : savedSource === "ghl" ? "ghl" : "manual";
 
-  const [data, health, reconciliation, manualTotals, manualLevelTotals] = await Promise.all([
-    getDashboardData(range),
-    getSystemHealthData(),
-    getOperationalReconciliation(range),
-    getSubmittedManualEodTotals(range),
-    getManualTourLevelTotals(range.start, range.end),
-  ]);
+  // V17: one cached Supabase RPC replaces the previous ~11 home-page requests.
+  const payload = await getHomePayloadV17(range.start, range.end);
+  const data = payload.dashboard;
+  const health = healthFromPayload(payload);
+  const reconciliation = payload.reconciliation;
+  const manualTotals = payload.manualTotals;
+  const manualLevelTotals = payload.manualLevelTotals;
+  const transitionRates = payload.transitionRates;
 
   const systemFunnelKeys = [
     "new_leads",
@@ -66,6 +68,8 @@ export default async function DashboardPage({
     "qualified_leads",
     "school_tours_booked",
     "school_tours_attended",
+    "trial_days_booked",
+    "trial_days_showed",
     "closed",
   ];
   const cascade = systemFunnelKeys
@@ -118,63 +122,64 @@ export default async function DashboardPage({
         basePath="/"
         range={range}
         locale={locale}
-        preserve={{ source: summarySource }}
       />
 
-      <SummarySourceToggle source={summarySource} range={range} locale={locale} />
+      <SummarySourceSwitcher
+        initialSource={summarySource}
+        locale={locale}
+        manual={<ManualEodSummary levelTotals={manualLevelTotals} totals={manualTotals} locale={locale} />}
+        ghl={(
+          <>
+            <OperationalCascade
+              metrics={cascade}
+              range={range}
+              locale={locale}
+              mode="system"
+              transitionRates={transitionRates}
+            />
 
-      {summarySource === "manual" ? (
-        <ManualEodSummary levelTotals={manualLevelTotals} totals={manualTotals} locale={locale} />
-      ) : (
-        <>
-          <OperationalCascade
-            metrics={cascade}
-            range={range}
-            locale={locale}
-            mode="system"
-          />
-
-          <section className="panel ghl-support-panel">
-            <div className="panel-heading compact-panel-heading">
-              <div>
-                <p className="eyebrow">{tr(locale, "Activity + schedule", "Actividad + agenda")}</p>
-                <h2>{tr(locale, "Supporting GHL Metrics", "Métricas GHL de Apoyo")}</h2>
+            <section className="panel ghl-support-panel">
+              <div className="panel-heading compact-panel-heading">
+                <div>
+                  <p className="eyebrow">{tr(locale, "Activity + schedule", "Actividad + agenda")}</p>
+                  <h2>{tr(locale, "Supporting GHL Metrics", "Métricas GHL de Apoyo")}</h2>
+                </div>
+                <p className="panel-note">
+                  {tr(locale,
+                    "Dials are actions, not unique leads, so they stay outside the lead funnel. School Tours Today is a current-day schedule indicator.",
+                    "Las llamadas son acciones, no leads únicos, por eso quedan fuera de la cascada de leads. School Tours Hoy es un indicador de agenda del día actual.")}
+                </p>
               </div>
-              <p className="panel-note">
-                {tr(locale,
-                  "Dials are actions, not unique leads, so they stay outside the lead funnel. School Tours Today is a current-day schedule indicator.",
-                  "Las llamadas son acciones, no leads únicos, por eso quedan fuera de la cascada de leads. School Tours Hoy es un indicador de agenda del día actual.")}
-              </p>
-            </div>
-            <div className="kpi-grid ghl-support-grid">
-              <KpiCard
-                helper={sourceHelper("number_of_dials", `${number(data.period.outbound_call_attempts)} outbound attempts`)}
-                icon={PhoneCall}
-                label={tr(locale, "Number of Dials", "Llamadas GHL")}
-                definitionKey="number_of_dials"
-                locale={locale}
-                value={number(systemValue("number_of_dials", data.period.call_attempts))}
-              />
-              <KpiCard
-                helper={tr(locale, "Shared institutional channel", "Canal institucional compartido")}
-                icon={MessageCircleMore}
-                label={tr(locale, "WhatsApp Messages", "Mensajes WhatsApp")}
-                definitionKey="whatsapp_messages"
-                locale={locale}
-                value={number(data.period.whatsapp_messages)}
-              />
-              <KpiCard
-                helper={sourceHelper("school_tours_today", tr(locale, "Current day", "Día actual"))}
-                icon={Clock3}
-                label={tr(locale, "School Tours Today", "School Tours Hoy")}
-                definitionKey="school_tours_today"
-                locale={locale}
-                value={number(systemValue("school_tours_today", 0))}
-              />
-            </div>
-          </section>
-        </>
-      )}
+              <div className="kpi-grid ghl-support-grid">
+                <KpiCard
+                  helper={sourceHelper("number_of_dials", `${number(data.period.outbound_call_attempts)} outbound attempts`)}
+                  icon={PhoneCall}
+                  label={tr(locale, "Number of Dials", "Llamadas GHL")}
+                  definitionKey="number_of_dials"
+                  locale={locale}
+                  value={number(systemValue("number_of_dials", data.period.call_attempts))}
+                />
+                <KpiCard
+                  helper={tr(locale, "Shared institutional channel", "Canal institucional compartido")}
+                  icon={MessageCircleMore}
+                  label={tr(locale, "WhatsApp Messages", "Mensajes WhatsApp")}
+                  definitionKey="whatsapp_messages"
+                  locale={locale}
+                  value={number(data.period.whatsapp_messages)}
+                />
+                <KpiCard
+                  helper={sourceHelper("school_tours_today", tr(locale, "Current day", "Día actual"))}
+                  icon={Clock3}
+                  label={tr(locale, "School Tours Today", "School Tours Hoy")}
+                  definitionKey="school_tours_today"
+                  locale={locale}
+                  value={number(systemValue("school_tours_today", 0))}
+                />
+              </div>
+            </section>
+          </>
+        )}
+      />
 
       <section className="panel">
         <div className="panel-heading">

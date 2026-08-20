@@ -3882,3 +3882,40 @@ tbody tr:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================
+   V17 · Stabilization & performance UI
+========================================================== */
+
+.summary-source-option {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.summary-source-option-active {
+  background: var(--green);
+}
+
+.cascade-kpi-card {
+  color: var(--text);
+  text-decoration: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.cascade-kpi-card:hover {
+  border-color: rgba(23, 107, 82, 0.42);
+  box-shadow: 0 12px 28px rgba(25, 61, 48, 0.09);
+  transform: translateY(-2px);
+}
+
+.ghl-cascade-panel .manual-funnel-flow {
+  margin-top: 0;
+}
+
+.ghl-evidence-badge {
+  display: inline-flex;
+  width: fit-content;
+  white-space: nowrap;
+}

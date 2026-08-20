@@ -1,6 +1,6 @@
 # Milhano Admissions — Project Notes
 
-**Current checkpoint:** V16.5.3  
+**Current checkpoint:** V17  
 **Dashboard:** Next.js + Supabase  
 **Primary CRM:** GoHighLevel (GHL)  
 **Timezone:** America/Merida
@@ -261,6 +261,8 @@ already exists. It is a project checkpoint, not a from-zero database bootstrap.
   school level reporting, tooltip overflow fix, 2+ minute call signal for Meaningful.
 - **V16.4:** clean repository checkpoint. Keeps the complete V16.2 feature set while consolidating project SQL/docs into the maintained current files.
 
+- **V17:** stabilization and performance release. Full-calendar This Month/This Year ranges; canonical Responded and Meaningful definitions; GHL appointments as the single automated source for School Tour/Trial Day booked and attended; same-source scorecard/drill-down; true same-lead GHL transition rates; missing opportunity/contact indexes; one cached home-page RPC; instant Manual/GHL switch; clearer GHL evidence drill-down.
+
 Going forward, update this section in place instead of adding another changelog document.
 
 ---
@@ -276,3 +278,33 @@ Do **not** add a new release setup/changelog/check SQL file to the project root
 unless it is genuinely temporary and will be removed at the next checkpoint.
 
 Git history is the archive for old releases.
+
+
+## 10. V17 health checkpoint
+
+The August 20, 2026 health scan identified and addressed these system-level issues:
+
+- `This Month` previously ended on today, hiding future appointments such as Lune on Aug 25. V17 uses the full calendar month.
+- Old Responded logic counted any inbound WhatsApp and therefore treated many Click-to-WhatsApp inquiry messages as replies. V17 requires a WhatsApp inbound after human outreach, or a connected call.
+- Meaningful GHL calls use a 120-second connected-call threshold. WhatsApp semantic Meaningful remains conservative until the orchestrator supplies `is_meaningful_whatsapp`.
+- School Tour and Trial Day automated Booked/Attended metrics use `milhano_ghl_appointments` as their canonical source.
+- The future-dated 2027 `excel_legacy` Fit event remains stored for audit but future legacy stage events are excluded from operational milestone views.
+- The missing `(ghl_contact_id, updated_at)` opportunity index is added.
+- Home Summary data is consolidated through `milhano_get_home_payload_v17` and cached for 60 seconds to reduce repeated Supabase round trips.
+- The Manual/GHL source toggle is client-side and no longer causes a full server reload.
+- GHL funnel percentages come from same-lead cohort transitions and therefore cannot exceed 100%. Manual EOD percentages remain reported-period ratios because manual aggregate EODs do not identify every lead individually.
+
+### n8n production state after cutover
+
+Published:
+- `09 Dashboard Refresh Orchestrator v2 | Appointments`
+- `02 Opportunity Live Sync`
+
+Manual / unpublished:
+- `01 Opportunities Full Reconciliation V2`
+- `02A Capture Opportunity Payload`
+- `03A WhatsApp All Messages Reconciliation`
+- `03B Call API Reconciliation`
+- `04 Daily EOD Snapshot`
+- `05 WhatsApp Historical Backfill`
+- `08 System Health Monitor`

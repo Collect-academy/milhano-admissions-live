@@ -123,6 +123,7 @@ export function resolveDateRange(
     label = "Last 30 Days";
   } else if (key === "this_month") {
     start = utcDate(now.year, now.month, 1);
+    end = addDays(utcDate(now.year, now.month + 1, 1), -1);
     label = "This Month";
   } else if (key === "last_month") {
     const firstThisMonth = utcDate(now.year, now.month, 1);
@@ -135,6 +136,7 @@ export function resolveDateRange(
     label = "Last Month";
   } else if (key === "this_year") {
     start = utcDate(now.year, 1, 1);
+    end = utcDate(now.year, 12, 31);
     label = "This Year";
   } else if (key === "custom") {
     const customStart = first(params.from);
@@ -159,6 +161,7 @@ export function resolveDateRange(
     }
 
     start = utcDate(now.year, now.month, 1);
+    end = addDays(utcDate(now.year, now.month + 1, 1), -1);
     label = "This Month";
   }
 

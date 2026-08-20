@@ -132,8 +132,8 @@ export function ManualEodSummary({
           <p className="panel-note">
             {tr(
               locale,
-              `Submitted/validated EODs only · ${totals.reportedDays} reported day(s). Contact attempts are intentionally separated because they are actions, not unique leads.`,
-              `Solo EOD enviados/validados · ${totals.reportedDays} día(s) reportado(s). Contactados se separa porque son acciones, no leads únicos.`,
+              `Submitted/validated EODs only · ${totals.reportedDays} reported day(s). Arrow percentages are reported-period ratios because manual EOD totals do not identify every lead individually.`,
+              `Solo EOD enviados/validados · ${totals.reportedDays} día(s) reportado(s). Los porcentajes son ratios del periodo reportado porque el EOD manual no identifica individualmente a todos los leads.`,
             )}
           </p>
         </div>

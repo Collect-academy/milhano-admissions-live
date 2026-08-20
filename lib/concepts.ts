@@ -50,24 +50,24 @@ const DEFINITIONS: Record<string, { en: string; es: string }> = {
     es: "Lost / Sin continuidad: la gestión activa terminó después de una decisión clara, falta explícita de continuidad o agotamiento de los criterios de seguimiento del equipo.",
   },
   school_tours_booked: {
-    en: "Distinct leads that entered School Tour Booked during the selected period. A tour booked today may belong to a lead qualified on an earlier day.",
-    es: "Leads únicos que entraron a School Tour agendado durante el periodo seleccionado. Un tour agendado hoy puede pertenecer a un lead calificado en un día anterior.",
+    en: "Distinct leads with a non-cancelled School Tour appointment scheduled inside the selected period. GHL appointments are the automated source of truth; reschedules for the same lead do not duplicate the scorecard.",
+    es: "Leads únicos con una cita de School Tour no cancelada programada dentro del periodo. Las citas de GHL son la fuente automática de verdad; reprogramaciones del mismo lead no duplican el scorecard.",
   },
   school_tours_attended: {
-    en: "Distinct leads recorded as having attended a School Tour during the selected period.",
-    es: "Leads únicos registrados como asistentes a un School Tour durante el periodo seleccionado.",
+    en: "Distinct leads whose School Tour appointment in the selected period is marked Showed/Completed in GHL. No Show does not count as attended.",
+    es: "Leads únicos cuya cita de School Tour del periodo está marcada como Asistido/Completed en GHL. No asistió no cuenta como atendido.",
   },
   school_tours_today: {
     en: "School Tours scheduled for the current local date in Mérida. This is a current schedule reading, not the total booked during the selected historical period.",
     es: "School Tours programados para la fecha local actual en Mérida. Es una lectura de agenda actual, no el total agendado durante el periodo histórico seleccionado.",
   },
   trial_days_booked: {
-    en: "Distinct leads entering the Trial Day Booked stage during the selected period.",
-    es: "Leads únicos que entraron al stage Pasadía agendada durante el periodo seleccionado.",
+    en: "Distinct leads with a non-cancelled Trial Day appointment scheduled inside the selected period. GHL appointments are the automated source of truth.",
+    es: "Leads únicos con una cita de Pasadía no cancelada programada dentro del periodo. Las citas de GHL son la fuente automática de verdad.",
   },
   trial_days_showed: {
-    en: "Distinct leads recorded as having attended their Trial Day during the selected period.",
-    es: "Leads únicos registrados como asistentes a su Pasadía durante el periodo seleccionado.",
+    en: "Distinct leads whose Trial Day appointment in the selected period is marked Showed/Completed in GHL.",
+    es: "Leads únicos cuya cita de Pasadía del periodo está marcada como Asistido/Completed en GHL.",
   },
   feedback: {
     en: "Post-visit or post-trial feedback stage used while admissions feedback is being gathered or reviewed.",
@@ -94,12 +94,12 @@ const DEFINITIONS: Record<string, { en: string; es: string }> = {
     es: "Leads únicos de admisiones con al menos un intento humano saliente observable: una llamada GHL o un WhatsApp manual/contabilizable. Cuenta leads únicos, no intentos totales de contacto.",
   },
   responded_leads: {
-    en: "Distinct admissions leads who gave a simple observable response: an inbound WhatsApp reply or a connected GHL call. A response does not imply that enough information was provided to qualify the lead.",
-    es: "Leads únicos de admisiones que dieron una respuesta simple observable: un WhatsApp entrante o una llamada GHL conectada. Responder no significa que ya haya información suficiente para calificar al lead.",
+    en: "Distinct admissions leads who responded after human outreach: an inbound WhatsApp after a human/countable outbound touch, or a connected GHL call. The initial Click-to-WhatsApp inquiry does not count as Responded.",
+    es: "Leads únicos de admisiones que respondieron después de contacto humano: un WhatsApp entrante posterior a un touch saliente humano/contabilizable, o una llamada GHL conectada. El mensaje inicial de Click-to-WhatsApp no cuenta como Responded.",
   },
   meaningful_conversations: {
-    en: "Unique leads who reached a relevant admissions conversation. Manual EOD: advisor judgment. GHL/System in V16.2: connected call lasting at least 2 minutes, plus WhatsApp conversations explicitly classified as school-information provided. The WhatsApp classifier remains conservative until the existing sync/orchestrator supplies that semantic flag.",
-    es: "Leads únicos que llegaron a una conversación relevante de admisiones. EOD manual: criterio de la asesora. GHL/System en V16.2: llamada conectada de al menos 2 minutos, más conversaciones WhatsApp clasificadas explícitamente como informes de la escuela proporcionados. La clasificación de WhatsApp se mantiene conservadora hasta que el sync/orchestrator existente envíe esa señal semántica.",
+    en: "Unique leads who reached a relevant admissions conversation. Manual EOD: advisor judgment. GHL/System in V17: connected call lasting at least 2 minutes, plus WhatsApp conversations explicitly classified as school-information provided. The WhatsApp classifier remains conservative until the existing sync/orchestrator supplies that semantic flag.",
+    es: "Leads únicos que llegaron a una conversación relevante de admisiones. EOD manual: criterio de la asesora. GHL/System en V17: llamada conectada de al menos 2 minutos, más conversaciones WhatsApp clasificadas explícitamente como informes de la escuela proporcionados. La clasificación de WhatsApp se mantiene conservadora hasta que el sync/orchestrator existente envíe esa señal semántica.",
   },
   calls_3min: {
     en: "GHL calls lasting at least 3 minutes. This is a duration-based call metric only and is no longer treated as Meaningful Conversations.",
