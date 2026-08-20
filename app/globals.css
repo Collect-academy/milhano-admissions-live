@@ -1789,7 +1789,7 @@ tbody tr:hover {
 .operational-cascade {
   display: flex;
   align-items: stretch;
-  gap: 14px;
+  gap: 8px;
   overflow-x: auto;
   padding: 6px 4px 12px;
   scroll-behavior: smooth;
@@ -1799,7 +1799,7 @@ tbody tr:hover {
   display: flex;
   flex: 0 0 auto;
   align-items: stretch;
-  gap: 14px;
+  gap: 8px;
 }
 
 .cascade-scorecard {
@@ -3332,44 +3332,35 @@ tbody tr:hover {
 
 .cascade-flow-arrow,
 .flow-arrow {
-  --flow-outline: rgba(22, 78, 62, 0.68);
   position: relative;
   display: grid;
   place-items: center;
-  min-width: 76px;
-  min-height: 36px;
-  flex: 0 0 76px;
+  min-width: 54px;
+  min-height: 28px;
+  flex: 0 0 54px;
   align-self: center;
-  padding: 7px 10px 7px 8px;
+  padding: 0;
   color: var(--green-dark);
   text-align: center;
-  background: var(--surface);
-  border: 1.5px solid var(--flow-outline);
-  clip-path: polygon(
-    0 0,
-    calc(100% - 10px) 0,
-    100% 50%,
-    calc(100% - 10px) 100%,
-    0 100%,
-    8px 50%
-  );
+  background: transparent;
+  border: none;
+  overflow: visible;
 }
 
 .cascade-flow-arrow::before,
 .flow-arrow::before {
-  content: "";
+  content: "››";
   position: absolute;
-  inset: 1px;
-  z-index: 0;
-  background: linear-gradient(180deg, rgba(239, 248, 244, 0.98), rgba(231, 243, 237, 0.98));
-  clip-path: polygon(
-    0 0,
-    calc(100% - 10px) 0,
-    100% 50%,
-    calc(100% - 10px) 100%,
-    0 100%,
-    8px 50%
-  );
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 3rem;
+  line-height: 1;
+  font-weight: 800;
+  color: rgba(28, 110, 84, 0.16);
+  letter-spacing: -0.28em;
+  transform: translateX(4px);
+  pointer-events: none;
 }
 
 .cascade-flow-arrow > strong,
@@ -3385,10 +3376,15 @@ tbody tr:hover {
 @media (max-width: 900px) {
   .cascade-flow-arrow,
   .flow-arrow {
-    min-width: 70px;
-    flex-basis: 70px;
-    min-height: 34px;
-    padding: 6px 9px 6px 8px;
+    min-width: 48px;
+    flex-basis: 48px;
+    min-height: 26px;
+  }
+
+  .cascade-flow-arrow::before,
+  .flow-arrow::before {
+    font-size: 2.6rem;
+    transform: translateX(3px);
   }
 
   .cascade-flow-arrow > strong,
@@ -3407,7 +3403,7 @@ tbody tr:hover {
 .manual-funnel-flow {
   display: flex;
   align-items: stretch;
-  gap: 14px;
+  gap: 8px;
   overflow-x: auto;
   padding: 6px 4px 12px;
   scroll-behavior: smooth;
@@ -3418,7 +3414,7 @@ tbody tr:hover {
   flex: 0 0 auto;
   width: max-content;
   align-items: stretch;
-  gap: 14px;
+  gap: 8px;
 }
 
 .manual-funnel-step .kpi-card {
