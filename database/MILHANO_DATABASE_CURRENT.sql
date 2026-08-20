@@ -1,6 +1,6 @@
 -- =============================================================================
 -- MILHANO ADMISSIONS | DATABASE CURRENT CHECKPOINT
--- Current dashboard checkpoint: V16.5.2
+-- Current dashboard checkpoint: V16.5.3
 -- Generated: 2026-08-19
 -- =============================================================================
 --

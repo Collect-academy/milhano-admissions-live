@@ -1789,7 +1789,7 @@ tbody tr:hover {
 .operational-cascade {
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: 3px;
   overflow-x: auto;
   padding: 6px 4px 12px;
   scroll-behavior: smooth;
@@ -1799,7 +1799,7 @@ tbody tr:hover {
   display: flex;
   flex: 0 0 auto;
   align-items: stretch;
-  gap: 8px;
+  gap: 3px;
 }
 
 .cascade-scorecard {
@@ -3334,10 +3334,12 @@ tbody tr:hover {
 .flow-arrow {
   position: relative;
   display: grid;
+  grid-template-rows: auto auto;
   place-items: center;
-  min-width: 54px;
-  min-height: 28px;
-  flex: 0 0 54px;
+  row-gap: 0;
+  min-width: 42px;
+  min-height: 44px;
+  flex: 0 0 42px;
   align-self: center;
   padding: 0;
   color: var(--green-dark);
@@ -3350,24 +3352,26 @@ tbody tr:hover {
 .cascade-flow-arrow::before,
 .flow-arrow::before {
   content: "››";
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: 3rem;
-  line-height: 1;
+  grid-row: 2;
+  display: block;
+  width: 100%;
+  text-align: center;
+  font-size: 2.45rem;
+  line-height: 0.72;
   font-weight: 800;
-  color: rgba(28, 110, 84, 0.16);
+  color: rgba(28, 110, 84, 0.18);
   letter-spacing: -0.28em;
-  transform: translateX(4px);
+  transform: translateX(-2px);
   pointer-events: none;
 }
 
 .cascade-flow-arrow > strong,
 .flow-arrow > strong {
+  grid-row: 1;
   position: relative;
   z-index: 1;
-  font-size: 0.86rem;
+  margin-bottom: -1px;
+  font-size: 0.84rem;
   font-weight: 850;
   letter-spacing: -0.02em;
   white-space: nowrap;
@@ -3376,20 +3380,20 @@ tbody tr:hover {
 @media (max-width: 900px) {
   .cascade-flow-arrow,
   .flow-arrow {
-    min-width: 48px;
-    flex-basis: 48px;
-    min-height: 26px;
+    min-width: 40px;
+    flex-basis: 40px;
+    min-height: 42px;
   }
 
   .cascade-flow-arrow::before,
   .flow-arrow::before {
-    font-size: 2.6rem;
-    transform: translateX(3px);
+    font-size: 2.25rem;
+    transform: translateX(-2px);
   }
 
   .cascade-flow-arrow > strong,
   .flow-arrow > strong {
-    font-size: 0.8rem;
+    font-size: 0.79rem;
   }
 
   .manual-funnel-step .kpi-card,
@@ -3403,7 +3407,7 @@ tbody tr:hover {
 .manual-funnel-flow {
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: 3px;
   overflow-x: auto;
   padding: 6px 4px 12px;
   scroll-behavior: smooth;
@@ -3414,7 +3418,7 @@ tbody tr:hover {
   flex: 0 0 auto;
   width: max-content;
   align-items: stretch;
-  gap: 8px;
+  gap: 3px;
 }
 
 .manual-funnel-step .kpi-card {
