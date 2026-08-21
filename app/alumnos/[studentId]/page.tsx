@@ -1,5 +1,14 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpenText, CalendarDays, FileText, UserRound } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpenText,
+  CalendarDays,
+  FileText,
+  GraduationCap,
+  IdCard,
+  UserRound,
+  UsersRound,
+} from "lucide-react";
 
 import { StudentModuleLayout } from "@/components/student-module-layout";
 import { ConfidentialTooltip, StudentStatusIcon } from "@/components/student-status";
@@ -9,7 +18,7 @@ import type { StudentFormCode, StudentFormStatus } from "@/lib/student-forms";
 export const dynamic = "force-dynamic";
 
 function formatDate(value: string | null) {
-  if (!value) return "Sin fecha";
+  if (!value) return "—";
   return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium" }).format(new Date(`${value}T12:00:00`));
 }
 
@@ -39,6 +48,10 @@ function statusCard({
   return canOpen ? <Link className="student-format-card" href={`/alumnos/${studentId}/formato-${formCode.slice(-1)}`}>{inner}</Link> : <div className="student-format-card student-format-card-locked">{inner}</div>;
 }
 
+function tutorList(student: Awaited<ReturnType<typeof getStudent>>) {
+  return [student.tutor_name, student.tutor_2_name, student.tutor_3_name].filter((value): value is string => Boolean(value));
+}
+
 export default async function StudentDetailPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
   const [context, student, directory, observations, evaluations, piaps] = await Promise.all([
@@ -49,22 +62,61 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
     getStudentFormRecords(studentId, "form_3_evaluation"),
     getStudentFormRecords(studentId, "form_4_piap", null),
   ]);
+  const tutors = tutorList(student);
 
   return (
     <StudentModuleLayout
       eyebrow="Expediente del alumno"
       title={student.full_name}
       subtitle={[student.level, student.grade, student.group_name ? `Grupo ${student.group_name}` : null].filter(Boolean).join(" · ") || "Datos académicos pendientes"}
-      statusLabel="Expediente activo"
+      statusLabel={student.is_demo ? "Alumno de prueba" : "Expediente activo"}
     >
       <Link className="secondary-button inline-back-link" href="/alumnos"><ArrowLeft size={15} /> Volver a alumnos</Link>
+
+      {student.is_demo ? (
+        <div className="student-demo-notice">
+          <strong>Expediente DEMO</strong>
+          <span>Este alumno es ficticio. Puedes editar sus formatos libremente para probar estados, autoguardado e impresión.</span>
+        </div>
+      ) : null}
 
       <section className="student-profile-summary panel">
         <div className="student-profile-avatar"><UserRound size={26} /></div>
         <div><span>Alumno</span><strong>{student.full_name}</strong></div>
         <div><span>Grado / grupo</span><strong>{student.grade ?? "—"} {student.group_name ?? ""}</strong></div>
-        <div><span>Tutor</span><strong>{student.tutor_name ?? "Pendiente"}</strong></div>
+        <div><span>Nivel</span><strong>{student.level ?? "—"}</strong></div>
         <div><span>Matrícula</span><strong>{student.student_code ?? "—"}</strong></div>
+      </section>
+
+      <section className="panel student-info-panel">
+        <div className="panel-heading">
+          <div><p className="eyebrow">Datos base</p><h2>Información del alumno</h2></div>
+        </div>
+        <div className="student-info-grid">
+          <article><UserRound size={17} /><div><span>Sexo</span><strong>{student.sex ?? "Sin dato"}</strong></div></article>
+          <article><CalendarDays size={17} /><div><span>Fecha de nacimiento</span><strong>{formatDate(student.birth_date)}</strong></div></article>
+          <article><GraduationCap size={17} /><div><span>Estado de inscripción</span><strong>{student.enrollment_status ?? "Sin dato"}</strong></div></article>
+          <article><IdCard size={17} /><div><span>Estado del alumno</span><strong>{student.student_status ?? "Activo"}</strong></div></article>
+          <article><CalendarDays size={17} /><div><span>Fecha de ingreso</span><strong>{formatDate(student.admission_date)}</strong></div></article>
+          <article><FileText size={17} /><div><span>Origen</span><strong>{student.source_system ?? "Manual"}</strong></div></article>
+        </div>
+      </section>
+
+      <section className="panel student-tutors-panel">
+        <div className="panel-heading">
+          <div><p className="eyebrow">Red de apoyo</p><h2>Tutores registrados</h2></div>
+        </div>
+        {tutors.length ? (
+          <div className="student-tutor-grid">
+            {tutors.map((tutor, index) => (
+              <article key={`${tutor}-${index}`}>
+                <span className="student-tutor-icon"><UsersRound size={17} /></span>
+                <div><small>Tutor {index + 1}</small><strong>{tutor}</strong></div>
+              </article>
+            ))}
+          </div>
+        ) : <p className="student-empty-inline">Sin tutores registrados.</p>}
+        {student.student_notes ? <div className="student-source-note"><strong>Notas de origen</strong><span>{student.student_notes}</span></div> : null}
       </section>
 
       <section className="student-format-grid">

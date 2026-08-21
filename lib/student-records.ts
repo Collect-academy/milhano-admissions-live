@@ -17,8 +17,15 @@ export type StudentDirectoryRow = {
   grade: string | null;
   group_name: string | null;
   tutor_name: string | null;
+  tutor_2_name: string | null;
+  tutor_3_name: string | null;
+  tutor_search: string | null;
   photo_url: string | null;
+  sex: string | null;
+  enrollment_status: string | null;
+  birth_date: string | null;
   is_active: boolean;
+  is_demo: boolean;
   form_1_status: StudentFormStatus;
   form_2_status: StudentFormStatus;
   form_3_status: StudentFormStatus;
@@ -35,10 +42,18 @@ export type StudentRow = {
   grade: string | null;
   group_name: string | null;
   tutor_name: string | null;
-  tutor_email: string | null;
-  tutor_phone: string | null;
+  tutor_2_name: string | null;
+  tutor_3_name: string | null;
   photo_url: string | null;
+  sex: string | null;
+  student_status: string | null;
+  enrollment_status: string | null;
+  birth_date: string | null;
+  admission_date: string | null;
+  student_notes: string | null;
+  source_system: string | null;
   is_active: boolean;
+  is_demo: boolean;
 };
 
 export type StudentFormPermission = {
@@ -130,15 +145,16 @@ export async function getStudentDirectory(query = ""): Promise<StudentDirectoryR
 
   let request = supabase
     .from("vw_milhano_student_directory")
-    .select("student_id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, photo_url, is_active, form_1_status, form_2_status, form_3_status, form_4_status")
+    .select("student_id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, tutor_2_name, tutor_3_name, tutor_search, photo_url, sex, enrollment_status, birth_date, is_active, is_demo, form_1_status, form_2_status, form_3_status, form_4_status")
     .eq("is_active", true)
+    .order("is_demo", { ascending: false })
     .order("full_name", { ascending: true })
     .limit(500);
 
   const normalized = query.trim().replace(/[(),]/g, " ");
   if (normalized) {
     request = request.or(
-      `full_name.ilike.%${normalized}%,last_name.ilike.%${normalized}%,grade.ilike.%${normalized}%,group_name.ilike.%${normalized}%,level.ilike.%${normalized}%,tutor_name.ilike.%${normalized}%`,
+      `full_name.ilike.%${normalized}%,last_name.ilike.%${normalized}%,student_code.ilike.%${normalized}%,grade.ilike.%${normalized}%,group_name.ilike.%${normalized}%,level.ilike.%${normalized}%,tutor_search.ilike.%${normalized}%`,
     );
   }
 
@@ -155,7 +171,7 @@ export async function getStudent(studentId: string): Promise<StudentRow> {
   const supabase = await createSupabaseServerClient();
   const result = await supabase
     .from("milhano_students")
-    .select("id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, tutor_email, tutor_phone, photo_url, is_active")
+    .select("id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, tutor_2_name, tutor_3_name, photo_url, sex, student_status, enrollment_status, birth_date, admission_date, student_notes, source_system, is_active, is_demo")
     .eq("id", studentId)
     .eq("is_active", true)
     .maybeSingle();
@@ -172,7 +188,7 @@ export async function getStudentDirectoryRow(studentId: string): Promise<Student
   const supabase = await createSupabaseServerClient();
   const result = await supabase
     .from("vw_milhano_student_directory")
-    .select("student_id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, photo_url, is_active, form_1_status, form_2_status, form_3_status, form_4_status")
+    .select("student_id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, tutor_2_name, tutor_3_name, tutor_search, photo_url, sex, enrollment_status, birth_date, is_active, is_demo, form_1_status, form_2_status, form_3_status, form_4_status")
     .eq("student_id", studentId)
     .maybeSingle();
 
