@@ -46,7 +46,7 @@ export async function DashboardLayout({
             <span>Admissions OS</span>
           </div>
         </div>
-        <AppNav locale={locale} />
+        <AppNav locale={locale} showStudents={user.role === "admin"} />
         <div className="session-controls">
           {user.username?.toLowerCase() !== "monacashflow" ? (
             <LanguageToggle locale={locale} />

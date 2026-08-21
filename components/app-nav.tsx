@@ -16,7 +16,7 @@ const links = [
   { href: "/sistema", en: "System", es: "Sistema" },
 ];
 
-export function AppNav({ locale }: { locale: Locale }) {
+export function AppNav({ locale, showStudents = false }: { locale: Locale; showStudents?: boolean }) {
   const pathname = usePathname();
 
   return (
@@ -24,7 +24,7 @@ export function AppNav({ locale }: { locale: Locale }) {
       aria-label="Dashboard sections"
       className="app-nav"
     >
-      {links.map((link) => {
+      {[...links, ...(showStudents ? [{ href: "/alumnos", en: "Students", es: "Alumnos" }] : [])].map((link) => {
         const active =
           link.href === "/"
             ? pathname === "/"
