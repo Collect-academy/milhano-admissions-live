@@ -45,18 +45,13 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
     requireStudentModuleContext(),
     getStudentDirectory(q),
   ]);
-  const demoCount = students.filter((student) => student.is_demo).length;
-  const realCount = students.length - demoCount;
-  const resultLabel = q
-    ? `${students.length} resultado${students.length === 1 ? "" : "s"}`
-    : `${realCount} alumnos${demoCount ? ` + ${demoCount} demo` : ""}`;
 
   return (
     <StudentModuleLayout
       eyebrow="Expediente escolar"
       title="Alumnos"
-      subtitle="Busca por nombre, apellidos, matrícula, grado, grupo o tutor y revisa el avance de los cuatro formatos."
-      statusLabel={resultLabel}
+      subtitle="Busca por nombre, apellidos, grado, grupo o tutor y revisa el avance de los cuatro formatos."
+      statusLabel={`${students.length} alumnos`}
     >
       <section className="panel student-directory-panel">
         <div className="student-directory-actions">
@@ -66,7 +61,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
               aria-label="Buscar alumnos"
               defaultValue={q}
               name="q"
-              placeholder="Buscar nombre, apellido, matrícula, grado o tutor…"
+              placeholder="Buscar nombre, apellido, grado, grupo o tutor…"
             />
           </form>
           {context.canManageStudents ? (
@@ -97,37 +92,27 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                 </tr>
               </thead>
               <tbody>
-                {students.map((student) => {
-                  const extraTutors = [student.tutor_2_name, student.tutor_3_name].filter(Boolean).length;
-                  return (
-                    <tr className={student.is_demo ? "student-demo-row" : undefined} key={student.student_id}>
-                      <td>
-                        <Link className="student-name-link" href={`/alumnos/${student.student_id}`}>
-                          <span className="student-avatar"><UserRound size={16} /></span>
-                          <span>
-                            <span className="student-name-heading">
-                              <strong>{student.full_name}</strong>
-                              {student.is_demo ? <em className="student-demo-badge">DEMO</em> : null}
-                            </span>
-                            <small>
-                              {student.tutor_name
-                                ? `Tutor: ${student.tutor_name}${extraTutors ? ` +${extraTutors}` : ""}`
-                                : "Tutor pendiente"}
-                            </small>
-                          </span>
-                        </Link>
-                      </td>
-                      <td>
-                        <strong>{student.grade ?? "—"}{student.group_name ? ` ${student.group_name}` : ""}</strong>
-                        <span className="secondary-cell">{student.level ?? "Nivel pendiente"}</span>
-                      </td>
-                      <td>{formCell({ studentId: student.student_id, label: "Formato 1", formCode: "form_1", status: student.form_1_status, canOpen: context.permissions.form_1.can_view_content })}</td>
-                      <td>{formCell({ studentId: student.student_id, label: "Formato 2", formCode: "form_2", status: student.form_2_status, canOpen: context.permissions.form_2.can_view_content })}</td>
-                      <td>{formCell({ studentId: student.student_id, label: "Formato 3", formCode: "form_3", status: student.form_3_status, canOpen: context.permissions.form_3.can_view_content })}</td>
-                      <td>{formCell({ studentId: student.student_id, label: "Formato 4", formCode: "form_4", status: student.form_4_status, canOpen: context.permissions.form_4.can_view_content })}</td>
-                    </tr>
-                  );
-                })}
+                {students.map((student) => (
+                  <tr key={student.student_id}>
+                    <td>
+                      <Link className="student-name-link" href={`/alumnos/${student.student_id}`}>
+                        <span className="student-avatar"><UserRound size={16} /></span>
+                        <span>
+                          <strong>{student.full_name}</strong>
+                          <small>{student.tutor_name ? `Tutor: ${student.tutor_name}` : "Tutor pendiente"}</small>
+                        </span>
+                      </Link>
+                    </td>
+                    <td>
+                      <strong>{student.grade ?? "—"}{student.group_name ? ` ${student.group_name}` : ""}</strong>
+                      <span className="secondary-cell">{student.level ?? "Nivel pendiente"}</span>
+                    </td>
+                    <td>{formCell({ studentId: student.student_id, label: "Formato 1", formCode: "form_1", status: student.form_1_status, canOpen: context.permissions.form_1.can_view_content })}</td>
+                    <td>{formCell({ studentId: student.student_id, label: "Formato 2", formCode: "form_2", status: student.form_2_status, canOpen: context.permissions.form_2.can_view_content })}</td>
+                    <td>{formCell({ studentId: student.student_id, label: "Formato 3", formCode: "form_3", status: student.form_3_status, canOpen: context.permissions.form_3.can_view_content })}</td>
+                    <td>{formCell({ studentId: student.student_id, label: "Formato 4", formCode: "form_4", status: student.form_4_status, canOpen: context.permissions.form_4.can_view_content })}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

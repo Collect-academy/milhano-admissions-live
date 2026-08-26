@@ -4,6 +4,7 @@ import { ArrowLeft, LogOut, UsersRound } from "lucide-react";
 
 import { logout } from "@/app/login/actions";
 import { isSupabaseAuthConfigured } from "@/lib/auth";
+import { DisplayPreferences } from "@/components/display-preferences";
 import { requireStudentModuleContext } from "@/lib/student-records";
 
 type Props = {
@@ -43,6 +44,7 @@ export async function StudentModuleLayout({ eyebrow, title, subtitle, statusLabe
         </nav>
 
         <div className="session-controls">
+          <DisplayPreferences locale="es" />
           <div className="session-user">
             <strong>{context.user.displayName}</strong>
             <span>Expediente escolar</span>

@@ -4,6 +4,7 @@ import { LogOut } from "lucide-react";
 import { logout } from "@/app/login/actions";
 import { AppNav } from "@/components/app-nav";
 import { LanguageToggle } from "@/components/language-toggle";
+import { DisplayPreferences } from "@/components/display-preferences";
 import {
   isSupabaseAuthConfigured,
   requireCurrentAppUser,
@@ -48,6 +49,7 @@ export async function DashboardLayout({
         </div>
         <AppNav locale={locale} showStudents={user.role === "admin"} />
         <div className="session-controls">
+          <DisplayPreferences locale={locale} />
           {user.username?.toLowerCase() !== "monacashflow" ? (
             <LanguageToggle locale={locale} />
           ) : null}

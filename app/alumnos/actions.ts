@@ -40,18 +40,10 @@ export async function createStudent(formData: FormData) {
       level: text(formData, "level") || null,
       grade: text(formData, "grade") || null,
       group_name: text(formData, "group_name") || null,
-      sex: text(formData, "sex") || null,
-      enrollment_status: text(formData, "enrollment_status") || null,
-      birth_date: text(formData, "birth_date") || null,
-      admission_date: text(formData, "admission_date") || null,
       tutor_name: text(formData, "tutor_name") || null,
       tutor_email: text(formData, "tutor_email") || null,
       tutor_phone: text(formData, "tutor_phone") || null,
-      tutor_2_name: text(formData, "tutor_2_name") || null,
-      tutor_3_name: text(formData, "tutor_3_name") || null,
-      student_notes: text(formData, "student_notes") || null,
       photo_url: text(formData, "photo_url") || null,
-      source_system: "Manual",
     })
     .select("id")
     .single();

@@ -4204,143 +4204,6 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
-
-.student-name-heading {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.student-demo-badge {
-  display: inline-flex;
-  align-items: center;
-  border-radius: 999px;
-  background: var(--gold-soft);
-  padding: 3px 6px;
-  color: #7c5a17;
-  font-size: 0.55rem;
-  font-style: normal;
-  font-weight: 900;
-  letter-spacing: 0.07em;
-}
-
-.student-demo-row {
-  background: rgba(249, 240, 207, 0.18);
-}
-
-.student-demo-notice {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 14px;
-  border: 1px solid rgba(166, 119, 31, 0.22);
-  border-radius: 13px;
-  background: var(--gold-soft);
-  padding: 11px 14px;
-  color: #74551c;
-  font-size: 0.72rem;
-}
-
-.student-demo-notice strong {
-  flex: 0 0 auto;
-}
-
-.student-info-panel,
-.student-tutors-panel {
-  margin-bottom: 18px;
-}
-
-.student-info-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.student-info-grid article {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: 13px;
-  background: var(--surface-soft);
-  padding: 12px 13px;
-  color: var(--green);
-}
-
-.student-info-grid article div,
-.student-tutor-grid article div {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.student-info-grid span,
-.student-tutor-grid small {
-  color: var(--muted);
-  font-size: 0.61rem;
-  font-weight: 760;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.student-info-grid strong,
-.student-tutor-grid strong {
-  overflow: hidden;
-  color: var(--text);
-  font-size: 0.75rem;
-  text-overflow: ellipsis;
-}
-
-.student-tutor-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.student-tutor-grid article {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: 13px;
-  padding: 12px 13px;
-}
-
-.student-tutor-icon {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 10px;
-  background: var(--green-soft);
-  color: var(--green);
-}
-
-.student-source-note {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 12px;
-  border-left: 3px solid var(--gold);
-  border-radius: 0 10px 10px 0;
-  background: rgba(249, 240, 207, 0.28);
-  padding: 10px 12px;
-}
-
-.student-source-note strong {
-  font-size: 0.68rem;
-}
-
-.student-source-note span {
-  color: var(--muted);
-  font-size: 0.7rem;
-  line-height: 1.45;
-}
-
 .student-format-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -4853,8 +4716,6 @@ fieldset.student-form-field {
 
   .student-format-grid,
   .student-timeline-grid,
-  .student-info-grid,
-  .student-tutor-grid,
   .student-form-grid,
   .student-checkbox-grid {
     grid-template-columns: 1fr;
@@ -4866,11 +4727,6 @@ fieldset.student-form-field {
 
   .student-profile-summary {
     grid-template-columns: auto 1fr;
-  }
-
-  .student-demo-notice {
-    align-items: flex-start;
-    flex-direction: column;
   }
 }
 
@@ -4936,5 +4792,377 @@ fieldset.student-form-field {
     border-color: #aaa;
     background: white;
     color: #111;
+  }
+}
+
+/* ==========================================================
+   V19 · Appearance preferences (UI only)
+   Themes and typography are local CSS state persisted in localStorage.
+========================================================== */
+
+html[data-font-size="small"] {
+  font-size: 16px;
+}
+
+html[data-font-size="medium"] {
+  font-size: 18px;
+}
+
+html[data-font-size="large"] {
+  font-size: 20.5px;
+}
+
+/* Keep the primary page heading stable while the rest of the UI scales. */
+h1 {
+  font-size: clamp(30px, 3vw, 52px);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
+html[data-theme="balanced"] {
+  color-scheme: light;
+  --background: #e7e4d8;
+  --surface: #f5f1e7;
+  --surface-soft: #e1e5d9;
+  --text: #253a31;
+  --muted: #666758;
+  --border: #c5c1ae;
+  --green: #406f56;
+  --green-dark: #2d4d3e;
+  --green-soft: #d3dfd2;
+  --gold: #9d763a;
+  --gold-soft: #e8dcc0;
+  --blue: #526f78;
+  --red: #985d51;
+  --red-soft: #ead8d0;
+  --shadow: 0 14px 34px rgba(61, 58, 42, 0.09);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #131814;
+  --surface: #1d251f;
+  --surface-soft: #252f28;
+  --text: #eee8da;
+  --muted: #b6ad98;
+  --border: #3a463c;
+  --green: #87aa8e;
+  --green-dark: #3e674d;
+  --green-soft: #2b3d31;
+  --gold: #c4a260;
+  --gold-soft: #493e29;
+  --blue: #83a2ad;
+  --red: #d48778;
+  --red-soft: #472e2b;
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
+}
+
+html[data-theme="balanced"] body {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(118, 94, 51, 0.10), transparent 31rem),
+    linear-gradient(145deg, rgba(223, 228, 214, 0.74), transparent 55rem),
+    var(--background);
+}
+
+html[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(196, 162, 96, 0.09), transparent 34rem),
+    radial-gradient(circle at 100% 20%, rgba(77, 119, 88, 0.10), transparent 38rem),
+    var(--background);
+}
+
+/* Replace light-only translucent surfaces when another theme is active. */
+html[data-theme="balanced"] .kpi-card,
+html[data-theme="balanced"] .panel,
+html[data-theme="balanced"] .app-nav,
+html[data-theme="balanced"] .data-badge,
+html[data-theme="balanced"] .insight-strip > div,
+html[data-theme="balanced"] .student-format-card,
+html[data-theme="balanced"] .student-editor-toolbar,
+html[data-theme="balanced"] .student-document,
+html[data-theme="dark"] .kpi-card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .app-nav,
+html[data-theme="dark"] .data-badge,
+html[data-theme="dark"] .insight-strip > div,
+html[data-theme="dark"] .student-format-card,
+html[data-theme="dark"] .student-editor-toolbar,
+html[data-theme="dark"] .student-document {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+html[data-theme="balanced"] .student-format-card-locked,
+html[data-theme="dark"] .student-format-card-locked,
+html[data-theme="balanced"] .student-search,
+html[data-theme="dark"] .student-search {
+  background: var(--surface-soft);
+}
+
+html[data-theme="dark"] .icon-button,
+html[data-theme="dark"] .secondary-button {
+  background: var(--surface);
+}
+
+html[data-theme="dark"] .student-form-field input:disabled,
+html[data-theme="dark"] .student-form-field select:disabled,
+html[data-theme="dark"] .student-form-field textarea:disabled,
+html[data-theme="dark"] .abc-table input:disabled,
+html[data-theme="dark"] .abc-table textarea:disabled {
+  background: #202821;
+  color: #a9b5aa;
+}
+
+html[data-theme="dark"] .confidential-tooltip {
+  background: #303a32;
+}
+
+html[data-theme="dark"] .confidential-bubble,
+html[data-theme="dark"] .confidential-bubble::after {
+  background: #0d110e;
+  color: #f4ecda;
+}
+
+html[data-theme="dark"] .student-demo-row {
+  background: rgba(196, 162, 96, 0.07);
+}
+
+html[data-theme="dark"] .student-demo-notice {
+  border-color: rgba(196, 162, 96, 0.28);
+  background: #3d3525;
+  color: #e4c982;
+}
+
+html[data-theme="dark"] .student-demo-badge {
+  background: #493e29;
+  color: #e2c376;
+}
+
+html[data-theme="dark"] .student-source-note {
+  background: rgba(196, 162, 96, 0.08);
+}
+
+html[data-theme="dark"] .student-status-incomplete,
+html[data-theme="dark"] .student-completion-incomplete,
+html[data-theme="dark"] .student-completion-empty {
+  background: var(--gold-soft);
+  color: #e4c982;
+}
+
+html[data-theme="dark"] .scope-banner,
+html[data-theme="dark"] .stage-seguimiento,
+html[data-theme="dark"] .status-pending {
+  color: #e1c47d;
+}
+
+/* Appearance popover */
+.display-preferences {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.display-preferences > summary {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface-soft);
+  padding: 7px 10px;
+  color: var(--green-dark);
+  font-size: 0.66rem;
+  font-weight: 800;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.display-preferences > summary::-webkit-details-marker {
+  display: none;
+}
+
+.display-preferences[open] > summary,
+.display-preferences > summary:hover {
+  background: var(--green-soft);
+}
+
+.display-preferences-popover {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  z-index: 80;
+  width: min(330px, calc(100vw - 32px));
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 14px;
+  color: var(--text);
+  box-shadow: 0 20px 48px rgba(17, 35, 27, 0.18);
+}
+
+.display-preferences-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 9px;
+}
+
+.display-preferences-heading strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+}
+
+.display-preferences-heading > span {
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.display-font-heading {
+  margin-top: 15px;
+}
+
+.display-theme-grid,
+.display-font-grid {
+  display: grid;
+  gap: 7px;
+}
+
+.display-theme-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.display-font-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.session-controls .display-option,
+.session-controls .display-font-option {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 62px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface-soft);
+  padding: 8px 6px;
+  color: var(--muted);
+  font-size: 0.61rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.session-controls .display-option:hover,
+.session-controls .display-font-option:hover {
+  border-color: color-mix(in srgb, var(--green) 45%, var(--border));
+  background: var(--green-soft);
+  color: var(--text);
+}
+
+.session-controls .display-option-active {
+  border-color: color-mix(in srgb, var(--green) 55%, var(--border));
+  background: var(--green-soft);
+  color: var(--green-dark);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 20%, transparent);
+}
+
+.display-option-check {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
+.display-font-sample {
+  color: var(--text);
+  font-weight: 850;
+  line-height: 1;
+}
+
+.display-font-small .display-font-sample {
+  font-size: 0.8rem;
+}
+
+.display-font-medium .display-font-sample {
+  font-size: 1rem;
+}
+
+.display-font-large .display-font-sample {
+  font-size: 1.25rem;
+}
+
+/* Student module readability: less visual glare and clearer text hierarchy. */
+.student-shell .panel,
+.student-shell .student-format-card,
+.student-shell .student-document {
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--text) 7%, transparent);
+}
+
+.student-directory-table tbody tr {
+  transition: background 120ms ease;
+}
+
+.student-directory-table tbody tr:nth-child(even) {
+  background: color-mix(in srgb, var(--surface-soft) 55%, transparent);
+}
+
+.student-directory-table tbody tr:hover {
+  background: var(--green-soft);
+}
+
+html[data-font-size="medium"] .student-directory-panel,
+html[data-font-size="large"] .student-directory-panel {
+  padding: 21px;
+}
+
+html[data-font-size="medium"] .student-directory-table th,
+html[data-font-size="large"] .student-directory-table th {
+  font-weight: 800;
+}
+
+html[data-font-size="medium"] .student-name-link small,
+html[data-font-size="large"] .student-name-link small,
+html[data-font-size="medium"] .student-record-main small,
+html[data-font-size="large"] .student-record-main small,
+html[data-font-size="medium"] .student-save-indicator span,
+html[data-font-size="large"] .student-save-indicator span,
+html[data-font-size="medium"] .student-info-grid span,
+html[data-font-size="large"] .student-info-grid span,
+html[data-font-size="medium"] .student-tutor-grid small,
+html[data-font-size="large"] .student-tutor-grid small {
+  font-size: 0.68rem;
+}
+
+html[data-font-size="large"] .student-form-status-link {
+  min-width: 126px;
+}
+
+@media (max-width: 1180px) {
+  .navigation-row {
+    flex-wrap: wrap;
+  }
+
+  .session-controls {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .display-preferences > summary span {
+    display: none;
+  }
+
+  .display-preferences-popover {
+    position: fixed;
+    top: 70px;
+    right: 16px;
   }
 }
