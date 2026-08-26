@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpenText, CalendarDays, FileText, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpenText, CalendarDays, FileText, NotebookPen, UserRound } from "lucide-react";
 
 import { StudentModuleLayout } from "@/components/student-module-layout";
+import { StudentNotesPanel } from "@/components/student-notes-panel";
 import { ConfidentialTooltip, StudentStatusIcon } from "@/components/student-status";
-import { getStudent, getStudentDirectoryRow, getStudentFormRecords, requireStudentModuleContext } from "@/lib/student-records";
+import { getStudent, getStudentDirectoryRow, getStudentFormRecords, getStudentNotes, getStudentPhotoSignedUrl, requireStudentModuleContext } from "@/lib/student-records";
 import type { StudentFormCode, StudentFormStatus } from "@/lib/student-forms";
 
 export const dynamic = "force-dynamic";
@@ -41,14 +42,16 @@ function statusCard({
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
-  const [context, student, directory, observations, evaluations, piaps] = await Promise.all([
+  const [context, student, directory, observations, evaluations, piaps, notes] = await Promise.all([
     requireStudentModuleContext(),
     getStudent(studentId),
     getStudentDirectoryRow(studentId),
     getStudentFormRecords(studentId, "form_2_observation"),
     getStudentFormRecords(studentId, "form_3_evaluation"),
     getStudentFormRecords(studentId, "form_4_piap", null),
+    getStudentNotes(studentId),
   ]);
+  const photoUrl = student.photo_path ? await getStudentPhotoSignedUrl(student.photo_path) : student.photo_url;
 
   return (
     <StudentModuleLayout
@@ -60,7 +63,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
       <Link className="secondary-button inline-back-link" href="/alumnos"><ArrowLeft size={15} /> Volver a alumnos</Link>
 
       <section className="student-profile-summary panel">
-        <div className="student-profile-avatar"><UserRound size={26} /></div>
+        <div className="student-profile-avatar">{photoUrl ? <img alt={`Foto de ${student.full_name}`} src={photoUrl} /> : <UserRound size={26} />}</div>
         <div><span>Alumno</span><strong>{student.full_name}</strong></div>
         <div><span>Grado / grupo</span><strong>{student.grade ?? "—"} {student.group_name ?? ""}</strong></div>
         <div><span>Tutor</span><strong>{student.tutor_name ?? "Pendiente"}</strong></div>
@@ -80,7 +83,9 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           <article><CalendarDays size={18} /><div><strong>Observaciones</strong><span>{observations.length ? `${observations.length} registro(s) · última ${formatDate(observations[0]?.occurred_on ?? null)}` : "Sin registros"}</span></div></article>
           <article><BookOpenText size={18} /><div><strong>Evaluaciones</strong><span>{evaluations.length ? `${evaluations.length} registro(s) · última ${formatDate(evaluations[0]?.occurred_on ?? null)}` : "Sin registros"}</span></div></article>
           <article><FileText size={18} /><div><strong>PIAP</strong><span>{piaps.length ? `${piaps.length} plan(es) · último ${formatDate(piaps[0]?.occurred_on ?? null)}` : "Sin registros"}</span></div></article>
+          <article><NotebookPen size={18} /><div><strong>Bitácora</strong><span>{notes.length ? `${notes.length} nota(s) · última ${formatDate(notes[0]?.occurred_on ?? null)}` : "Sin registros"}</span></div></article>
         </div>
+        <StudentNotesPanel canWrite studentId={studentId} notes={notes} />
       </section>
     </StudentModuleLayout>
   );

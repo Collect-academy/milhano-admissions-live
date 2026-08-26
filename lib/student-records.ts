@@ -38,6 +38,7 @@ export type StudentRow = {
   tutor_email: string | null;
   tutor_phone: string | null;
   photo_url: string | null;
+  photo_path: string | null;
   is_active: boolean;
 };
 
@@ -155,7 +156,7 @@ export async function getStudent(studentId: string): Promise<StudentRow> {
   const supabase = await createSupabaseServerClient();
   const result = await supabase
     .from("milhano_students")
-    .select("id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, tutor_email, tutor_phone, photo_url, is_active")
+    .select("id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, tutor_email, tutor_phone, photo_url, photo_path, is_active")
     .eq("id", studentId)
     .eq("is_active", true)
     .maybeSingle();
@@ -239,4 +240,38 @@ export async function getStudentFormRecord(
   }
   if (!result.data) notFound();
   return result.data as StudentFormRecord;
+}
+
+
+export type StudentNote = {
+  id: string;
+  student_id: string;
+  occurred_on: string;
+  category: "convivencia" | "clase" | "personal" | "academico" | "otro";
+  title: string | null;
+  note: string;
+  author_label: string;
+  created_at: string;
+};
+
+export async function getStudentNotes(studentId: string): Promise<StudentNote[]> {
+  await requireStudentModuleContext();
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase
+    .from("milhano_student_notes")
+    .select("id, student_id, occurred_on, category, title, note, author_label, created_at")
+    .eq("student_id", studentId)
+    .order("occurred_on", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (result.error) throw new Error(`No se pudo cargar la bitácora del alumno: ${result.error.message}`);
+  return (result.data ?? []) as StudentNote[];
+}
+
+export async function getStudentPhotoSignedUrl(photoPath: string | null): Promise<string | null> {
+  if (!photoPath) return null;
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.storage.from("student-photos").createSignedUrl(photoPath, 3600);
+  if (result.error) return null;
+  return result.data.signedUrl;
 }

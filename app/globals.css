@@ -5166,3 +5166,310 @@ html[data-font-size="large"] .student-form-status-link {
     right: 16px;
   }
 }
+
+/* ==========================================================
+   Student Records V17.2 — photos + cycle notes
+========================================================== */
+.student-timeline-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.student-timeline-grid span {
+  font-size: 0.84rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.student-profile-avatar {
+  overflow: hidden;
+}
+
+.student-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.student-photo-field {
+  display: flex;
+  min-width: 0;
+  grid-column: 1 / -1;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.student-photo-upload-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.student-photo-preview {
+  display: grid;
+  width: 104px;
+  height: 104px;
+  flex: 0 0 104px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  color: var(--green);
+}
+
+.student-photo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.student-photo-upload-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.student-photo-upload-copy strong {
+  font-size: 0.84rem;
+}
+
+.student-photo-upload-copy > span,
+.student-photo-upload-copy small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.student-photo-upload-copy .student-photo-error {
+  color: var(--red);
+  font-weight: 750;
+}
+
+.student-photo-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.student-cycle-notes {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 18px;
+}
+
+.student-cycle-notes-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 13px;
+}
+
+.student-cycle-notes-heading h3 {
+  margin: 2px 0 5px;
+  font-size: 1rem;
+}
+
+.student-cycle-notes-heading > div > p:last-child {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.student-note-form {
+  display: grid;
+  grid-template-columns: 180px 240px minmax(0, 1fr);
+  gap: 11px;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.student-note-form label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.student-note-form label > span small {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.student-note-form input,
+.student-note-form select,
+.student-note-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 9px 10px;
+  color: var(--text);
+  outline: none;
+}
+
+.student-note-form input,
+.student-note-form select {
+  min-height: 42px;
+}
+
+.student-note-title {
+  grid-column: auto;
+}
+
+.student-note-body {
+  grid-column: 1 / -1;
+}
+
+.student-note-body textarea {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.student-note-error {
+  grid-column: 1 / -1;
+  color: var(--red);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+
+.student-note-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
+.student-note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.student-note-item {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 11px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface-soft);
+  padding: 12px 13px;
+}
+
+.student-note-icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.student-note-content {
+  min-width: 0;
+}
+
+.student-note-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 750;
+}
+
+.student-note-content strong {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.82rem;
+}
+
+.student-note-content p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.student-note-empty {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 13px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+html[data-theme="balanced"] .student-photo-upload-card,
+html[data-theme="balanced"] .student-note-form,
+html[data-theme="balanced"] .student-note-item,
+html[data-theme="dark"] .student-photo-upload-card,
+html[data-theme="dark"] .student-note-form,
+html[data-theme="dark"] .student-note-item {
+  background: var(--surface-soft);
+}
+
+@media (max-width: 980px) {
+  .student-timeline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .student-note-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .student-note-title {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 680px) {
+  .student-timeline-grid,
+  .student-note-form {
+    grid-template-columns: 1fr;
+  }
+
+  .student-note-title,
+  .student-note-body {
+    grid-column: 1;
+  }
+
+  .student-cycle-notes-heading,
+  .student-photo-upload-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .student-photo-preview {
+    width: 100%;
+    height: 180px;
+    flex-basis: auto;
+  }
+}

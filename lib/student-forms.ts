@@ -73,7 +73,7 @@ export const studentFormDefinitions: Record<StudentDefinitionCode, StudentFormDe
           { key: "age", label: "Edad", type: "number", span: "half" },
           { key: "grade", label: "Grado", type: "text", span: "half" },
           { key: "group", label: "Grupo", type: "text", span: "half" },
-          { key: "photo_recent", label: "Foto reciente (referencia o URL)", type: "text" },
+          { key: "photo_recent", label: "Foto reciente", type: "text" },
           { key: "languages", label: "Idioma(s) y nivel", type: "textarea" },
           { key: "medical_alerts", label: "Alertas de salud / médicas", type: "textarea" },
         ],

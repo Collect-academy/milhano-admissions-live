@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { requireStudentModuleContext, getStudent } from "@/lib/student-records";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import type { StudentDefinitionCode, StudentPayload } from "@/lib/student-forms";
 
 function text(formData: FormData, key: string): string {
@@ -215,4 +216,59 @@ export async function saveStudentFormRecord(input: {
   revalidatePath(`/alumnos/${input.studentId}`);
   revalidatePath("/alumnos");
   return { ok: true, recordId, status: update.data.completion_status, savedAt: update.data.updated_at };
+}
+
+
+export async function saveStudentPhotoPath(input: { studentId: string; newPath: string; oldPath?: string | null }) {
+  const context = await requireStudentModuleContext();
+  if (!context.permissions.form_1.can_edit) throw new Error("No tienes permiso para actualizar la foto del alumno.");
+  if (!input.newPath.startsWith(`${input.studentId}/`) || !input.newPath.endsWith(".webp")) {
+    throw new Error("Ruta de foto inválida.");
+  }
+
+  const admin = createSupabaseAdmin();
+  const update = await admin
+    .from("milhano_students")
+    .update({ photo_path: input.newPath, updated_at: new Date().toISOString() })
+    .eq("id", input.studentId)
+    .select("id")
+    .single();
+  if (update.error) throw new Error(`No se pudo vincular la foto al alumno: ${update.error.message}`);
+
+  if (input.oldPath && input.oldPath !== input.newPath && input.oldPath.startsWith(`${input.studentId}/`)) {
+    await admin.storage.from("student-photos").remove([input.oldPath]);
+  }
+  revalidatePath(`/alumnos/${input.studentId}`);
+  revalidatePath(`/alumnos/${input.studentId}/formato-1`);
+  return { ok: true };
+}
+
+export async function createStudentNote(input: {
+  studentId: string;
+  occurredOn: string;
+  category: "convivencia" | "clase" | "personal" | "academico" | "otro";
+  title?: string;
+  note: string;
+}) {
+  const context = await requireStudentModuleContext();
+  const note = input.note.trim();
+  if (!note) throw new Error("La nota no puede estar vacía.");
+  if (note.length > 2000) throw new Error("La nota supera el límite de 2000 caracteres.");
+  const categories = new Set(["convivencia", "clase", "personal", "academico", "otro"]);
+  if (!categories.has(input.category)) throw new Error("Tipo de nota inválido.");
+  await getStudent(input.studentId);
+
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase.from("milhano_student_notes").insert({
+    student_id: input.studentId,
+    occurred_on: input.occurredOn || today(),
+    category: input.category,
+    title: input.title?.trim().slice(0, 120) || null,
+    note,
+    author_label: context.user.displayName,
+    created_by: context.user.id,
+  });
+  if (result.error) throw new Error(`No se pudo guardar la nota: ${result.error.message}`);
+  revalidatePath(`/alumnos/${input.studentId}`);
+  return { ok: true };
 }

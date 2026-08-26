@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Cloud, LoaderCircle, Plus, Printer, Trash2, TriangleAlert } from "lucide-react";
 
 import { saveStudentFormRecord } from "@/app/alumnos/actions";
+import { StudentPhotoUploader } from "@/components/student-photo-uploader";
 import {
   completionProgress,
   type AbcEntry,
@@ -22,6 +23,7 @@ type Props = {
   initialStatus: "empty" | "incomplete" | "complete";
   initialSavedAt?: string | null;
   canEdit: boolean;
+  initialPhotoUrl?: string | null;
 };
 
 function stringValue(value: StudentFieldValue | undefined): string {
@@ -56,6 +58,7 @@ export function StudentFormEditor({
   initialStatus,
   initialSavedAt,
   canEdit,
+  initialPhotoUrl,
 }: Props) {
   const [payload, setPayload] = useState<StudentPayload>(initialPayload);
   const [recordId, setRecordId] = useState<string | null>(initialRecordId);
@@ -190,6 +193,19 @@ export function StudentFormEditor({
                 const value = payload[field.key];
                 const filled = valueIsFilled(value);
                 const classes = `student-form-field ${field.span === "half" ? "student-field-half" : ""}`;
+
+                if (field.key === "photo_recent") {
+                  return (
+                    <StudentPhotoUploader
+                      canEdit={canEdit}
+                      currentPath={stringValue(value)}
+                      initialPreviewUrl={initialPhotoUrl}
+                      key={field.key}
+                      onUploaded={(path) => setValue(field.key, path)}
+                      studentId={studentId}
+                    />
+                  );
+                }
 
                 if (field.type === "checkboxGroup") {
                   const selected = arrayValue(value);
