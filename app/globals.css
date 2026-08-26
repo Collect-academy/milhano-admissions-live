@@ -5473,3 +5473,33 @@ html[data-theme="dark"] .student-note-item {
     flex-basis: auto;
   }
 }
+
+/* V17.3 — optional “Otra” detail for selected categorical dropdowns */
+.student-other-answer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  margin-top: 2px;
+  padding: 8px 9px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+}
+
+.student-other-answer > span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 800;
+}
+
+.student-other-answer input {
+  min-height: 36px;
+  padding-block: 7px;
+}
+
+@media (max-width: 680px) {
+  .student-other-answer {
+    grid-template-columns: 1fr;
+  }
+}

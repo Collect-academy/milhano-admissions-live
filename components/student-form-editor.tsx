@@ -50,6 +50,14 @@ function dateTimeLabel(value: string | null | undefined) {
   }
 }
 
+const OTHER_SENTINEL = "__milhano_other__";
+const OTHER_PREFIX = "Otra · ";
+
+function storedOtherDetail(value: StudentFieldValue | undefined): string | null {
+  const raw = stringValue(value);
+  return raw.startsWith(OTHER_PREFIX) ? raw.slice(OTHER_PREFIX.length) : null;
+}
+
 export function StudentFormEditor({
   studentId,
   definition,
@@ -66,6 +74,15 @@ export function StudentFormEditor({
   const [saveState, setSaveState] = useState<"idle" | "dirty" | "saving" | "saved" | "error">("idle");
   const [savedAt, setSavedAt] = useState<string | null>(initialSavedAt ?? null);
   const [error, setError] = useState<string | null>(null);
+  const [otherMode, setOtherMode] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    for (const section of definition.sections) {
+      for (const field of section.fields) {
+        if (field.allowOther && storedOtherDetail(initialPayload[field.key]) !== null) initial[field.key] = true;
+      }
+    }
+    return initial;
+  });
   const mounted = useRef(false);
   const lastSavedPayload = useRef(JSON.stringify(initialPayload));
   const latestPayload = useRef(payload);
@@ -276,15 +293,43 @@ export function StudentFormEditor({
                         value={stringValue(value)}
                       />
                     ) : field.type === "select" || field.type === "scale" ? (
-                      <select
-                        disabled={!canEdit}
-                        onBlur={flushSave}
-                        onChange={(event) => setValue(field.key, event.target.value)}
-                        value={stringValue(value)}
-                      >
-                        <option value="">Seleccionar…</option>
-                        {(field.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
+                      <>
+                        <select
+                          disabled={!canEdit}
+                          onBlur={flushSave}
+                          onChange={(event) => {
+                            if (field.allowOther && event.target.value === OTHER_SENTINEL) {
+                              setOtherMode((current) => ({ ...current, [field.key]: true }));
+                              setValue(field.key, "");
+                              return;
+                            }
+                            setOtherMode((current) => ({ ...current, [field.key]: false }));
+                            setValue(field.key, event.target.value);
+                          }}
+                          value={field.allowOther && (otherMode[field.key] || storedOtherDetail(value) !== null) ? OTHER_SENTINEL : stringValue(value)}
+                        >
+                          <option value="">Seleccionar…</option>
+                          {(field.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
+                          {field.allowOther ? <option value={OTHER_SENTINEL}>Otra</option> : null}
+                        </select>
+                        {field.allowOther && (otherMode[field.key] || storedOtherDetail(value) !== null) ? (
+                          <div className="student-other-answer">
+                            <span>Otra:</span>
+                            <input
+                              disabled={!canEdit}
+                              onBlur={flushSave}
+                              onChange={(event) => {
+                                const detail = event.target.value;
+                                setOtherMode((current) => ({ ...current, [field.key]: true }));
+                                setValue(field.key, detail.trim() ? `${OTHER_PREFIX}${detail}` : "");
+                              }}
+                              placeholder={field.otherPlaceholder ?? "Especifica otra opción…"}
+                              type="text"
+                              value={storedOtherDetail(value) ?? ""}
+                            />
+                          </div>
+                        ) : null}
+                      </>
                     ) : (
                       <input
                         disabled={!canEdit}

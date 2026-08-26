@@ -35,6 +35,8 @@ export type StudentFormField = {
   type: StudentFieldType;
   placeholder?: string;
   options?: string[];
+  allowOther?: boolean;
+  otherPlaceholder?: string;
   helper?: string;
   span?: "full" | "half";
 };
@@ -147,7 +149,7 @@ export const studentFormDefinitions: Record<StudentDefinitionCode, StudentFormDe
           { key: "grade_group", label: "Grado y grupo", type: "text" },
           { key: "subject_activity", label: "Materia / actividad", type: "text" },
           { key: "teacher_in_charge", label: "Docente a cargo", type: "text" },
-          { key: "observation_type", label: "Tipo de observación", type: "select", options: ["Grupal exploratoria", "Seguimiento individual", "Solicitada por docente"] },
+          { key: "observation_type", label: "Tipo de observación", type: "select", options: ["Grupal exploratoria", "Seguimiento individual", "Solicitada por docente"], allowOther: true, otherPlaceholder: "Especifica el tipo de observación…" },
           { key: "session_objective", label: "Objetivo de la sesión", type: "textarea" },
         ],
       },
