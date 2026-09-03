@@ -78,7 +78,7 @@ export function StudentFormEditor({
     const initial: Record<string, boolean> = {};
     for (const section of definition.sections) {
       for (const field of section.fields) {
-        if (field.allowOther && storedOtherDetail(initialPayload[field.key]) !== null) initial[field.key] = true;
+        if ((field.type === "select" || field.type === "scale") && storedOtherDetail(initialPayload[field.key]) !== null) initial[field.key] = true;
       }
     }
     return initial;
@@ -210,6 +210,7 @@ export function StudentFormEditor({
                 const value = payload[field.key];
                 const filled = valueIsFilled(value);
                 const classes = `student-form-field ${field.span === "half" ? "student-field-half" : ""}`;
+                const supportsOther = field.type === "select" || field.type === "scale";
 
                 if (field.key === "photo_recent") {
                   return (
@@ -298,7 +299,7 @@ export function StudentFormEditor({
                           disabled={!canEdit}
                           onBlur={flushSave}
                           onChange={(event) => {
-                            if (field.allowOther && event.target.value === OTHER_SENTINEL) {
+                            if (supportsOther && event.target.value === OTHER_SENTINEL) {
                               setOtherMode((current) => ({ ...current, [field.key]: true }));
                               setValue(field.key, "");
                               return;
@@ -306,13 +307,13 @@ export function StudentFormEditor({
                             setOtherMode((current) => ({ ...current, [field.key]: false }));
                             setValue(field.key, event.target.value);
                           }}
-                          value={field.allowOther && (otherMode[field.key] || storedOtherDetail(value) !== null) ? OTHER_SENTINEL : stringValue(value)}
+                          value={supportsOther && (otherMode[field.key] || storedOtherDetail(value) !== null) ? OTHER_SENTINEL : stringValue(value)}
                         >
                           <option value="">Seleccionar…</option>
                           {(field.options ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
-                          {field.allowOther ? <option value={OTHER_SENTINEL}>Otra</option> : null}
+                          {supportsOther ? <option value={OTHER_SENTINEL}>Otra</option> : null}
                         </select>
-                        {field.allowOther && (otherMode[field.key] || storedOtherDetail(value) !== null) ? (
+                        {supportsOther && (otherMode[field.key] || storedOtherDetail(value) !== null) ? (
                           <div className="student-other-answer">
                             <span>Otra:</span>
                             <input
