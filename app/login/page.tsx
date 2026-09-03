@@ -32,7 +32,7 @@ export default async function LoginPage({
 
   if (isSupabaseAuthConfigured()) {
     const currentUser = await getCurrentAppUser();
-    if (currentUser) redirect("/");
+    if (currentUser) redirect(currentUser.role === "student_staff" ? "/alumnos" : "/");
   }
 
   const next =

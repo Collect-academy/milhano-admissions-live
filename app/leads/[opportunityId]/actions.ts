@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireCurrentAppUser } from "@/lib/auth";
+import { requireAdmissionsAppUser } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 
 function value(formData: FormData, key: string): string {
@@ -16,7 +16,7 @@ function meridaTimestamp(raw: string): string | null {
 }
 
 async function actorAppUserId(
-  user: Awaited<ReturnType<typeof requireCurrentAppUser>>,
+  user: Awaited<ReturnType<typeof requireAdmissionsAppUser>>,
 ): Promise<string> {
   if (user.id !== "basic-auth-fallback") {
     return user.id;
@@ -43,7 +43,7 @@ async function actorAppUserId(
 export async function saveSchoolTourDetails(
   formData: FormData,
 ): Promise<never> {
-  const user = await requireCurrentAppUser();
+  const user = await requireAdmissionsAppUser();
   const actorId = await actorAppUserId(user);
   const opportunityId = value(
     formData,

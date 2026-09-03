@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireCurrentAppUser } from "@/lib/auth";
+import { requireAdmissionsAppUser } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 
 function safeString(value: FormDataEntryValue | null): string {
@@ -51,7 +51,7 @@ function errorMessage(error: unknown): string {
 }
 
 async function actorAppUserId(
-  currentUser: Awaited<ReturnType<typeof requireCurrentAppUser>>,
+  currentUser: Awaited<ReturnType<typeof requireAdmissionsAppUser>>,
 ): Promise<string> {
   if (currentUser.id !== "basic-auth-fallback") {
     return currentUser.id;
@@ -78,7 +78,7 @@ async function actorAppUserId(
 export async function saveReconciliationEntry(
   formData: FormData,
 ): Promise<never> {
-  const currentUser = await requireCurrentAppUser();
+  const currentUser = await requireAdmissionsAppUser();
 
   if (currentUser.role !== "admin") {
     redirect(

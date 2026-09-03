@@ -1,0 +1,4 @@
+-- Reference only. Already applied to production Supabase.
+-- Extends milhano_app_users.role with student_staff and grants Ricardo Soxme
+-- access to the student module + edit rights on forms 1–4.
+-- Auth identity is linked automatically by matching email when created in Supabase Auth.

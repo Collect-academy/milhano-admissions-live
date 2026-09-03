@@ -11,7 +11,7 @@ import {
 
 import { saveSchoolTourDetails } from "@/app/leads/[opportunityId]/actions";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { requireCurrentAppUser } from "@/lib/auth";
+import { requireAdmissionsAppUser } from "@/lib/auth";
 import { getLeadDetail } from "@/lib/cascade";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr } from "@/lib/locale";
@@ -39,7 +39,7 @@ export default async function LeadDetailPage({
   params: Promise<{ opportunityId: string }>;
   searchParams: SearchParams;
 }) {
-  const currentUser = await requireCurrentAppUser();
+  const currentUser = await requireAdmissionsAppUser();
   const locale = await getDashboardLocale();
   const canEdit = currentUser.role !== "viewer";
   const { opportunityId } = await params;

@@ -5,13 +5,15 @@ import { redirect } from "next/navigation";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export type AppRole = "advisor" | "admin" | "viewer" | "student_staff";
+
 export type CurrentAppUser = {
   id: string;
   authUserId: string;
   displayName: string;
   email: string | null;
   username: string | null;
-  role: "advisor" | "admin" | "viewer";
+  role: AppRole;
   ghlUserId: string | null;
 };
 
@@ -78,6 +80,22 @@ export async function requireCurrentAppUser(): Promise<CurrentAppUser> {
   if (!user) {
     redirect("/login?error=access");
     throw new Error("Unauthorized access.");
+  }
+
+  return user;
+}
+
+export async function getCurrentAdmissionsAppUser(): Promise<CurrentAppUser | null> {
+  const user = await getCurrentAppUser();
+  return user?.role === "student_staff" ? null : user;
+}
+
+export async function requireAdmissionsAppUser(): Promise<CurrentAppUser> {
+  const user = await requireCurrentAppUser();
+
+  if (user.role === "student_staff") {
+    redirect("/alumnos");
+    throw new Error("Admissions access is not allowed for student staff.");
   }
 
   return user;

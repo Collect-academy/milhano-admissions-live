@@ -18,7 +18,7 @@ import { EmptyState } from "@/components/empty-state";
 import { HelpTip } from "@/components/help-tip";
 import { EodSchoolTourReporter } from "@/components/eod-school-tour-reporter";
 import { conceptDefinition } from "@/lib/concepts";
-import { requireCurrentAppUser } from "@/lib/auth";
+import { requireAdmissionsAppUser } from "@/lib/auth";
 import { dateRangeParams, resolveDateRange } from "@/lib/date-range";
 import { getEodData } from "@/lib/data";
 import {
@@ -141,7 +141,7 @@ export default async function EodPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const currentUser = await requireCurrentAppUser();
+  const currentUser = await requireAdmissionsAppUser();
   const locale = await getDashboardLocale();
   const params = await searchParams;
   const range = resolveDateRange(params);

@@ -7,7 +7,7 @@ import { LanguageToggle } from "@/components/language-toggle";
 import { DisplayPreferences } from "@/components/display-preferences";
 import {
   isSupabaseAuthConfigured,
-  requireCurrentAppUser,
+  requireAdmissionsAppUser,
 } from "@/lib/auth";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr } from "@/lib/locale";
@@ -24,6 +24,7 @@ const roleLabels = {
   advisor: "Advisor",
   admin: "Admin",
   viewer: "Leadership",
+  student_staff: "Student staff",
 } as const;
 
 export async function DashboardLayout({
@@ -33,7 +34,7 @@ export async function DashboardLayout({
   statusLabel,
   children,
 }: Props) {
-  const user = await requireCurrentAppUser();
+  const user = await requireAdmissionsAppUser();
   const locale = await getDashboardLocale();
   const individualAuth = isSupabaseAuthConfigured();
 
@@ -55,7 +56,7 @@ export async function DashboardLayout({
           ) : null}
           <div className="session-user">
             <strong>{user.displayName}</strong>
-            <span>{locale === "es" ? ({ advisor: "Asesora", admin: "Admin", viewer: "Dirección" } as const)[user.role] : roleLabels[user.role]}</span>
+            <span>{locale === "es" ? ({ advisor: "Asesora", admin: "Admin", viewer: "Dirección", student_staff: "Expediente escolar" } as const)[user.role] : roleLabels[user.role]}</span>
           </div>
           {individualAuth ? (
             <form action={logout}>

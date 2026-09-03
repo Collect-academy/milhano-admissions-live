@@ -23,7 +23,7 @@ export type ReconciliationEntry = {
 export type ReconciliationUser = {
   id: string;
   display_name: string;
-  role: "advisor" | "admin" | "viewer";
+  role: "advisor" | "admin" | "viewer" | "student_staff";
   is_active: boolean;
 };
 

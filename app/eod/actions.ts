@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireCurrentAppUser } from "@/lib/auth";
+import { requireAdmissionsAppUser } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 
 function safeString(value: FormDataEntryValue | null): string {
@@ -84,7 +84,7 @@ function isIsoDate(value: string): boolean {
 }
 
 async function actorAppUserId(
-  currentUser: Awaited<ReturnType<typeof requireCurrentAppUser>>,
+  currentUser: Awaited<ReturnType<typeof requireAdmissionsAppUser>>,
 ): Promise<string> {
   if (currentUser.id !== "basic-auth-fallback") {
     return currentUser.id;
@@ -111,7 +111,7 @@ async function actorAppUserId(
 export async function openHistoricalEod(
   formData: FormData,
 ): Promise<never> {
-  const currentUser = await requireCurrentAppUser();
+  const currentUser = await requireAdmissionsAppUser();
   const actorId = await actorAppUserId(currentUser);
   const eodDate = safeString(formData.get("historical_eod_date"));
   const context = safeString(formData.get("eod_context")) === "today"
@@ -206,7 +206,7 @@ function safeJsonArray(value: FormDataEntryValue | null): unknown[] {
 export async function saveEodSubmission(
   formData: FormData,
 ): Promise<never> {
-  const currentUser = await requireCurrentAppUser();
+  const currentUser = await requireAdmissionsAppUser();
   const actorId = await actorAppUserId(currentUser);
   const submissionId = safeString(
     formData.get("submission_id"),
@@ -288,7 +288,7 @@ export async function saveEodSubmission(
 export async function validateEodSubmission(
   formData: FormData,
 ): Promise<never> {
-  const currentUser = await requireCurrentAppUser();
+  const currentUser = await requireAdmissionsAppUser();
   const actorId = await actorAppUserId(currentUser);
   const submissionId = safeString(
     formData.get("submission_id"),

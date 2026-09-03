@@ -27,7 +27,7 @@ import {
   getReconciliationEntries,
   getReconciliationUsers,
 } from "@/lib/reconciliation";
-import { requireCurrentAppUser } from "@/lib/auth";
+import { requireAdmissionsAppUser } from "@/lib/auth";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr, type Locale } from "@/lib/locale";
 import { conceptDefinition, metricLabel } from "@/lib/concepts";
@@ -97,7 +97,7 @@ export default async function ReconciliationPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const currentUser = await requireCurrentAppUser();
+  const currentUser = await requireAdmissionsAppUser();
   const locale = await getDashboardLocale();
   const params = await searchParams;
   const range = resolveDateRange(params);

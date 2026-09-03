@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { requireCurrentAppUser } from "@/lib/auth";
+import { requireAdmissionsAppUser } from "@/lib/auth";
 import { resolveDateRange } from "@/lib/date-range";
 import {
   getManualEodRecords,
@@ -43,7 +43,7 @@ function metricLabel(key: ManualEodMetricKey, locale: Locale): string {
 }
 
 export async function GET(request: NextRequest) {
-  const currentUser = await requireCurrentAppUser();
+  const currentUser = await requireAdmissionsAppUser();
   const locale = await getDashboardLocale();
   const params = Object.fromEntries(request.nextUrl.searchParams.entries());
   const range = resolveDateRange(params);

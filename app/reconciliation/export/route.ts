@@ -1,4 +1,4 @@
-import { getCurrentAppUser } from "@/lib/auth";
+import { getCurrentAdmissionsAppUser } from "@/lib/auth";
 import { getOperationalReconciliation } from "@/lib/cascade";
 import { resolveDateRange } from "@/lib/date-range";
 import { getDashboardLocale } from "@/lib/i18n";
@@ -29,7 +29,7 @@ function pct(value: number | null): string {
 }
 
 export async function GET(request: Request) {
-  const user = await getCurrentAppUser();
+  const user = await getCurrentAdmissionsAppUser();
   if (!user) {
     return new Response("Unauthorized", { status: 401 });
   }
