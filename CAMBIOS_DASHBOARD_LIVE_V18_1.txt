@@ -1,0 +1,15 @@
+MILHANO Admissions V18.1
+Date: 2026-09-10
+
+Changes
+- Added current V2 opportunity inventory scorecards: Total, Setter, Closer.
+- Auto/GHL V2 now uses all opportunities currently present in the Setter or Closer pipelines, regardless of original creation date.
+- Setter and Closer funnels are calculated from their respective current pipeline populations.
+- Restored Manual (EOD) vs GHL/System summary switch on Admissions V2.
+- Rebuilt all three V2 cascade card layouts to prevent overlap and remove nonessential helper/transition text.
+- Current stage panels show their own pipeline total prominently and use denser cards.
+- Refresh API now reports the exact missing Vercel environment variable if a deployment was built before variables were added.
+- Added MILHANO_V18_1_ADMISSIONS_V2_CURRENT_INVENTORY.sql patch.
+
+Operational note
+A newly created opportunity that remains in New Lead must still reach Supabase through Opportunity Live Sync. Add an Opportunity Created trigger for the Setter pipeline to the existing GHL -> WF02 webhook flow. Run WF01 Full Reconciliation once after adding it to close any pre-existing gap.

@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { CalendarDays, CircleCheckBig, DatabaseZap } from "lucide-react";
+import { cookies } from "next/headers";
+import {
+  CalendarDays,
+  CircleCheckBig,
+  DatabaseZap,
+  Layers3,
+  Route,
+  UsersRound,
+} from "lucide-react";
 
 import { AdmissionsV2Cascade } from "@/components/admissions-v2-cascade";
 import { AdmissionsVersionSwitcher } from "@/components/admissions-version-switcher";
@@ -7,8 +15,14 @@ import { DashboardLayout } from "@/components/dashboard-layout";
 import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { KpiCard } from "@/components/kpi-card";
+import { SummarySourceSwitcher, type SummarySource } from "@/components/summary-source-switcher";
 import { V2CurrentStages } from "@/components/v2-current-stages";
-import { ADMISSIONS_V2_CUTOVER, clampV2Range, getAdmissionsV2Payload } from "@/lib/admissions-v2";
+import {
+  ADMISSIONS_V2_CUTOVER,
+  clampV2Range,
+  getAdmissionsV2Payload,
+  type V2CascadeMetric,
+} from "@/lib/admissions-v2";
 import { resolveDateRange, type DateRange } from "@/lib/date-range";
 import { dateLabel, number } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
@@ -31,16 +45,101 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       : requestedRange.label,
   };
   const locale = await getDashboardLocale();
+  const cookieStore = await cookies();
+  const requestedSource = Array.isArray(params.source) ? params.source[0] : params.source;
+  const savedSource = cookieStore.get("milhano_summary_source")?.value;
+  const summarySource: SummarySource = requestedSource === "ghl" || requestedSource === "manual"
+    ? requestedSource
+    : savedSource === "manual" || savedSource === "ghl"
+      ? savedSource
+      : "ghl";
+
   const payload = await getAdmissionsV2Payload(range.start, range.end);
   const stageMapReady = payload.stage_map.resolved_stage_ids >= payload.stage_map.expected_stage_rows;
+
+  const manualGeneral: V2CascadeMetric[] = [
+    { metric_key: "new_leads", label: "New Leads", value: payload.manual.new_leads },
+    { metric_key: "unique_contacted_leads", label: "Contacted", value: payload.manual.contacted ?? 0 },
+    { metric_key: "responded_leads", label: "Responded", value: payload.manual.responded },
+    { metric_key: "meaningful_conversations", label: "Meaningful", value: payload.manual.meaningful },
+    { metric_key: "qualified_leads", label: "Qualified", value: payload.manual.qualified },
+    { metric_key: "school_tours_booked", label: "Tour Booked", value: payload.manual.tour_booked },
+    { metric_key: "school_tours_attended", label: "Tour Attended", value: payload.manual.tour_attended },
+    { metric_key: "trial_days_booked", label: "Pasadía Booked", value: payload.manual.trial_booked },
+    { metric_key: "trial_days_showed", label: "Pasadía Attended", value: payload.manual.trial_attended },
+    { metric_key: "closed", label: "Closed", value: payload.manual.closed },
+  ];
+  const manualSetter = manualGeneral.slice(0, 5);
+  const manualCloser = manualGeneral.slice(5);
+
+  const automaticCascades = (
+    <>
+      <AdmissionsV2Cascade
+        eyebrow="GENERAL · AUTO"
+        title="Cascada General"
+        scope="general"
+        metrics={payload.general}
+        range={range}
+      />
+      <div className="v2-two-cascades">
+        <AdmissionsV2Cascade
+          compact
+          eyebrow="SETTER · PATY"
+          title="Cascada Setter"
+          scope="setter"
+          metrics={payload.setter.funnel}
+          range={range}
+        />
+        <AdmissionsV2Cascade
+          compact
+          eyebrow="CLOSER · CINTHIA"
+          title="Cascada Closer"
+          scope="closer"
+          metrics={payload.closer.funnel}
+          range={range}
+        />
+      </div>
+    </>
+  );
+
+  const manualCascades = (
+    <>
+      <AdmissionsV2Cascade
+        clickable={false}
+        eyebrow="GENERAL · MANUAL EOD"
+        title="Cascada General"
+        metrics={manualGeneral}
+        range={range}
+      />
+      <div className="v2-two-cascades">
+        <AdmissionsV2Cascade
+          clickable={false}
+          compact
+          eyebrow="SETTER · MANUAL EOD"
+          title="Cascada Setter"
+          metrics={manualSetter}
+          range={range}
+        />
+        <AdmissionsV2Cascade
+          clickable={false}
+          compact
+          eyebrow="CLOSER · MANUAL EOD"
+          title="Cascada Closer"
+          metrics={manualCloser}
+          range={range}
+        />
+      </div>
+      <p className="v2-manual-period-note">EOD enviados/validados en el periodo: <strong>{number(payload.manual.reported_days)}</strong></p>
+    </>
+  );
 
   return (
     <DashboardLayout
       eyebrow="Milhano · Admissions V2"
       statusLabel={`${tr(locale, "Period", "Periodo")} ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
       subtitle={tr(locale,
-        "Setter + Closer + unified admissions funnel from the September 8 operational cutover.",
-        "Setter + Closer + cascada general desde el corte operativo del 8 de septiembre.")}
+        "Current Setter + Closer operation with a unified admissions view.",
+        "Operación actual Setter + Closer con vista unificada de admisiones.")}
       title={tr(locale, "Admissions V2", "Admisiones V2")}
     >
       <div className="v2-toolbar">
@@ -49,51 +148,66 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       </div>
 
       <div className="v2-cutover-note">
-        <strong>V2 inicia el 8 Sep 2026.</strong>
-        <span>Los periodos anteriores se consultan en <Link href="/legacy">V1 · Legacy</Link>. Si eliges un rango que cruza el corte, V2 empieza automáticamente el 08/09.</span>
+        <strong>V2 · operación actual.</strong>
+        <span>El histórico previo permanece en <Link href="/legacy">V1 · Legacy</Link>.</span>
       </div>
 
       <DateRangeFilter basePath="/" range={range} locale={locale} />
 
-      <AdmissionsV2Cascade
-        eyebrow="CASCADE · GENERAL"
-        title="Cascada General"
-        note="Una sola cohorte: Setter → School Tour → Pasadía → Closed/Enrolled. Los avances posteriores implican los hitos previos para evitar conversiones imposibles."
-        metrics={payload.general}
-        range={range}
-      />
+      <section className="panel v2-inventory-panel">
+        <div className="panel-heading compact-panel-heading">
+          <div>
+            <p className="eyebrow">INVENTARIO ACTUAL · GHL</p>
+            <h2>Opportunities en los pipelines V2</h2>
+          </div>
+          {payload.inventory.unmapped_stage_opportunities > 0 ? (
+            <p className="panel-note">{number(payload.inventory.unmapped_stage_opportunities)} opportunity(s) en stage sin mapear.</p>
+          ) : null}
+        </div>
+        <div className="kpi-grid v2-inventory-grid">
+          <KpiCard
+            helper="Setter + Closer actuales"
+            icon={Layers3}
+            label="Total Opportunities"
+            locale={locale}
+            value={number(payload.inventory.total_opportunities)}
+          />
+          <KpiCard
+            helper="Leads Milhano (Setter Pipeline)"
+            icon={UsersRound}
+            label="Setter Pipeline"
+            locale={locale}
+            value={number(payload.inventory.setter_opportunities)}
+          />
+          <KpiCard
+            helper="Leads Milhano (Closer Pipeline)"
+            icon={Route}
+            label="Closer Pipeline"
+            locale={locale}
+            value={number(payload.inventory.closer_opportunities)}
+          />
+        </div>
+      </section>
 
-      <div className="v2-two-cascades">
-        <AdmissionsV2Cascade
-          compact
-          eyebrow="SETTER · PATHI"
-          title="Cascada Setter"
-          note="New Lead → Contacted → Responded → Meaningful Conversation → Qualified. D1/D2/D3, Callback y Nurturing se muestran en la cola operativa, no como conversiones."
-          metrics={payload.setter.funnel}
-          range={range}
-        />
-        <AdmissionsV2Cascade
-          compact
-          eyebrow="CLOSER · CINTHIA"
-          title="Cascada Closer"
-          note="Tour Booked → Tour Attended → Pasadía Booked → Pasadía Attended → Closed/Enrolled. Cancelled/No-show sigue visible como Nurturing B."
-          metrics={payload.closer.funnel}
-          range={range}
-        />
-      </div>
+      <SummarySourceSwitcher
+        initialSource={summarySource}
+        locale={locale}
+        manual={manualCascades}
+        ghl={automaticCascades}
+        automaticLabel="Auto (GHL)"
+      />
 
       <section className="panel ghl-support-panel">
         <div className="panel-heading compact-panel-heading">
           <div>
             <p className="eyebrow">AGENDA · GHL</p>
-            <h2>Agenda de hoy y estado V2</h2>
+            <h2>Agenda de hoy</h2>
           </div>
-          <p className="panel-note">Pasadía usa el Calendar ID {payload.meta.pasadia_calendar_id}; no depende del texto del nombre del calendario.</p>
         </div>
         <div className="kpi-grid ghl-support-grid">
           <KpiCard icon={CalendarDays} label="School Tours Hoy" locale={locale} value={number(payload.today.school_tours_today)} helper="Citas GHL no canceladas" />
           <KpiCard icon={CalendarDays} label="Pasadías Hoy" locale={locale} value={number(payload.today.trial_days_today)} helper="Calendario Pasadía" />
-          <KpiCard icon={stageMapReady ? CircleCheckBig : DatabaseZap} label="Stage IDs V2" locale={locale} value={`${payload.stage_map.resolved_stage_ids}/${payload.stage_map.expected_stage_rows}`} helper={stageMapReady ? "Mapeo resuelto" : "Ejecuta Full Reconciliation V3"} />
+          <KpiCard icon={stageMapReady ? CircleCheckBig : DatabaseZap} label="Stage IDs V2" locale={locale} value={`${payload.stage_map.resolved_stage_ids}/${payload.stage_map.expected_stage_rows}`} helper={stageMapReady ? "Mapeo resuelto" : "Ejecuta Full Reconciliation"} />
         </div>
       </section>
 
@@ -101,24 +215,6 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         <V2CurrentStages title="Setter Pipeline" owner={payload.setter.owner} stages={payload.setter.current_stages} />
         <V2CurrentStages title="Closer Pipeline" owner={payload.closer.owner} stages={payload.closer.current_stages} />
       </div>
-
-      <section className="panel v2-manual-check">
-        <div className="panel-heading compact-panel-heading">
-          <div>
-            <p className="eyebrow">RECONCILIACIÓN HUMANA</p>
-            <h2>Referencia EOD del periodo</h2>
-          </div>
-          <p className="panel-note">No se suma ciegamente al sistema. Sirve para detectar rápidamente si una Pasadía/Closed fue reportada manualmente pero aún no llegó por GHL.</p>
-        </div>
-        <div className="v2-manual-grid">
-          <div><span>Tour Booked</span><strong>{number(payload.manual.tour_booked)}</strong></div>
-          <div><span>Tour Attended</span><strong>{number(payload.manual.tour_attended)}</strong></div>
-          <div><span>Pasadía Booked</span><strong>{number(payload.manual.trial_booked)}</strong></div>
-          <div><span>Pasadía Attended</span><strong>{number(payload.manual.trial_attended)}</strong></div>
-          <div><span>Closed</span><strong>{number(payload.manual.closed)}</strong></div>
-          <div><span>Días EOD</span><strong>{number(payload.manual.reported_days)}</strong></div>
-        </div>
-      </section>
     </DashboardLayout>
   );
 }

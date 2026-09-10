@@ -10,6 +10,8 @@ export function V2CurrentStages({
   owner: string;
   stages: V2CurrentStage[];
 }) {
+  const total = stages.reduce((sum, stage) => sum + Number(stage.opportunity_count || 0), 0);
+
   return (
     <section className="panel v2-stage-panel">
       <div className="panel-heading compact-panel-heading">
@@ -17,15 +19,12 @@ export function V2CurrentStages({
           <p className="eyebrow">COLA OPERATIVA · {owner}</p>
           <h2>{title}</h2>
         </div>
-        <p className="panel-note">Posición actual en GHL. No reemplaza la cascada histórica de arriba.</p>
+        <div className="v2-stage-total"><strong>{number(total)}</strong><span>opportunities actuales</span></div>
       </div>
       <div className="v2-stage-grid">
         {stages.map((stage) => (
           <article className={`v2-stage-card v2-stage-${stage.stage_group}`} key={stage.canonical_key}>
-            <div>
-              <span>{stage.stage_name}</span>
-              <small>{stage.stage_group}</small>
-            </div>
+            <span>{stage.stage_name}</span>
             <strong>{number(stage.opportunity_count)}</strong>
           </article>
         ))}

@@ -29,6 +29,13 @@ export type AdmissionsV2Payload = {
     closer_pipeline_id: string;
     pasadia_calendar_id: string;
   };
+  inventory: {
+    total_opportunities: number;
+    setter_opportunities: number;
+    closer_opportunities: number;
+    open_opportunities: number;
+    unmapped_stage_opportunities: number;
+  };
   general: V2CascadeMetric[];
   setter: {
     owner: string;
@@ -48,6 +55,7 @@ export type AdmissionsV2Payload = {
   };
   manual: {
     new_leads: number;
+    contacted: number;
     responded: number;
     meaningful: number;
     qualified: number;

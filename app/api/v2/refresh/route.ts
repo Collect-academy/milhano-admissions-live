@@ -7,19 +7,26 @@ export const dynamic = "force-dynamic";
 export async function POST() {
   await requireAdmissionsAppUser();
 
-  const baseUrl = process.env.MILHANO_N8N_REFRESH_WEBHOOK_URL;
-  const key = process.env.MILHANO_N8N_REFRESH_KEY;
+  const baseUrl = process.env.MILHANO_N8N_REFRESH_WEBHOOK_URL?.trim();
+  const key = process.env.MILHANO_N8N_REFRESH_KEY?.trim();
+  const missing = [
+    !baseUrl ? "MILHANO_N8N_REFRESH_WEBHOOK_URL" : null,
+    !key ? "MILHANO_N8N_REFRESH_KEY" : null,
+  ].filter(Boolean);
 
-  if (!baseUrl || !key) {
+  if (missing.length) {
     return NextResponse.json(
-      { ok: false, message: "Falta configurar el webhook de actualización en Vercel." },
+      {
+        ok: false,
+        message: `Falta configurar en este deployment: ${missing.join(", ")}. Haz Redeploy después de guardar las variables en Production.`,
+      },
       { status: 503 },
     );
   }
 
   try {
-    const url = new URL(baseUrl);
-    url.searchParams.set("key", key);
+    const url = new URL(baseUrl!);
+    url.searchParams.set("key", key!);
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

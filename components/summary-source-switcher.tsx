@@ -15,11 +15,13 @@ export function SummarySourceSwitcher({
   locale,
   manual,
   ghl,
+  automaticLabel,
 }: {
   initialSource: SummarySource;
   locale: Locale;
   manual: ReactNode;
   ghl: ReactNode;
+  automaticLabel?: string;
 }) {
   const [source, setSource] = useState<SummarySource>(initialSource);
 
@@ -66,7 +68,7 @@ export function SummarySourceSwitcher({
             onClick={() => choose("ghl")}
             type="button"
           >
-            <Database size={16} /> GHL
+            <Database size={16} /> {automaticLabel ?? "GHL"}
           </button>
         </div>
       </section>

@@ -28,11 +28,6 @@ const iconByMetric = {
   closed: UserRoundCheck,
 } as const;
 
-function ratio(from: number, to: number) {
-  if (from <= 0) return "—";
-  return `${Math.min(100, (to / from) * 100).toFixed(1)}%`;
-}
-
 export function AdmissionsV2Cascade({
   eyebrow,
   title,
@@ -40,41 +35,56 @@ export function AdmissionsV2Cascade({
   metrics,
   range,
   compact = false,
+  clickable = true,
+  scope = "general",
 }: {
   eyebrow: string;
   title: string;
-  note: string;
+  note?: string;
   metrics: V2CascadeMetric[];
   range: DateRange;
   compact?: boolean;
+  clickable?: boolean;
+  scope?: "general" | "setter" | "closer";
 }) {
   const query = dateRangeQuery(range);
 
   return (
     <section className={`panel v2-cascade-panel ${compact ? "v2-cascade-compact" : ""}`}>
-      <div className="panel-heading">
+      <div className="panel-heading v2-cascade-heading">
         <div>
           <p className="eyebrow">{eyebrow}</p>
           <h2>{title}</h2>
         </div>
-        <p className="panel-note">{note}</p>
+        {note ? <p className="panel-note">{note}</p> : null}
       </div>
 
       <div className="v2-funnel-flow">
         {metrics.map((metric, index) => {
           const Icon = iconByMetric[metric.metric_key as keyof typeof iconByMetric] ?? Activity;
-          const next = metrics[index + 1];
+          const body = (
+            <>
+              <div className="v2-kpi-topline">
+                <span className="v2-step-number">{String(index + 1).padStart(2, "0")}</span>
+                <span className="v2-kpi-icon"><Icon size={16} strokeWidth={1.9} /></span>
+              </div>
+              <p className="v2-kpi-label">{metric.label}</p>
+              <p className="v2-kpi-value">{number(metric.value)}</p>
+            </>
+          );
+
           return (
             <div className="v2-funnel-step" key={metric.metric_key}>
-              <Link className="kpi-card cascade-kpi-card v2-kpi-card" href={`/v2/leads?metric=${encodeURIComponent(metric.metric_key)}&${query}`}>
-                <div className="kpi-icon"><Icon size={19} strokeWidth={1.8} /></div>
-                <div>
-                  <p className="kpi-label">{metric.label}</p>
-                  <p className="kpi-value">{number(metric.value)}</p>
-                  <p className="kpi-helper">Misma cohorte V2</p>
-                </div>
-              </Link>
-              {next ? <div className="flow-arrow"><strong>{ratio(metric.value, next.value)}</strong></div> : null}
+              {clickable ? (
+                <Link
+                  className="v2-kpi-card"
+                  href={`/v2/leads?metric=${encodeURIComponent(metric.metric_key)}&scope=${scope}&${query}`}
+                >
+                  {body}
+                </Link>
+              ) : (
+                <article className="v2-kpi-card v2-kpi-card-static">{body}</article>
+              )}
             </div>
           );
         })}
