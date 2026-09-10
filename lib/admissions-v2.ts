@@ -1,0 +1,147 @@
+import "server-only";
+
+import { createSupabaseAdmin } from "@/lib/supabase-admin";
+
+export const ADMISSIONS_V2_CUTOVER = "2026-09-08";
+
+export type V2CascadeMetric = {
+  metric_key: string;
+  label: string;
+  value: number;
+};
+
+export type V2CurrentStage = {
+  stage_name: string;
+  canonical_key: string;
+  display_order: number;
+  stage_group: string;
+  opportunity_count: number;
+  open_count: number;
+};
+
+export type AdmissionsV2Payload = {
+  meta: {
+    version: string;
+    cutover_date: string;
+    effective_start: string;
+    effective_end: string;
+    setter_pipeline_id: string;
+    closer_pipeline_id: string;
+    pasadia_calendar_id: string;
+  };
+  general: V2CascadeMetric[];
+  setter: {
+    owner: string;
+    pipeline_id: string;
+    funnel: V2CascadeMetric[];
+    current_stages: V2CurrentStage[];
+  };
+  closer: {
+    owner: string;
+    pipeline_id: string;
+    funnel: V2CascadeMetric[];
+    current_stages: V2CurrentStage[];
+  };
+  today: {
+    school_tours_today: number;
+    trial_days_today: number;
+  };
+  manual: {
+    new_leads: number;
+    responded: number;
+    meaningful: number;
+    qualified: number;
+    tour_booked: number;
+    tour_attended: number;
+    trial_booked: number;
+    trial_attended: number;
+    closed: number;
+    reported_days: number;
+  };
+  stage_map: {
+    expected_stage_rows: number;
+    resolved_stage_ids: number;
+  };
+  health: Array<Record<string, unknown>>;
+  quality: Array<Record<string, unknown>>;
+};
+
+export type AdmissionsV2Lead = {
+  ghl_opportunity_id: string;
+  ghl_contact_id: string | null;
+  lead_name: string;
+  contact_name: string | null;
+  student_name: string | null;
+  phone: string | null;
+  email: string | null;
+  source: string | null;
+  operational_owner: string | null;
+  current_pipeline_role: string | null;
+  current_stage: string | null;
+  lead_at: string;
+};
+
+function normalizeNumericValues(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(normalizeNumericValues);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        normalizeNumericValues(item),
+      ]),
+    );
+  }
+  if (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value)) {
+    return Number(value);
+  }
+  return value;
+}
+
+export function clampV2Range(start: string, end: string) {
+  if (end < ADMISSIONS_V2_CUTOVER) {
+    return { start: ADMISSIONS_V2_CUTOVER, end: ADMISSIONS_V2_CUTOVER };
+  }
+
+  return {
+    start: start < ADMISSIONS_V2_CUTOVER ? ADMISSIONS_V2_CUTOVER : start,
+    end,
+  };
+}
+
+export async function getAdmissionsV2Payload(
+  start: string,
+  end: string,
+): Promise<AdmissionsV2Payload> {
+  const effective = clampV2Range(start, end);
+  const supabase = createSupabaseAdmin();
+  const result = await supabase.rpc("milhano_get_admissions_v2_payload", {
+    p_start: effective.start,
+    p_end: effective.end,
+  });
+
+  if (result.error) {
+    throw new Error(`Unable to load Admissions V2: ${result.error.message}`);
+  }
+
+  return normalizeNumericValues(result.data) as AdmissionsV2Payload;
+}
+
+export async function getAdmissionsV2MetricLeads(
+  metricKey: string,
+  start: string,
+  end: string,
+): Promise<AdmissionsV2Lead[]> {
+  const effective = clampV2Range(start, end);
+  const supabase = createSupabaseAdmin();
+  const result = await supabase.rpc("milhano_get_v2_metric_leads", {
+    p_metric_key: metricKey,
+    p_start: effective.start,
+    p_end: effective.end,
+  });
+
+  if (result.error) {
+    throw new Error(`Unable to load V2 metric leads: ${result.error.message}`);
+  }
+
+  return (result.data ?? []) as AdmissionsV2Lead[];
+}

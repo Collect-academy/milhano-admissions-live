@@ -1,0 +1,174 @@
+MILHANO — ADMISSIONS V2 — ORDEN DE CAMBIOS / EJECUCIÓN
+========================================================
+Cutover V2: 2026-09-08 (America/Merida)
+Setter pipeline: GYqHbZyWUxxc3K03efVT
+Closer pipeline: z1FEJfbtOHusjdwe40Ko
+Pasadía calendar: a0bvCaXgCdVwSrgPELza
+
+OBJETIVO
+--------
+Mantener V1 consultable hasta 2026-09-07 y activar V2 desde 2026-09-08 con:
+- Cascada Setter (Pathi)
+- Cascada Closer (Cinthia)
+- Cascada General
+- Pasadía desde el calendario real de GHL
+- soporte del stage manual/operativo Pasadia Attended
+- botón Actualizar datos sin añadir otro workflow programado
+
+IMPORTANTE
+----------
+No borres los pipelines viejos ni las filas históricas de Supabase.
+No dejes dos versiones activas de Workflow 02 con el mismo webhook.
+No dejes dos versiones programadas de Workflow 09 activas al mismo tiempo.
+Workflow 01 V3 es MANUAL; no debe programarse.
+
+PASO 1 — SUPABASE
+-----------------
+Ejecuta:
+  database/MILHANO_V18_ADMISSIONS_V2.sql
+
+La migración:
+- agrega pipeline_id a milhano_opportunities;
+- crea el catálogo V2 de stages;
+- crea RPCs separados para V2;
+- mantiene V1;
+- hace que snapshots EOD entiendan nombres legacy + V2;
+- no borra opportunities, stage events ni EODs.
+
+No continúes si SQL devuelve error.
+
+PASO 2 — N8N WORKFLOW 01 / FULL RECONCILIATION
+-----------------------------------------------
+Importa:
+  n8n/MILHANO_01_Opportunities_Full_Reconciliation_V3_Dual_Pipeline.json
+
+Asigna las credenciales existentes:
+- Milhano GHL PrivInt
+- Supabase Milhano
+
+Déjalo INACTIVO (es manual) y ejecútalo una vez.
+
+Resultado esperado:
+- reconoce Setter y Closer por ID;
+- registra automáticamente los IDs reales de los 16 stages;
+- lee opportunities de ambos pipelines;
+- actualiza pipeline_id/current_stage en Supabase;
+- conserva campos históricos;
+- ejecuta el baseline V2 mínimo.
+
+Revisa Result | Full Reconciliation. Debe mostrar ambos pipelines.
+
+PASO 3 — N8N WORKFLOW 02 / LIVE SYNC
+------------------------------------
+Importa:
+  n8n/MILHANO_02_Opportunity_Live_Sync_V2_Dual_Pipeline.json
+
+Asigna las mismas credenciales GHL + Supabase.
+
+El webhook path se conserva:
+  /webhook/milhano-opportunity-live-sync
+
+Orden para evitar doble procesamiento:
+1. Deja la nueva versión inactiva.
+2. Desactiva el Workflow 02 viejo.
+3. Activa Workflow 02 V2.
+4. Confirma que el GHL workflow sigue apuntando al mismo Production URL.
+
+No necesitas cambiar el body GHL actual.
+
+Prueba recomendada:
+- mueve/actualiza una opportunity de Setter;
+- confirma que Supabase guarda pipeline_id GYqHbZyWUxxc3K03efVT;
+- cuando se agende School Tour y tu workflow haga Update Opportunity, confirma que la MISMA opportunity queda con pipeline_id z1FEJfbtOHusjdwe40Ko y stage Tour Booked.
+
+PASO 4 — N8N WORKFLOW 09 / APPOINTMENTS + REFRESH BUTTON
+---------------------------------------------------------
+Importa:
+  n8n/MILHANO_09_Dashboard_Refresh_Orchestrator_V4_Admissions_V2.json
+
+Asigna credenciales existentes.
+
+ANTES de apagar el 09 anterior:
+- ejecuta V4 manualmente una vez;
+- revisa Result | Dashboard Refresh;
+- selected_calendars debe incluir Pasadía;
+- trial_day_appointments debe ser coherente con las citas reales.
+
+Luego:
+1. Desactiva el Workflow 09 anterior.
+2. Activa Workflow 09 V4.
+
+V4 conserva los horarios del 09 actual. No se crea un segundo schedule.
+
+PASO 5 — VERCEL ENVIRONMENT VARIABLES
+-------------------------------------
+Agrega al mismo proyecto Vercel:
+
+MILHANO_N8N_REFRESH_WEBHOOK_URL=https://collectacademy.app.n8n.cloud/webhook/milhano-dashboard-refresh-v2
+MILHANO_N8N_REFRESH_KEY=8l_mnmCazHTxcYdrz6wOJJnW2dPuugg9yKZOaN9KG1E
+
+IMPORTANTE: el mismo key ya está dentro de Workflow 09 V4.
+Después de agregar/cambiar variables de entorno, haz redeploy.
+No pongas NEXT_PUBLIC_ a estas variables.
+
+PASO 6 — VERCEL / FRONTEND
+--------------------------
+Despliega el ZIP:
+  milhano-admissions-live-v18-admissions-v2.zip
+
+o usa directamente la carpeta del proyecto incluida en el paquete.
+
+Después del deploy:
+- / = V2 Actual
+- /legacy = V1 Legacy, capped al 2026-09-07
+- /v2/leads = drilldown de la cascada V2
+- /alumnos sigue disponible sin cambios de lógica de Admissions
+
+PASO 7 — POSTCHECK
+------------------
+Ejecuta el archivo READ ONLY:
+  database/MILHANO_V18_ADMISSIONS_V2_POSTCHECK.sql
+
+Verifica especialmente:
+1. stage map: 9 Setter + 7 Closer; idealmente 16/16 stage_id resueltos.
+2. opportunities en ambos pipeline IDs.
+3. calendario a0bvCaXgCdVwSrgPELza aparece como trial_day después de correr 09 V4.
+4. milhano_get_admissions_v2_payload devuelve las tres estructuras.
+
+PASO 8 — PRUEBAS FUNCIONALES
+----------------------------
+A. Setter
+- New Lead debe aparecer en Setter.
+- Meaningful Conversation y Qualified deben aumentar al mover stages.
+
+B. Handoff
+- Agenda School Tour.
+- El workflow GHL existente cambia la misma opportunity a Closer.
+- Debe aparecer Tour Booked sin duplicar el lead en la cascada general.
+
+C. School Tour
+- Cancelled/No-show conserva el hito histórico Tour Booked pero NO cuenta Tour Attended.
+- Tour Attended sí aumenta cuando hay Showed/Completed/Attended o stage equivalente.
+
+D. Pasadía
+- Agenda desde calendario Pasadía.
+- Actualiza dashboard.
+- Pasadía Booked debe aumentar.
+- Marca asistencia en GHL: Pasadía Attended debe aumentar.
+- Si se reporta manualmente en EOD, la referencia EOD V2 debe reflejarlo aunque se mantenga separada del conteo automático para evitar doble conteo.
+
+E. Closed
+- Stage Closed/Enrolled debe reflejarse en Closer y Cascada General.
+
+ROLLBACK OPERATIVO RÁPIDO
+-------------------------
+Si el frontend V2 da problemas:
+- revierte deployment de Vercel; la migración es aditiva y V1 sigue existiendo.
+
+Si Workflow 09 V4 da problemas:
+- desactívalo y reactiva el 09 anterior. Nunca ambos simultáneamente.
+
+Si Workflow 02 V2 da problemas:
+- desactívalo y reactiva 02 anterior. El path del webhook es el mismo.
+
+No borres datos de Supabase como rollback.

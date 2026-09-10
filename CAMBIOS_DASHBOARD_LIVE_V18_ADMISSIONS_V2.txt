@@ -1,0 +1,47 @@
+MILHANO DASHBOARD — V18 ADMISSIONS V2
+=====================================
+
+Base: ZIP actual entregado por el usuario (misma base funcional de V17.5).
+Cutover: 2026-09-08.
+
+NUEVO FRONTEND
+- `/` ahora presenta Admissions V2.
+- `/legacy` conserva el Home V1 y limita consultas al 2026-09-07.
+- Selector visible V2 Actual / V1 Legacy.
+- Cascada Setter: New Leads → Contacted → Responded → Meaningful → Qualified.
+- Cascada Closer: Tour Booked → Tour Attended → Pasadía Booked → Pasadía Attended → Closed/Enrolled.
+- Cascada General: 10 hitos de punta a punta.
+- Cards de stages actuales separadas por Setter/Closer.
+- `/v2/leads` permite abrir los leads de cada hito V2.
+- Panel de agenda de hoy: School Tours + Pasadías.
+- Panel EOD de referencia para detectar diferencias manual vs sistema.
+- Botón `Actualizar datos` conectado a Workflow 09 V4 mediante endpoint server-side.
+
+SUPABASE
+- Nuevo `pipeline_id` en milhano_opportunities.
+- Nuevo catálogo milhano_v2_stage_map.
+- IDs de stages se resuelven automáticamente desde GHL al ejecutar Workflow 01 V3.
+- RPC separado milhano_get_admissions_v2_payload.
+- RPC separado milhano_get_v2_metric_leads.
+- Wrapper Live Sync V2 que conserva procesador probado V1 y añade pipeline_id.
+- Baseline V2 mínimo para arrancar con opportunities ya existentes sin inventar una historia completa.
+- EOD entiende stages legacy y stages V2.
+
+PASADÍA
+- Calendar ID fijo: a0bvCaXgCdVwSrgPELza.
+- Workflow 09 clasifica ese ID como trial_day antes de revisar el nombre.
+- Booked se conserva como hito histórico aun si luego la cita se cancela/no-show.
+- Attended requiere Showed/Completed/Attended o evidencia equivalente del stage.
+- Valores manuales EOD se muestran como referencia, no se suman ciegamente al sistema.
+
+N8N / EXECUTION BUDGET
+- Workflow 01 V3: manual únicamente.
+- Workflow 02 V2: event-driven, igual que antes.
+- Workflow 09 V4: reutiliza el schedule existente; no agrega otro workflow programado.
+- El botón de refresh genera una ejecución únicamente cuando alguien lo pulsa.
+
+NO CAMBIADO
+- Módulo Alumnos y sus 4 formatos.
+- Fotos/bitácora/permisos del módulo Alumnos.
+- Datos históricos V1.
+- Pipelines legacy en GHL.

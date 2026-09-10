@@ -1,0 +1,943 @@
+{
+  "name": "MILHANO | 09 | Dashboard Refresh Orchestrator v4 | Admissions V2",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        4560,
+        4000
+      ],
+      "id": "c73ada9b-1ae6-4fee-8f46-3327fc254c55",
+      "name": "Manual | Refresh Dashboard"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "52 8-20 * * 1-5"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        4560,
+        3808
+      ],
+      "id": "938a66f6-f0e1-45ae-ad44-267089fdf4f0",
+      "name": "Schedule | Weekdays Hourly 08-20"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "52 9,13,17,20 * * 0,6"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        4560,
+        3600
+      ],
+      "id": "fc1ce28c-f8ce-4058-8a30-e902c43da28d",
+      "name": "Schedule | Weekend 4x"
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\n\nconst parts = new Intl.DateTimeFormat('en-US', {\n  timeZone: 'America/Merida',\n  weekday: 'short',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit',\n  hour12: false\n}).formatToParts(now);\n\nconst get = (type) => parts.find(p => p.type === type)?.value ?? null;\n\nconst weekday = get('weekday');\nconst hour = Number(get('hour'));\nconst minute = Number(get('minute'));\nconst isWeekday = ['Mon','Tue','Wed','Thu','Fri'].includes(weekday);\n\nconst dateParts = new Intl.DateTimeFormat('en-CA', {\n  timeZone: 'America/Merida',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit'\n}).formatToParts(now);\n\nconst y = dateParts.find(p => p.type === 'year')?.value;\nconst m = dateParts.find(p => p.type === 'month')?.value;\nconst d = dateParts.find(p => p.type === 'day')?.value;\nconst eodDate = `${y}-${m}-${d}`;\n\n// Appointment sync window:\n// 60 days backwards catches late Show / No Show status updates.\n// 120 days forward keeps upcoming School Tours visible.\nconst appointmentsStartMs = now.getTime() - (60 * 24 * 60 * 60 * 1000);\nconst appointmentsEndMs = now.getTime() + (120 * 24 * 60 * 60 * 1000);\n\n// Calls are re-read for 60 days because GHL may populate duration/status\n// after the initial message record. With current Milhano volume this remains\n// comfortably under the API's 1000-record page limit.\nconst callsStartDate = new Date(now.getTime() - (60 * 24 * 60 * 60 * 1000)).toISOString();\nconst callsEndDate = now.toISOString();\n\nreturn [{\n  json: {\n    location_id: 'ZzRtp9n8n76ARy99VzJc',\n    run_started_at: now.toISOString(),\n    eod_date: eodDate,\n    local_weekday: weekday,\n    local_hour: hour,\n    local_minute: minute,\n    should_refresh_eod:\n      isWeekday &&\n      hour === 14 &&\n      minute >= 50 &&\n      minute <= 59,\n\n    // Pasadía is pinned by Calendar ID. Keywords remain as a safe fallback\n    // for School Tour and any future admissions calendar aliases.\n    appointment_calendar_ids: ['a0bvCaXgCdVwSrgPELza'],\n    pasadia_calendar_id: 'a0bvCaXgCdVwSrgPELza',\n    appointment_calendar_keywords: [\n      'school tour',\n      'tour escolar',\n      'visita escolar',\n      'visita',\n      'pasadia',\n      'pasadía',\n      'trial day'\n    ],\n    appointments_start_ms: appointmentsStartMs,\n    appointments_end_ms: appointmentsEndMs,\n    calls_start_date: callsStartDate,\n    calls_end_date: callsEndDate\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4832,
+        3808
+      ],
+      "id": "bfbce875-094c-419e-8c60-4e4987b4f195",
+      "name": "Config | Orchestrator"
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/conversations/messages/export",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $('Config | Orchestrator').first().json.location_id }}"
+            },
+            {
+              "name": "channel",
+              "value": "WhatsApp"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2023-02-21"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5072,
+        3808
+      ],
+      "id": "eee846ab-7a17-4a74-b8dc-3c0362f39a10",
+      "name": "GHL | Export Latest WhatsApp",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const responseItems = $input.all();\nconst config = $('Config | Orchestrator').first().json;\n\nfunction clean(value) {\n  if (value === null || value === undefined) return null;\n  const text = String(value).trim();\n  return text.length ? text : null;\n}\n\nfunction toIso(value) {\n  if (value === null || value === undefined || value === '') return null;\n  let normalized = value;\n  if (typeof normalized === 'number' && normalized < 100000000000) normalized *= 1000;\n  const date = new Date(normalized);\n  return Number.isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nfunction fnv1a(text) {\n  let hash = 0x811c9dc5;\n  for (let index = 0; index < text.length; index += 1) {\n    hash ^= text.charCodeAt(index);\n    hash = Math.imul(hash, 0x01000193);\n  }\n  return (hash >>> 0).toString(16).padStart(8, '0');\n}\n\nfunction extractMessages(payload) {\n  if (!payload) return [];\n  if (Array.isArray(payload)) return payload.flatMap(extractMessages);\n  if (Array.isArray(payload.messages)) return payload.messages;\n  if (Array.isArray(payload.data?.messages)) return payload.data.messages;\n  if (Array.isArray(payload.body?.messages)) return payload.body.messages;\n  if (Array.isArray(payload.data)) return payload.data;\n  return [];\n}\n\nconst rawMessages = responseItems.flatMap((item) => extractMessages(item.json));\nconst deduped = new Map();\n\nfor (const message of rawMessages) {\n  const messageId = clean(\n    message.id ?? message._id ?? message.messageId ?? message.message_id\n  );\n  if (!messageId) continue;\n\n  const messageType = clean(\n    message.messageType ?? message.channel ?? message.type\n  );\n\n  const isWhatsApp =\n    String(messageType ?? '').toLowerCase().includes('whatsapp') ||\n    Number(message.type) === 19;\n\n  if (!isWhatsApp) continue;\n\n  const direction = clean(\n    message.direction ?? message.messageDirection ?? message.message_direction\n  )?.toLowerCase();\n\n  if (!['inbound', 'outbound'].includes(direction)) continue;\n\n  const userId = clean(\n    message.userId ?? message.user_id ?? message.senderId ?? message.sender?.id\n  );\n\n  const messageSource = clean(\n    message.source ?? message.provider ?? message.origin\n  )?.toLowerCase() ?? 'unknown';\n\n  const workflowId = clean(\n    message.workflowId ??\n    message.workflow_id ??\n    message.automationId ??\n    message.automation_id\n  );\n\n  const isAutomated =\n    messageSource === 'workflow' ||\n    Boolean(workflowId) ||\n    message.isAutomated === true ||\n    message.is_automated === true;\n\n  let origin;\n  if (isAutomated) {\n    origin = 'ghl_workflow';\n  } else if (direction === 'inbound') {\n    origin = 'external_contact';\n  } else if (messageSource === 'app' && !userId) {\n    origin = 'shared_whatsapp_app';\n  } else if (userId) {\n    origin = 'ghl_identified_user';\n  } else {\n    origin = 'unknown';\n  }\n\n  const body = clean(\n    message.body ?? message.message ?? message.text ?? message.content\n  ) ?? '';\n\n  const attachments = Array.isArray(message.attachments)\n    ? message.attachments\n    : [];\n\n  const eventTimestamp =\n    toIso(\n      message.dateAdded ??\n      message.createdAt ??\n      message.created_at ??\n      message.timestamp ??\n      message.sentAt\n    ) ?? config.run_started_at;\n\n  const deliveryStatus = clean(\n    message.status ?? message.deliveryStatus ?? message.delivery_status\n  )?.toLowerCase() ?? 'unknown';\n\n  deduped.set(messageId, {\n    message_id: messageId,\n    contact_id: clean(\n      message.contactId ?? message.contact_id ?? message.contact?.id\n    ),\n    conversation_id: clean(\n      message.conversationId ?? message.conversation_id\n    ),\n    user_id: userId,\n    direction,\n    delivery_status: deliveryStatus,\n    event_timestamp: eventTimestamp,\n    origin,\n    message_source: messageSource,\n    is_automated: isAutomated,\n    message_body_hash: fnv1a(body),\n    has_attachment: attachments.length > 0,\n    attachment_count: attachments.length,\n    body_length: body.length,\n    from_number: clean(message.from),\n    to_number: clean(message.to),\n    content_type: clean(message.contentType),\n    alt_id: clean(message.altId),\n    workflow_id: workflowId\n  });\n}\n\nconst normalizedMessages = [...deduped.values()];\n\nreturn [{\n  json: {\n    p_location_id: config.location_id,\n    p_messages: normalizedMessages,\n    p_reconciled_at: new Date().toISOString(),\n    raw_records_received: rawMessages.length,\n    unique_whatsapp_messages: normalizedMessages.length,\n    inbound_messages: normalizedMessages.filter(m => m.direction === 'inbound').length,\n    outbound_messages: normalizedMessages.filter(m => m.direction === 'outbound').length,\n    manual_outbound_candidates: normalizedMessages.filter(\n      m =>\n        m.direction === 'outbound' &&\n        m.message_source === 'app' &&\n        !m.is_automated &&\n        ['sent', 'delivered', 'read'].includes(m.delivery_status)\n    ).length,\n    automated_outbound_candidates: normalizedMessages.filter(\n      m => m.direction === 'outbound' && m.is_automated\n    ).length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5328,
+        3808
+      ],
+      "id": "d13fe0b2-01d3-4f19-9fe7-fd37b6f3e56a",
+      "name": "Normalize | WhatsApp Batch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_reconcile_whatsapp_messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { p_location_id: $json.p_location_id, p_messages: $json.p_messages, p_reconciled_at: $json.p_reconciled_at } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5568,
+        3808
+      ],
+      "id": "529586f8-b060-4285-b2bb-441a51ab21d8",
+      "name": "Supabase | Reconcile WhatsApp Batch",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/conversations/messages/export",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $('Config | Orchestrator').first().json.location_id }}"
+            },
+            {
+              "name": "channel",
+              "value": "Call"
+            },
+            {
+              "name": "limit",
+              "value": "1000"
+            },
+            {
+              "name": "startDate",
+              "value": "={{ $('Config | Orchestrator').first().json.calls_start_date }}"
+            },
+            {
+              "name": "endDate",
+              "value": "={{ $('Config | Orchestrator').first().json.calls_end_date }}"
+            },
+            {
+              "name": "sortBy",
+              "value": "updatedAt"
+            },
+            {
+              "name": "sortOrder",
+              "value": "desc"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5824,
+        3808
+      ],
+      "id": "ca238871-6cce-403e-ac8c-f6e65cabaf6d",
+      "name": "GHL | Export Latest Calls",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const responseItems = $input.all();\nconst config = $('Config | Orchestrator').first().json;\n\nfunction clean(value) {\n  if (value === null || value === undefined) return null;\n  const text = String(value).trim();\n  return text.length ? text : null;\n}\n\nfunction toIso(value) {\n  if (value === null || value === undefined || value === '') return null;\n  let normalized = value;\n  if (typeof normalized === 'number' && normalized < 100000000000) normalized *= 1000;\n  const date = new Date(normalized);\n  return Number.isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nfunction durationSeconds(value) {\n  if (value === null || value === undefined || value === '') return 0;\n  if (typeof value === 'number' && Number.isFinite(value)) {\n    return Math.max(0, Math.round(value));\n  }\n\n  const text = String(value).trim();\n  if (/^\\d+(\\.\\d+)?$/.test(text)) return Math.max(0, Math.round(Number(text)));\n\n  const parts = text.split(':').map(Number);\n  if (parts.some(Number.isNaN)) return 0;\n\n  if (parts.length === 3) {\n    return Math.max(0, Math.round(parts[0] * 3600 + parts[1] * 60 + parts[2]));\n  }\n  if (parts.length === 2) {\n    return Math.max(0, Math.round(parts[0] * 60 + parts[1]));\n  }\n  return 0;\n}\n\nfunction extractMessages(payload) {\n  if (!payload) return [];\n  if (Array.isArray(payload)) return payload.flatMap(extractMessages);\n  if (Array.isArray(payload.messages)) return payload.messages;\n  if (Array.isArray(payload.data?.messages)) return payload.data.messages;\n  if (Array.isArray(payload.body?.messages)) return payload.body.messages;\n  if (Array.isArray(payload.data)) return payload.data;\n  return [];\n}\n\nconst rawMessages = responseItems.flatMap((item) => extractMessages(item.json));\nconst deduped = new Map();\n\nfor (const message of rawMessages) {\n  const messageId = clean(\n    message.id ?? message.messageId ?? message.message_id ?? message._id\n  );\n  if (!messageId) continue;\n\n  const messageType = clean(\n    message.messageType ?? message.messageTypeString ?? message.type\n  );\n\n  const rawCallStatus = clean(\n    message.callStatus ??\n    message.call_status ??\n    message.meta?.callStatus ??\n    message.meta?.call_status\n  );\n\n  const rawDuration =\n    message.callDuration ??\n    message.call_duration ??\n    message.meta?.callDuration ??\n    message.meta?.call_duration;\n\n  const looksLikeCall =\n    String(messageType ?? '').toLowerCase().includes('call') ||\n    String(messageType ?? '').toLowerCase().includes('voicemail') ||\n    rawCallStatus !== null ||\n    (rawDuration !== null && rawDuration !== undefined);\n\n  if (!looksLikeCall) continue;\n\n  const direction = clean(\n    message.direction ?? message.messageDirection ?? message.message_direction\n  )?.toLowerCase();\n\n  if (!['inbound', 'outbound'].includes(direction)) continue;\n\n  const deliveryStatus = clean(\n    message.status ?? message.deliveryStatus ?? message.delivery_status\n  )?.toLowerCase() ?? 'unknown';\n\n  const callStatus = (rawCallStatus ?? deliveryStatus)?.toLowerCase();\n\n  const disposition = clean(\n    message.callDisposition ??\n    message.call_disposition ??\n    message.disposition ??\n    message.meta?.callDisposition ??\n    message.meta?.call_disposition ??\n    message.meta?.disposition\n  );\n\n  const duration = durationSeconds(rawDuration);\n\n  deduped.set(messageId, {\n    message_id: messageId,\n    contact_id: clean(\n      message.contactId ?? message.contact_id ?? message.contact?.id\n    ),\n    conversation_id: clean(\n      message.conversationId ?? message.conversation_id\n    ),\n    user_id: clean(\n      message.userId ??\n      message.user_id ??\n      message.answeredBy ??\n      message.answered_by\n    ),\n    direction,\n    delivery_status: deliveryStatus,\n    call_status: callStatus,\n    call_duration_seconds: duration,\n    call_disposition: disposition,\n    event_timestamp:\n      toIso(\n        message.dateAdded ??\n        message.createdAt ??\n        message.created_at ??\n        message.timestamp\n      ) ?? config.run_started_at,\n    message_source: clean(\n      message.source ?? message.provider ?? message.origin\n    )?.toLowerCase() ?? 'unknown',\n    from_number: clean(message.from),\n    to_number: clean(message.to),\n    has_recording:\n      Array.isArray(message.attachments) &&\n      message.attachments.length > 0,\n    message_type: messageType\n  });\n}\n\nconst calls = [...deduped.values()];\nconst isRawConnected = call =>\n  ['completed', 'answered'].includes(call.call_status);\nconst isTwoMinutesPlus = call =>\n  ['completed', 'answered'].includes(call.call_status) &&\n  call.call_duration_seconds >= 120;\n\nreturn [{\n  json: {\n    p_location_id: config.location_id,\n    p_messages: calls,\n    p_reconciled_at: new Date().toISOString(),\n    raw_records_received: rawMessages.length,\n    unique_calls: calls.length,\n    outbound_attempts: calls.filter(c => c.direction === 'outbound').length,\n    inbound_calls: calls.filter(c => c.direction === 'inbound').length,\n    raw_connected_calls: calls.filter(isRawConnected).length,\n    calls_with_duration: calls.filter(c => c.call_duration_seconds > 0).length,\n    calls_2min_plus: calls.filter(isTwoMinutesPlus).length,\n    max_call_duration_seconds: calls.reduce(\n      (max, c) => Math.max(max, c.call_duration_seconds || 0),\n      0\n    )\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6080,
+        3808
+      ],
+      "id": "b648cf4b-bdeb-4edc-b03d-cfaa890b15af",
+      "name": "Normalize | Call Batch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_reconcile_call_messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { p_location_id: $json.p_location_id, p_messages: $json.p_messages, p_reconciled_at: $json.p_reconciled_at } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        6320,
+        3808
+      ],
+      "id": "02089119-c3f8-4c76-8031-85c64fd22ea9",
+      "name": "Supabase | Reconcile Call Batch",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_refresh_system_health",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        7824,
+        3808
+      ],
+      "id": "51009504-3831-4851-bfc1-c848babc7ffb",
+      "name": "Supabase | Refresh System Health",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b65fbe47-3b37-4371-954d-d3f49987b62d",
+              "leftValue": "={{ $('Config | Orchestrator').first().json.should_refresh_eod }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        8080,
+        3808
+      ],
+      "id": "597e0360-cfd5-4db4-99c5-eb254767ad6c",
+      "name": "IF | EOD Refresh Due"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_refresh_all_eod_snapshots",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { p_eod_date: $('Config | Orchestrator').first().json.eod_date } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        8320,
+        3712
+      ],
+      "id": "f513dae9-151b-4cc8-afba-2cbc3bd71353",
+      "name": "Supabase | Refresh All EOD",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = $('Config | Orchestrator').first().json;\nconst wa = $('Normalize | WhatsApp Batch').first().json;\nconst calls = $('Normalize | Call Batch').first().json;\nconst appointments = $('Normalize | Appointment Batch').first().json;\n\nfunction nodeResult(name) {\n  try {\n    return $(name).first().json;\n  } catch {\n    return null;\n  }\n}\n\nconst waDb = nodeResult('Supabase | Reconcile WhatsApp Batch');\nconst callDb = nodeResult('Supabase | Reconcile Call Batch');\nconst appointmentDb = nodeResult('Supabase | Reconcile Appointments');\nconst health = nodeResult('Supabase | Refresh System Health');\nconst eod = nodeResult('Supabase | Refresh All EOD');\n\nreturn [{\n  json: {\n    ok: true,\n    workflow: 'MILHANO | 09 | Dashboard Refresh Orchestrator v4 | Admissions V2',\n    started_at: cfg.run_started_at,\n    finished_at: new Date().toISOString(),\n    eod_date: cfg.eod_date,\n    eod_refreshed: Boolean(cfg.should_refresh_eod),\n\n    whatsapp: {\n      raw_records_received: wa.raw_records_received,\n      unique_messages: wa.unique_whatsapp_messages,\n      inbound: wa.inbound_messages,\n      outbound: wa.outbound_messages,\n      db_response: waDb\n    },\n\n    calls: {\n      raw_records_received: calls.raw_records_received,\n      unique_calls: calls.unique_calls,\n      outbound_attempts: calls.outbound_attempts,\n      inbound_calls: calls.inbound_calls,\n      connected_calls: calls.raw_connected_calls,\n      calls_with_duration: calls.calls_with_duration,\n      calls_2min_plus: calls.calls_2min_plus,\n      max_call_duration_seconds: calls.max_call_duration_seconds,\n      db_response: callDb\n    },\n\n    appointments: {\n      selected_calendars: appointments.selected_calendars,\n      raw_events_received: appointments.raw_events_received,\n      classified_appointments: appointments.classified_appointments,\n      school_tour_appointments: appointments.school_tour_appointments,\n      trial_day_appointments: appointments.trial_day_appointments,\n      db_response: appointmentDb\n    },\n\n    health_response: health,\n    eod_response: eod\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8592,
+        3808
+      ],
+      "id": "464c5701-aaab-49c6-bb96-addfcb71f139",
+      "name": "Result | Dashboard Refresh"
+    },
+    {
+      "parameters": {
+        "content": "## MILHANO — Dashboard Refresh Orchestrator v4 · Admissions V2\n\nOne execution refreshes WhatsApp → Calls → Admissions Appointments → System Health → conditional EOD.\n\n### V2 changes\n- Pins Pasadía Calendar ID `a0bvCaXgCdVwSrgPELza` explicitly.\n- Pasadía is classified as `trial_day` by Calendar ID first, so accents or display-name changes cannot break it.\n- Adds a secure webhook trigger used by the Vercel **Actualizar datos** button.\n- Keeps the existing schedules; it does NOT add another scheduled workflow/execution stream.\n\n### Refresh webhook\nPath: `/webhook/milhano-dashboard-refresh-v2`\nThe dashboard sends the private key as `?key=...`; keep the secret only in n8n/Vercel environment variables.\n\n### Deployment\n1. Apply the V2 Supabase migration first.\n2. Import this workflow while the old 09 is still active, but leave this V4 inactive.\n3. Run V4 manually once and confirm `trial_day_appointments` is plausible.\n4. Deactivate old Workflow 09.\n5. Activate this V4. Never leave both schedules active.\n6. Add the Vercel refresh URL/key from `MILHANO_V18_ADMISSIONS_V2_DEPLOY_ORDER.txt`.\n\nPasadía source priority in V2 dashboard: real GHL appointment/status → V2 stage evidence → EOD manual report as reconciliation context."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4560,
+        3216
+      ],
+      "id": "050d9471-9e37-49ac-a3fa-73ceda6a8e27",
+      "name": "README | Orchestrator"
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/calendars/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $('Config | Orchestrator').first().json.location_id }}"
+            },
+            {
+              "name": "showDrafted",
+              "value": "false"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        6576,
+        3808
+      ],
+      "id": "7000d5ad-bec1-4d99-9c4d-094d76ee8fc7",
+      "name": "GHL | Get Calendars",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Config | Orchestrator').first().json;\nconst payloads = $input.all().map(item => item.json);\n\nfunction clean(value) {\n  if (value === null || value === undefined) return '';\n  return String(value).trim();\n}\n\nfunction extractCalendars(payload) {\n  if (!payload) return [];\n  if (Array.isArray(payload)) return payload.flatMap(extractCalendars);\n  if (Array.isArray(payload.calendars)) return payload.calendars;\n  if (Array.isArray(payload.data?.calendars)) return payload.data.calendars;\n  if (Array.isArray(payload.data)) return payload.data;\n  return [];\n}\n\nconst calendars = payloads.flatMap(extractCalendars);\nconst exactIds = new Set((config.appointment_calendar_ids ?? []).map(String));\nconst keywords = (config.appointment_calendar_keywords ?? [])\n  .map(v => clean(v).toLocaleLowerCase('es'))\n  .filter(Boolean);\n\nconst active = calendars.filter(calendar => calendar.isActive !== false);\n\nconst normalized = active.map(calendar => {\n  const id = clean(calendar.id ?? calendar.calendarId);\n  const name = clean(\n    calendar.name ??\n    calendar.calendarName ??\n    calendar.title ??\n    calendar.slug\n  ) || id;\n\n  const haystack = [\n    name,\n    clean(calendar.description),\n    clean(calendar.slug)\n  ].join(' ').toLocaleLowerCase('es');\n\n  const exactMatch = exactIds.has(id);\n  const keywordMatch = keywords.some(keyword => haystack.includes(keyword));\n\n  return {\n    calendar_id: id,\n    calendar_name: name,\n    exact_match: exactMatch,\n    keyword_match: keywordMatch,\n  };\n}).filter(row => row.calendar_id);\n\nlet selected = normalized.filter(row => row.exact_match || row.keyword_match);\nlet selectionMode = 'configured_match';\n\n// Safe fallback: if calendar naming does not match our keywords, query all\n// active calendars. Appointment normalization still discards unrelated events.\nif (!selected.length) {\n  selected = normalized;\n  selectionMode = 'fallback_all_active';\n}\n\nif (!selected.length) {\n  throw new Error('GHL returned no active calendars for the Milhano location.');\n}\n\nreturn selected.map(row => ({\n  json: {\n    ...row,\n    selection_mode: selectionMode,\n    appointments_start_ms: config.appointments_start_ms,\n    appointments_end_ms: config.appointments_end_ms,\n    location_id: config.location_id,\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6832,
+        3808
+      ],
+      "id": "2f84d50d-2b9e-4f7c-a2dc-6d3031586e57",
+      "name": "Select | Admissions Calendars"
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/calendars/events",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $json.location_id }}"
+            },
+            {
+              "name": "calendarId",
+              "value": "={{ $json.calendar_id }}"
+            },
+            {
+              "name": "startTime",
+              "value": "={{ String($json.appointments_start_ms) }}"
+            },
+            {
+              "name": "endTime",
+              "value": "={{ String($json.appointments_end_ms) }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "2023-02-21"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        7072,
+        3808
+      ],
+      "id": "c67d0784-51ff-4713-9f0d-fec84dc35144",
+      "name": "GHL | Get Appointment Events",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Config | Orchestrator').first().json;\nconst calendarItems = $('Select | Admissions Calendars').all().map(item => item.json);\nconst calendarNames = new Map(\n  calendarItems.map(item => [String(item.calendar_id), String(item.calendar_name ?? '')])\n);\n\nfunction clean(value) {\n  if (value === null || value === undefined) return null;\n  const text = String(value).trim();\n  return text.length ? text : null;\n}\n\nfunction toIso(value) {\n  if (value === null || value === undefined || value === '') return null;\n  let normalized = value;\n  if (typeof normalized === 'number' && normalized < 100000000000) normalized *= 1000;\n  const date = new Date(normalized);\n  return Number.isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nfunction extractEvents(payload) {\n  if (!payload) return [];\n  if (Array.isArray(payload)) return payload.flatMap(extractEvents);\n  if (Array.isArray(payload.events)) return payload.events;\n  if (Array.isArray(payload.data?.events)) return payload.data.events;\n  if (Array.isArray(payload.data)) return payload.data;\n  return [];\n}\n\nfunction normalizeText(value) {\n  return String(value ?? '')\n    .toLocaleLowerCase('es')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '');\n}\n\nfunction appointmentType(calendarId, calendarName, title) {\n  if (String(calendarId ?? '') === String(config.pasadia_calendar_id ?? '')) {\n    return 'trial_day';\n  }\n\n  const haystack = normalizeText(`${calendarName} ${title}`);\n\n  if (\n    haystack.includes('pasadia') ||\n    haystack.includes('trial day')\n  ) return 'trial_day';\n\n  if (\n    haystack.includes('school tour') ||\n    haystack.includes('tour escolar') ||\n    haystack.includes('visita escolar') ||\n    haystack.includes('visita')\n  ) return 'school_tour';\n\n  return 'other';\n}\n\nconst rawEvents = $input.all().flatMap(item => extractEvents(item.json));\nconst deduped = new Map();\n\nfor (const event of rawEvents) {\n  const appointmentId = clean(event.id ?? event.eventId);\n  const calendarId = clean(event.calendarId ?? event.calendar_id);\n  const contactId = clean(event.contactId ?? event.contact_id);\n\n  // Calendar block events and unrelated objects can come through this endpoint.\n  // A real appointment should have a contact and an appointment status.\n  const rawStatus = clean(\n    event.appointmentStatus ??\n    event.appointment_status ??\n    event.status\n  )?.toLowerCase();\n\n  if (!appointmentId || !calendarId || !contactId || !rawStatus) continue;\n\n  const calendarName = calendarNames.get(calendarId) ?? '';\n  const title = clean(event.title) ?? '';\n  const type = appointmentType(calendarId, calendarName, title);\n\n  // We queried only likely admissions calendars, but fallback mode may query\n  // all active calendars. Discard unrelated appointment types here.\n  if (type === 'other') continue;\n\n  deduped.set(appointmentId, {\n    appointment_id: appointmentId,\n    calendar_id: calendarId,\n    calendar_name: calendarName,\n    appointment_type: type,\n    contact_id: contactId,\n    appointment_status: rawStatus,\n    start_time: toIso(event.startTime ?? event.start_time),\n    end_time: toIso(event.endTime ?? event.end_time),\n    assigned_user_id: clean(\n      event.assignedUserId ??\n      event.assigned_user_id\n    ),\n    title,\n    date_added: toIso(event.dateAdded ?? event.date_added),\n    date_updated: toIso(event.dateUpdated ?? event.date_updated),\n    address: clean(event.address),\n    notes: clean(event.notes),\n    raw_payload: event\n  });\n}\n\nconst events = [...deduped.values()];\n\nreturn [{\n  json: {\n    p_location_id: config.location_id,\n    p_events: events,\n    p_reconciled_at: new Date().toISOString(),\n    raw_events_received: rawEvents.length,\n    classified_appointments: events.length,\n    school_tour_appointments: events.filter(e => e.appointment_type === 'school_tour').length,\n    trial_day_appointments: events.filter(e => e.appointment_type === 'trial_day').length,\n    selected_calendars: calendarItems.map(item => ({\n      id: item.calendar_id,\n      name: item.calendar_name,\n      selection_mode: item.selection_mode,\n    })),\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7328,
+        3808
+      ],
+      "id": "082f1cdd-f61f-47b6-95d4-c632b158136c",
+      "name": "Normalize | Appointment Batch"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_reconcile_appointments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { p_location_id: $json.p_location_id, p_events: $json.p_events, p_reconciled_at: $json.p_reconciled_at } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        7568,
+        3808
+      ],
+      "id": "17ba4228-21c7-4661-b897-e1dc3f19a3d9",
+      "name": "Supabase | Reconcile Appointments",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "milhano-dashboard-refresh-v2",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        4560,
+        4240
+      ],
+      "id": "6fdc2685-639d-4310-853d-507f976bd2b0",
+      "name": "Webhook | Dashboard Refresh V2",
+      "webhookId": "3fbf02c1-ce47-4740-9e06-b366459ee7fc"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst expectedKey = '8l_mnmCazHTxcYdrz6wOJJnW2dPuugg9yKZOaN9KG1E';\nconst suppliedKey = String(input.query?.key ?? input.body?.key ?? '').trim();\n\nif (!suppliedKey || suppliedKey !== expectedKey) {\n  throw new Error('Dashboard refresh key inválida.');\n}\n\nreturn [{ json: { trigger: 'dashboard_v2', requested_at: new Date().toISOString() } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4752,
+        4240
+      ],
+      "id": "95b98fe9-3f6c-4499-be3f-15ca34c06139",
+      "name": "Validate | Dashboard Refresh Key"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual | Refresh Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Config | Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule | Weekdays Hourly 08-20": {
+      "main": [
+        [
+          {
+            "node": "Config | Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule | Weekend 4x": {
+      "main": [
+        [
+          {
+            "node": "Config | Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config | Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "GHL | Export Latest WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Export Latest WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Normalize | WhatsApp Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize | WhatsApp Batch": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Reconcile WhatsApp Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Reconcile WhatsApp Batch": {
+      "main": [
+        [
+          {
+            "node": "GHL | Export Latest Calls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Export Latest Calls": {
+      "main": [
+        [
+          {
+            "node": "Normalize | Call Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize | Call Batch": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Reconcile Call Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Reconcile Call Batch": {
+      "main": [
+        [
+          {
+            "node": "GHL | Get Calendars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Refresh System Health": {
+      "main": [
+        [
+          {
+            "node": "IF | EOD Refresh Due",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF | EOD Refresh Due": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Refresh All EOD",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Result | Dashboard Refresh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Refresh All EOD": {
+      "main": [
+        [
+          {
+            "node": "Result | Dashboard Refresh",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Get Calendars": {
+      "main": [
+        [
+          {
+            "node": "Select | Admissions Calendars",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select | Admissions Calendars": {
+      "main": [
+        [
+          {
+            "node": "GHL | Get Appointment Events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Get Appointment Events": {
+      "main": [
+        [
+          {
+            "node": "Normalize | Appointment Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize | Appointment Batch": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Reconcile Appointments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Reconcile Appointments": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Refresh System Health",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook | Dashboard Refresh V2": {
+      "main": [
+        [
+          {
+            "node": "Validate | Dashboard Refresh Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate | Dashboard Refresh Key": {
+      "main": [
+        [
+          {
+            "node": "Config | Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "instanceId": "78e06ca99ecba4a6beed399bde7ce7c4355c1ebb2f45fc14c201b98f111c233d"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

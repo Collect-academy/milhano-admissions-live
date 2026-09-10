@@ -1,0 +1,294 @@
+{
+  "name": "MILHANO | 02 | Opportunity Live Sync V2 | Dual Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "milhano-opportunity-live-sync",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        32,
+        576
+      ],
+      "id": "91c29746-6002-445c-8bac-5979cb680382",
+      "name": "Webhook | Opportunity Changed",
+      "webhookId": "03efc695-f6a5-4bda-a30b-34e5651ca888"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst body = input.body ?? input;\nconst expectedLocationId = 'ZzRtp9n8n76ARy99VzJc';\nconst expectedWebhookKey = 'fnkSDnX3wJ4TwEi4452RWrmal5MByJwH';\n\nfunction clean(value) {\n  if (value === null || value === undefined) return null;\n  const text = String(value).trim();\n  return text.length ? text : null;\n}\n\nconst suppliedKey =\n  clean(input.query?.key) ??\n  clean(body.webhook_key);\n\nif (suppliedKey !== expectedWebhookKey) {\n  throw new Error('Webhook key inválida.');\n}\n\nconst opportunityId =\n  clean(body.opportunity_id) ??\n  clean(body.opportunityId);\n\nif (!opportunityId) {\n  throw new Error(\n    'El payload no contiene opportunity_id. No se acepta body.id como fallback porque puede ser el Contact ID.'\n  );\n}\n\nconst locationId =\n  clean(body.location_id) ??\n  clean(body.locationId) ??\n  expectedLocationId;\n\nif (locationId !== expectedLocationId) {\n  throw new Error(\n    `Location ID no autorizada: ${locationId}`\n  );\n}\n\nreturn [{\n  json: {\n    event_type:\n      clean(body.event_type) ??\n      'opportunity_changed',\n    received_at: new Date().toISOString(),\n    location_id: locationId,\n    opportunity_id: opportunityId,\n    contact_id:\n      clean(body.contact_id) ??\n      clean(body.contactId),\n    contact_name:\n      clean(body.contact_name) ??\n      clean(body.contactName),\n    contact_email:\n      clean(body.contact_email) ??\n      clean(body.contactEmail),\n    contact_phone:\n      clean(body.contact_phone) ??\n      clean(body.contactPhone),\n    raw_webhook: input\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        576
+      ],
+      "id": "c75248e0-f4b1-4ac6-9c06-c6d75fcc4ebb",
+      "name": "Validate | Secure Payload"
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://services.leadconnectorhq.com/opportunities/' + encodeURIComponent($json.opportunity_id) }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        512,
+        576
+      ],
+      "id": "6de7a88a-0b23-404c-9331-f22e5b330906",
+      "name": "GHL | Get Opportunity",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/opportunities/pipelines",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $('Validate | Secure Payload').first().json.location_id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        784,
+        576
+      ],
+      "id": "6bbedf36-0ffd-4aa1-93a5-3a23aaafc7be",
+      "name": "GHL | Resolve Pipeline Stage",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const validated = $('Validate | Secure Payload').first().json;\nconst opportunityResponse = $('GHL | Get Opportunity').first().json;\nconst pipelinesResponse = $('GHL | Resolve Pipeline Stage').first().json;\n\nconst opportunity =\n  opportunityResponse.opportunity ??\n  opportunityResponse.data?.opportunity ??\n  opportunityResponse.data ??\n  opportunityResponse;\n\nconst pipelines =\n  pipelinesResponse.pipelines ??\n  pipelinesResponse.data?.pipelines ??\n  [];\n\nfunction clean(value) {\n  if (value === null || value === undefined) return null;\n\n  if (typeof value === 'object') {\n    const objectId =\n      value.id ??\n      value._id ??\n      value.userId ??\n      value.value;\n\n    if (objectId !== null && objectId !== undefined) {\n      const text = String(objectId).trim();\n      return text.length ? text : null;\n    }\n\n    return null;\n  }\n\n  const text = String(value).trim();\n  return text.length ? text : null;\n}\n\nfunction toIso(value) {\n  if (value === null || value === undefined || value === '') return null;\n\n  let normalized = value;\n  if (typeof normalized === 'number' && normalized < 100000000000) {\n    normalized *= 1000;\n  }\n\n  const date = new Date(normalized);\n  return Number.isNaN(date.getTime()) ? null : date.toISOString();\n}\n\nconst opportunityId =\n  clean(opportunity.id) ??\n  validated.opportunity_id;\n\nif (opportunityId !== validated.opportunity_id) {\n  throw new Error(\n    `La API devolvió una opportunity distinta: ${opportunityId}`\n  );\n}\n\nconst pipelineId =\n  clean(opportunity.pipelineId) ??\n  clean(opportunity.pipeline_id);\n\nconst pipelineStageId =\n  clean(opportunity.pipelineStageId) ??\n  clean(opportunity.pipeline_stage_id) ??\n  clean(opportunity.stageId);\n\nlet selectedPipeline =\n  pipelines.find((pipeline) => clean(pipeline.id) === pipelineId) ??\n  pipelines.find((pipeline) =>\n    (pipeline.stages ?? []).some(\n      (stage) => clean(stage.id) === pipelineStageId\n    )\n  ) ??\n  null;\n\nconst selectedStage =\n  selectedPipeline?.stages?.find(\n    (stage) => clean(stage.id) === pipelineStageId\n  ) ??\n  null;\n\nconst contact =\n  opportunity.contact &&\n  typeof opportunity.contact === 'object'\n    ? opportunity.contact\n    : {};\n\nconst contactId =\n  clean(opportunity.contactId) ??\n  clean(opportunity.contact_id) ??\n  clean(contact.id) ??\n  validated.contact_id;\n\nconst assignedUserId =\n  clean(opportunity.assignedTo) ??\n  clean(opportunity.assignedToId) ??\n  clean(opportunity.assignedUserId) ??\n  clean(opportunity.userId);\n\nconst createdAt = toIso(\n  opportunity.dateAdded ??\n  opportunity.createdAt ??\n  opportunity.created_at\n);\n\nconst updatedAt = toIso(\n  opportunity.dateUpdated ??\n  opportunity.updatedAt ??\n  opportunity.updated_at ??\n  opportunity.lastStatusChangeAt ??\n  createdAt\n);\n\nconst pipelineUpdatedAt = toIso(\n  opportunity.lastStageChangeAt ??\n  opportunity.pipelineStageChangedAt ??\n  opportunity.stageChangedAt ??\n  updatedAt\n);\n\nconst contactName =\n  clean(contact.name) ??\n  clean(opportunity.contactName) ??\n  clean(\n    [contact.firstName, contact.lastName]\n      .filter(Boolean)\n      .join(' ')\n  ) ??\n  validated.contact_name;\n\nconst phone =\n  clean(contact.phone) ??\n  clean(opportunity.phone) ??\n  clean(opportunity.contactPhone) ??\n  validated.contact_phone;\n\nconst email =\n  clean(contact.email) ??\n  clean(opportunity.email) ??\n  clean(opportunity.contactEmail) ??\n  validated.contact_email;\n\nconst status = clean(opportunity.status);\nconst source =\n  clean(opportunity.source) ??\n  clean(contact.source);\n\nconst fingerprintParts = [\n  opportunityId,\n  pipelineId ?? '',\n  updatedAt ?? pipelineUpdatedAt ?? validated.received_at,\n  pipelineStageId ?? '',\n  status ?? '',\n  assignedUserId ?? ''\n];\n\nconst eventFingerprint = fingerprintParts.join('|');\n\nconst compactOpportunityPayload = {\n  id: opportunityId,\n  contactId,\n  pipelineId,\n  pipelineStageId,\n  stageName: clean(selectedStage?.name),\n  status,\n  assignedTo: assignedUserId,\n  name:\n    clean(opportunity.name) ??\n    clean(opportunity.opportunityName),\n  source,\n  dateAdded: createdAt,\n  dateUpdated: updatedAt,\n  lastStageChangeAt: pipelineUpdatedAt,\n  customFields:\n    opportunity.customFields ??\n    opportunity.custom_fields ??\n    null\n};\n\nreturn [{\n  json: {\n    event_fingerprint: eventFingerprint,\n    rpc_body: {\n      p_event_fingerprint: eventFingerprint,\n      p_event_type: validated.event_type,\n      p_received_at: validated.received_at,\n      p_location_id: validated.location_id,\n      p_opportunity_id: opportunityId,\n      p_contact_id: contactId,\n      p_pipeline_id: pipelineId,\n      p_pipeline_name: clean(selectedPipeline?.name),\n      p_pipeline_stage_id: pipelineStageId,\n      p_stage_name: clean(selectedStage?.name),\n      p_status: status,\n      p_assigned_user_id: assignedUserId,\n      p_opportunity_name:\n        clean(opportunity.name) ??\n        clean(opportunity.opportunityName),\n      p_contact_name: contactName,\n      p_phone: phone,\n      p_email: email,\n      p_source: source,\n      p_created_at: createdAt,\n      p_updated_at: updatedAt,\n      p_pipeline_updated_at: pipelineUpdatedAt,\n      p_raw_payload: {\n        webhook: validated.raw_webhook,\n        opportunity: compactOpportunityPayload\n      }\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        576
+      ],
+      "id": "f5ff7086-a3aa-4396-b591-c374f7539aae",
+      "name": "Normalize | Opportunity Event"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_process_opportunity_live_event_v2",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.rpc_body }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1312,
+        576
+      ],
+      "id": "73fd711f-2246-4bbc-b230-292236cedbcb",
+      "name": "Supabase | Process Live Event",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst normalized = $('Normalize | Opportunity Event').first().json;\nconst result = response?.data !== undefined ? response.data : response;\n\nreturn [{\n  json: {\n    ok: true,\n    workflow: 'MILHANO | 02 | Opportunity Live Sync V2 | Dual Pipeline',\n    pipeline_id: normalized.rpc_body?.p_pipeline_id ?? null,\n    pipeline_name: normalized.rpc_body?.p_pipeline_name ?? null,\n    stage_name: normalized.rpc_body?.p_stage_name ?? null,\n    live_sync: result,\n    processed_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        576
+      ],
+      "id": "6929b7b7-390a-4c9c-820a-35f40b33cf2e",
+      "name": "Result | Live Sync"
+    },
+    {
+      "parameters": {
+        "content": "## MILHANO — Opportunity Live Sync V2 · Dual Pipeline\n\nProcesses one opportunity per GHL event and supports both Admissions V2 pipelines:\n- Setter: `GYqHbZyWUxxc3K03efVT`\n- Closer: `z1FEJfbtOHusjdwe40Ko`\n\nThe same opportunity is expected to move from Setter to Closer when a School Tour is booked. The V2 Supabase RPC stores the current `pipeline_id` while preserving the V1 stage-event history.\n\n### Before activating\n1. Apply `MILHANO_V18_ADMISSIONS_V2.sql` in Supabase.\n2. Import this workflow with GHL credential `Milhano GHL PrivInt` and the existing Supabase credential.\n3. Keep the same GHL webhook body and Production URL/path used by the current Workflow 02.\n4. Deactivate the old Workflow 02 before activating this one; never run two workflows on the same webhook path.\n\n### Production webhook path\n`/webhook/milhano-opportunity-live-sync`\n\n### GHL body\n```json\n{\n  \"event_type\": \"opportunity_changed\",\n  \"location_id\": \"ZzRtp9n8n76ARy99VzJc\",\n  \"contact_id\": \"{{contact.id}}\",\n  \"contact_name\": \"{{contact.name}}\",\n  \"contact_email\": \"{{contact.email}}\",\n  \"contact_phone\": \"{{contact.phone_raw}}\",\n  \"opportunity_id\": \"{{opportunity.id}}\"\n}\n```\n\nNo extra polling is added. Stage changes remain event-driven.",
+        "height": 480,
+        "width": 760
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "46e886be-b52f-4c90-b886-78266358fea7",
+      "name": "README | Live Sync"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook | Opportunity Changed": {
+      "main": [
+        [
+          {
+            "node": "Validate | Secure Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate | Secure Payload": {
+      "main": [
+        [
+          {
+            "node": "GHL | Get Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Get Opportunity": {
+      "main": [
+        [
+          {
+            "node": "GHL | Resolve Pipeline Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Resolve Pipeline Stage": {
+      "main": [
+        [
+          {
+            "node": "Normalize | Opportunity Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize | Opportunity Event": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Process Live Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Process Live Event": {
+      "main": [
+        [
+          {
+            "node": "Result | Live Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "instanceId": "78e06ca99ecba4a6beed399bde7ce7c4355c1ebb2f45fc14c201b98f111c233d"
+  },
+  "nodeGroups": [],
+  "tags": []
+}

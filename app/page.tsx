@@ -1,425 +1,124 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
-import {
-  AlertTriangle,
-  Clock3,
-  MessageCircleMore,
-  PhoneCall,
-} from "lucide-react";
+import { CalendarDays, CircleCheckBig, DatabaseZap } from "lucide-react";
 
-import { DashboardCharts } from "@/components/dashboard-charts";
+import { AdmissionsV2Cascade } from "@/components/admissions-v2-cascade";
+import { AdmissionsVersionSwitcher } from "@/components/admissions-version-switcher";
 import { DashboardLayout } from "@/components/dashboard-layout";
+import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { KpiCard } from "@/components/kpi-card";
-import { OperationalCascade } from "@/components/operational-cascade";
-import { ManualEodSummary } from "@/components/manual-eod-summary";
-import { SummarySourceSwitcher, type SummarySource } from "@/components/summary-source-switcher";
-import {
-  dateRangeQuery,
-  resolveDateRange,
-} from "@/lib/date-range";
-import { dateLabel, number, percent } from "@/lib/format";
+import { V2CurrentStages } from "@/components/v2-current-stages";
+import { ADMISSIONS_V2_CUTOVER, clampV2Range, getAdmissionsV2Payload } from "@/lib/admissions-v2";
+import { resolveDateRange, type DateRange } from "@/lib/date-range";
+import { dateLabel, number } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr } from "@/lib/locale";
-import { getHomePayloadV17, healthFromPayload } from "@/lib/home-v17";
-import { HelpTip } from "@/components/help-tip";
-import { conceptDefinition, stageConceptDefinition } from "@/lib/concepts";
-import {
-  ownerLabel,
-  stageLabel,
-} from "@/lib/terminology";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Record<
-  string,
-  string | string[] | undefined
->;
+type SearchParams = Record<string, string | string[] | undefined>;
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
+export default async function AdmissionsV2Page({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
-  const range = resolveDateRange(params);
-  const locale = await getDashboardLocale();
-  const cookieStore = await cookies();
-  const requestedSource = Array.isArray(params.source) ? params.source[0] : params.source;
-  const savedSource = cookieStore.get("milhano_summary_source")?.value;
-  const summarySource: SummarySource = requestedSource === "ghl" || requestedSource === "manual"
-    ? requestedSource
-    : savedSource === "ghl" ? "ghl" : "manual";
-
-  // V17: one cached Supabase RPC replaces the previous ~11 home-page requests.
-  const payload = await getHomePayloadV17(range.start, range.end);
-  const data = payload.dashboard;
-  const health = healthFromPayload(payload);
-  const reconciliation = payload.reconciliation;
-  const manualTotals = payload.manualTotals;
-  const manualLevelTotals = payload.manualLevelTotals;
-  const transitionRates = payload.transitionRates;
-
-  const systemFunnelKeys = [
-    "new_leads",
-    "unique_contacted_leads",
-    "responded_leads",
-    "meaningful_conversations",
-    "qualified_leads",
-    "school_tours_booked",
-    "school_tours_attended",
-    "trial_days_booked",
-    "trial_days_showed",
-    "closed",
-  ];
-  const cascade = systemFunnelKeys
-    .map((key) => reconciliation.find((metric) => metric.metric_key === key))
-    .filter((metric): metric is NonNullable<typeof metric> => Boolean(metric));
-
-  const rangeQuery = dateRangeQuery(range);
-  const cascadeByKey = new Map(
-    reconciliation.map((metric) => [metric.metric_key, metric]),
-  );
-  const systemValue = (metricKey: string, fallback: number) =>
-    cascadeByKey.get(metricKey)?.system_value ?? fallback;
-
-  const sourceHelper = (metricKey: string, fallback: string) => {
-    const metric = cascadeByKey.get(metricKey);
-    if (!metric || metric.system_value === null) return fallback;
-    return `GHL/System ${number(metric.system_value)}`;
+  const requestedRange = resolveDateRange(params);
+  const effective = clampV2Range(requestedRange.start, requestedRange.end);
+  const range: DateRange = {
+    ...requestedRange,
+    start: effective.start,
+    end: effective.end,
+    label: requestedRange.start < ADMISSIONS_V2_CUTOVER
+      ? `${dateLabel(effective.start)} – ${dateLabel(effective.end)}`
+      : requestedRange.label,
   };
+  const locale = await getDashboardLocale();
+  const payload = await getAdmissionsV2Payload(range.start, range.end);
+  const stageMapReady = payload.stage_map.resolved_stage_ids >= payload.stage_map.expected_stage_rows;
 
   return (
     <DashboardLayout
-      eyebrow={tr(locale, "Milhano · Admissions", "Milhano · Admisiones")}
-      statusLabel={`${tr(locale, "Period", "Periodo")} ${dateLabel(
-        range.start,
-      )} – ${dateLabel(range.end)}`}
-      subtitle={tr(locale, "Unified admissions performance, activity and operational follow-up.", "Rendimiento unificado de admisiones, actividad y seguimiento operativo.")}
-      title={tr(locale, "Admissions Summary", "Resumen de Admisiones")}
+      eyebrow="Milhano · Admissions V2"
+      statusLabel={`${tr(locale, "Period", "Periodo")} ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
+      subtitle={tr(locale,
+        "Setter + Closer + unified admissions funnel from the September 8 operational cutover.",
+        "Setter + Closer + cascada general desde el corte operativo del 8 de septiembre.")}
+      title={tr(locale, "Admissions V2", "Admisiones V2")}
     >
-      <Link
-        className={
-          health.overallStatus === "healthy"
-            ? "system-health-link system-health-good"
-            : health.overallStatus === "error"
-              ? "system-health-link system-health-error"
-              : "system-health-link system-health-warning"
-        }
-        href="/sistema"
-      >
-        <span>
-          {health.overallStatus === "healthy"
-            ? tr(locale, "System is up to date", "Sistema actualizado")
-            : health.overallStatus === "error"
-              ? tr(locale, "System has errors", "El sistema tiene errores")
-              : tr(locale, "System requires review", "El sistema requiere revisión")}
-        </span>
-        <strong>{tr(locale, "View monitoring →", "Ver monitoreo →")}</strong>
-      </Link>
+      <div className="v2-toolbar">
+        <AdmissionsVersionSwitcher current="v2" />
+        <DashboardRefreshButton />
+      </div>
 
-      <DateRangeFilter
-        basePath="/"
+      <div className="v2-cutover-note">
+        <strong>V2 inicia el 8 Sep 2026.</strong>
+        <span>Los periodos anteriores se consultan en <Link href="/legacy">V1 · Legacy</Link>. Si eliges un rango que cruza el corte, V2 empieza automáticamente el 08/09.</span>
+      </div>
+
+      <DateRangeFilter basePath="/" range={range} locale={locale} />
+
+      <AdmissionsV2Cascade
+        eyebrow="CASCADE · GENERAL"
+        title="Cascada General"
+        note="Una sola cohorte: Setter → School Tour → Pasadía → Closed/Enrolled. Los avances posteriores implican los hitos previos para evitar conversiones imposibles."
+        metrics={payload.general}
         range={range}
-        locale={locale}
       />
 
-      <SummarySourceSwitcher
-        initialSource={summarySource}
-        locale={locale}
-        manual={<ManualEodSummary levelTotals={manualLevelTotals} totals={manualTotals} locale={locale} />}
-        ghl={(
-          <>
-            <OperationalCascade
-              metrics={cascade}
-              range={range}
-              locale={locale}
-              mode="system"
-              transitionRates={transitionRates}
-            />
+      <div className="v2-two-cascades">
+        <AdmissionsV2Cascade
+          compact
+          eyebrow="SETTER · PATHI"
+          title="Cascada Setter"
+          note="New Lead → Contacted → Responded → Meaningful Conversation → Qualified. D1/D2/D3, Callback y Nurturing se muestran en la cola operativa, no como conversiones."
+          metrics={payload.setter.funnel}
+          range={range}
+        />
+        <AdmissionsV2Cascade
+          compact
+          eyebrow="CLOSER · CINTHIA"
+          title="Cascada Closer"
+          note="Tour Booked → Tour Attended → Pasadía Booked → Pasadía Attended → Closed/Enrolled. Cancelled/No-show sigue visible como Nurturing B."
+          metrics={payload.closer.funnel}
+          range={range}
+        />
+      </div>
 
-            <section className="panel ghl-support-panel">
-              <div className="panel-heading compact-panel-heading">
-                <div>
-                  <p className="eyebrow">{tr(locale, "Activity + schedule", "Actividad + agenda")}</p>
-                  <h2>{tr(locale, "Supporting GHL Metrics", "Métricas GHL de Apoyo")}</h2>
-                </div>
-                <p className="panel-note">
-                  {tr(locale,
-                    "Dials are actions, not unique leads, so they stay outside the lead funnel. School Tours Today is a current-day schedule indicator.",
-                    "Las llamadas son acciones, no leads únicos, por eso quedan fuera de la cascada de leads. School Tours Hoy es un indicador de agenda del día actual.")}
-                </p>
-              </div>
-              <div className="kpi-grid ghl-support-grid">
-                <KpiCard
-                  helper={sourceHelper("number_of_dials", `${number(data.period.outbound_call_attempts)} outbound attempts`)}
-                  icon={PhoneCall}
-                  label={tr(locale, "Number of Dials", "Llamadas GHL")}
-                  definitionKey="number_of_dials"
-                  locale={locale}
-                  value={number(systemValue("number_of_dials", data.period.call_attempts))}
-                />
-                <KpiCard
-                  helper={tr(locale, "Shared institutional channel", "Canal institucional compartido")}
-                  icon={MessageCircleMore}
-                  label={tr(locale, "WhatsApp Messages", "Mensajes WhatsApp")}
-                  definitionKey="whatsapp_messages"
-                  locale={locale}
-                  value={number(data.period.whatsapp_messages)}
-                />
-                <KpiCard
-                  helper={sourceHelper("school_tours_today", tr(locale, "Current day", "Día actual"))}
-                  icon={Clock3}
-                  label={tr(locale, "School Tours Today", "School Tours Hoy")}
-                  definitionKey="school_tours_today"
-                  locale={locale}
-                  value={number(systemValue("school_tours_today", 0))}
-                />
-              </div>
-            </section>
-          </>
-        )}
-      />
-
-      <section className="panel">
-        <div className="panel-heading">
+      <section className="panel ghl-support-panel">
+        <div className="panel-heading compact-panel-heading">
           <div>
-            <p className="eyebrow">
-              {tr(locale, "Current operational position", "Posición operativa actual")}
-            </p>
-            <h2>{tr(locale, "Current GHL Stages", "Stages Actuales en GHL")} <HelpTip text={conceptDefinition("current_stage", locale)} /></h2>
+            <p className="eyebrow">AGENDA · GHL</p>
+            <h2>Agenda de hoy y estado V2</h2>
           </div>
-          <p className="panel-note">
-            {tr(locale, "These cards show the current CRM stage. The unified cascade above measures period activity.", "Estas cards muestran el stage actual en CRM. La cascada superior mide actividad del periodo.")}
-          </p>
+          <p className="panel-note">Pasadía usa el Calendar ID {payload.meta.pasadia_calendar_id}; no depende del texto del nombre del calendario.</p>
         </div>
-
-        <div className="pipeline-grid">
-          {data.pipeline.map((stage) => (
-            <Link
-              className="stage-card stage-card-link"
-              href={`/pipeline?${rangeQuery}&stage=${encodeURIComponent(
-                stage.stage_name,
-              )}`}
-              key={stage.stage_name}
-            >
-              <div className="stage-topline">
-                <span className="stage-chip stage-hito">
-                  {tr(locale, "Current Stage", "Stage Actual")}
-                </span>
-                <strong>
-                  {number(stage.opportunity_count)}
-                </strong>
-              </div>
-              <h3>{stageLabel(stage.stage_name, locale)} <HelpTip text={stageConceptDefinition(stage.stage_name, locale)} /></h3>
-              <div className="stage-meta">
-                <span>
-                  {number(stage.open_count)} {tr(locale, "open", "abiertos")}
-                </span>
-                <span>
-                  {number(stage.open_8_plus_days)} {tr(locale, "with 8+ days", "con 8+ días")}
-                </span>
-              </div>
-            </Link>
-          ))}
+        <div className="kpi-grid ghl-support-grid">
+          <KpiCard icon={CalendarDays} label="School Tours Hoy" locale={locale} value={number(payload.today.school_tours_today)} helper="Citas GHL no canceladas" />
+          <KpiCard icon={CalendarDays} label="Pasadías Hoy" locale={locale} value={number(payload.today.trial_days_today)} helper="Calendario Pasadía" />
+          <KpiCard icon={stageMapReady ? CircleCheckBig : DatabaseZap} label="Stage IDs V2" locale={locale} value={`${payload.stage_map.resolved_stage_ids}/${payload.stage_map.expected_stage_rows}`} helper={stageMapReady ? "Mapeo resuelto" : "Ejecuta Full Reconciliation V3"} />
         </div>
       </section>
 
-      <DashboardCharts
-        daily={data.daily}
-        rangeLabel={range.label}
-        locale={locale}
-      />
-
-      <div className="two-column">
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">
-                Cohort · {range.label}
-              </p>
-              <h2>{tr(locale, "Performance by Raw Source · GHL Only", "Rendimiento por Source Crudo · Solo GHL")} <HelpTip text={conceptDefinition("raw_source", locale)} /></h2>
-            </div>
-          </div>
-
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>{tr(locale, "Source", "Source")} <HelpTip text={conceptDefinition("raw_source", locale)} /></th>
-                  <th>{tr(locale, "New Leads", "Leads Totales")}</th>
-                  <th>{tr(locale, "School Tours Booked", "ST Booked")}</th>
-                  <th>{tr(locale, "School Tours Attended", "ST Attended")}</th>
-                  <th>{tr(locale, "Closed", "Inscritos / Closed")}</th>
-                  <th>{tr(locale, "Lead → Closed", "Lead → Closed")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.sources.map((row) => (
-                  <tr key={row.source ?? "no-source"}>
-                    <td>
-                      {row.source ?? tr(locale, "No Source", "Sin Source")}
-                      {["facebook", "instagram"].includes((row.source ?? "").trim().toLowerCase()) ? (
-                        <span className="source-ambiguity-badge">{tr(locale, "Ads/Organic unknown", "Ads/Orgánico sin definir")}</span>
-                      ) : null}
-                    </td>
-                    <td>{number(row.leads)}</td>
-                    <td>
-                      {number(row.tours_scheduled)}
-                    </td>
-                    <td>{number(row.tours_attended)}</td>
-                    <td>{number(row.enrolled)}</td>
-                    <td>
-                      {percent(row.lead_to_enrolled_pct)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">
-                Cohort · {range.label}
-              </p>
-              <h2>{tr(locale, "Performance by Advisor · GHL Only", "Rendimiento por Asesora · Solo GHL")}</h2>
-            </div>
-          </div>
-
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>{tr(locale, "Advisor", "Asesora")}</th>
-                  <th>{tr(locale, "New Leads", "Leads Totales")}</th>
-                  <th>{tr(locale, "School Tours Booked", "ST Booked")}</th>
-                  <th>{tr(locale, "School Tours Attended", "ST Attended")}</th>
-                  <th>{tr(locale, "Closed", "Inscritos / Closed")}</th>
-                  <th>{tr(locale, "Lead → Closed", "Lead → Closed")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.owners.map((row) => (
-                  <tr
-                    key={
-                      row.operational_owner ?? "unassigned"
-                    }
-                  >
-                    <td>
-                      {ownerLabel(
-                        row.operational_owner, locale,
-                      )}
-                    </td>
-                    <td>{number(row.leads)}</td>
-                    <td>
-                      {number(row.tours_scheduled)}
-                    </td>
-                    <td>{number(row.tours_attended)}</td>
-                    <td>{number(row.enrolled)}</td>
-                    <td>
-                      {percent(row.lead_to_enrolled_pct)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+      <div className="v2-two-cascades">
+        <V2CurrentStages title="Setter Pipeline" owner={payload.setter.owner} stages={payload.setter.current_stages} />
+        <V2CurrentStages title="Closer Pipeline" owner={payload.closer.owner} stages={payload.closer.current_stages} />
       </div>
 
-      <div className="two-column">
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">{range.label}</p>
-              <h2>{tr(locale, "Recorded Exits", "Salidas Registradas")}</h2>
-            </div>
+      <section className="panel v2-manual-check">
+        <div className="panel-heading compact-panel-heading">
+          <div>
+            <p className="eyebrow">RECONCILIACIÓN HUMANA</p>
+            <h2>Referencia EOD del periodo</h2>
           </div>
-
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>{tr(locale, "Exit", "Salida")}</th>
-                  <th>{tr(locale, "Previous Stage", "Stage Anterior")}</th>
-                  <th>{tr(locale, "Reason", "Motivo")}</th>
-                  <th>Leads</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.exits.map((row, index) => (
-                  <tr
-                    key={`${row.exit_type}-${row.exit_from_stage}-${index}`}
-                  >
-                    <td>{stageLabel(row.exit_type, locale)}</td>
-                    <td>
-                      {stageLabel(row.exit_from_stage, locale)}
-                    </td>
-                    <td>{row.exit_reason}</td>
-                    <td>
-                      {number(row.opportunity_count)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">
-                Cohort · {range.label}
-              </p>
-              <h2>{tr(locale, "Longest Current Inactivity", "Mayor Inactividad Actual")}</h2>
-            </div>
-            <AlertTriangle size={18} />
-          </div>
-
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Lead</th>
-                  <th>{tr(locale, "Current Stage", "Stage Actual")}</th>
-                  <th>{tr(locale, "Owner", "Asesora")}</th>
-                  <th>{tr(locale, "Days", "Días")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.stale.map((row) => (
-                  <tr key={row.ghl_opportunity_id}>
-                    <td>
-                      <Link
-                        href={`/leads/${encodeURIComponent(
-                          row.ghl_opportunity_id,
-                        )}`}
-                      >
-                        {row.opportunity_name}
-                      </Link>
-                    </td>
-                    <td>
-                      {stageLabel(row.current_stage, locale)}
-                    </td>
-                    <td>
-                      {ownerLabel(
-                        row.operational_owner, locale,
-                      )}
-                    </td>
-                    <td>
-                      {row.days_since_update ?? "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+          <p className="panel-note">No se suma ciegamente al sistema. Sirve para detectar rápidamente si una Pasadía/Closed fue reportada manualmente pero aún no llegó por GHL.</p>
+        </div>
+        <div className="v2-manual-grid">
+          <div><span>Tour Booked</span><strong>{number(payload.manual.tour_booked)}</strong></div>
+          <div><span>Tour Attended</span><strong>{number(payload.manual.tour_attended)}</strong></div>
+          <div><span>Pasadía Booked</span><strong>{number(payload.manual.trial_booked)}</strong></div>
+          <div><span>Pasadía Attended</span><strong>{number(payload.manual.trial_attended)}</strong></div>
+          <div><span>Closed</span><strong>{number(payload.manual.closed)}</strong></div>
+          <div><span>Días EOD</span><strong>{number(payload.manual.reported_days)}</strong></div>
+        </div>
+      </section>
     </DashboardLayout>
   );
 }

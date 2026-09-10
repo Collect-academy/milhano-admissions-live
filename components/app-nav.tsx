@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import type { Locale } from "@/lib/locale";
 
 const links = [
-  { href: "/", en: "Summary", es: "Resumen" },
+  { href: "/", en: "V2 Summary", es: "V2 Resumen" },
+  { href: "/legacy", en: "V1 Legacy", es: "V1 Legacy" },
   { href: "/pipeline", en: "Pipeline", es: "Pipeline" },
   { href: "/whatsapp", en: "WhatsApp", es: "WhatsApp" },
   { href: "/llamadas", en: "Calls", es: "Llamadas" },
