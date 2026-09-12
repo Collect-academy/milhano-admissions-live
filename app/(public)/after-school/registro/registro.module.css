@@ -24,7 +24,7 @@
 }
 .count{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.count button{padding:12px;border:1px solid #d7cdca;border-radius:10px;background:white;font-weight:900}
 .count button.on{background:#003c32;color:white}.student{border:1px solid #e1d8d5;border-radius:14px;padding:14px;margin-top:12px}
-.workshops{display:grid;grid-template-columns:1fr 1fr;gap:7px}.ws{display:flex;gap:6px;align-items:flex-start;font-size:11px;font-weight:700}
+.workshops{display:grid;grid-template-columns:1fr 1fr;gap:7px}.card .ws{display:flex;grid-template-columns:auto 1fr;gap:6px;align-items:flex-start;font-size:11px;font-weight:700;color:#315d4d}.card input[type="checkbox"]{width:16px;height:16px;padding:0;margin:0;accent-color:#003c32}
 .line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.15);font-size:13px}
 .total{display:flex;justify-content:space-between;align-items:end;margin:14px 0}.total strong{font-size:28px;color:#c89664}
 .btn{width:100%;padding:14px;border:0;border-radius:11px;background:#9b6836;color:white;font-weight:900;text-transform:uppercase;cursor:pointer}

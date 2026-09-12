@@ -45,6 +45,15 @@ function basicAuthFallback(request: NextRequest): NextResponse {
 }
 
 export async function proxy(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const isPublicAfterSchoolRoute =
+    pathname === "/after-school/registro" ||
+    pathname.startsWith("/api/after-school/register");
+
+  if (isPublicAfterSchoolRoute) {
+    return NextResponse.next();
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const publishableKey =
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
@@ -80,7 +89,6 @@ export async function proxy(request: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const hasSession = Boolean(data?.claims);
-  const pathname = request.nextUrl.pathname;
   const isLogin = pathname === "/login";
   const isPublicAuthRoute =
     isLogin || pathname.startsWith("/auth/");

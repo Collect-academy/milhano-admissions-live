@@ -17,7 +17,7 @@ export async function POST(req:NextRequest){
       allowed_grades:allowed.length?allowed:null
     }).select('id').single()
     if(error) throw error
-    revalidateTag('as26-sessions'); revalidateTag('as26-summary')
+    revalidateTag('as26-sessions', 'max'); revalidateTag('as26-summary', 'max')
     return NextResponse.json({ok:true,id:data.id})
   }catch(e:any){return NextResponse.json({ok:false,message:e?.message||'Could not create session'},{status:400})}
 }

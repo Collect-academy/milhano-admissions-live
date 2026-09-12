@@ -9,7 +9,7 @@ export async function PATCH(req:NextRequest){
       p_participant_id:b.participant_id,p_session_id:b.session_id,p_attended:!!b.attended,p_notes:b.notes||null
     })
     if(error) throw error
-    revalidateTag('as26-summary'); revalidateTag('as26-sessions')
+    revalidateTag('as26-summary', 'max'); revalidateTag('as26-sessions', 'max')
     return NextResponse.json(data)
   }catch(e:any){return NextResponse.json({ok:false,message:e?.message||'Attendance failed'},{status:400})}
 }

@@ -8,7 +8,7 @@ export async function POST(req:NextRequest){
     if(!b.participant_id) throw new Error('participant_id required')
     const {data,error}=await as26Admin().rpc('as26_auto_allocate_participant',{p_participant_id:b.participant_id})
     if(error) throw error
-    revalidateTag('as26-summary'); revalidateTag('as26-sessions')
+    revalidateTag('as26-summary', 'max'); revalidateTag('as26-sessions', 'max')
     return NextResponse.json(data)
   }catch(e:any){return NextResponse.json({ok:false,message:e?.message||'Allocation failed'},{status:400})}
 }

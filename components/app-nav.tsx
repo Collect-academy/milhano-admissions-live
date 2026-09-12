@@ -9,6 +9,7 @@ const links = [
   { href: "/", en: "V2 Summary", es: "V2 Resumen" },
   { href: "/legacy", en: "V1 Legacy", es: "V1 Legacy" },
   { href: "/pipeline", en: "Pipeline", es: "Pipeline" },
+  { href: "/after-school", en: "After School", es: "After School" },
   { href: "/whatsapp", en: "WhatsApp", es: "WhatsApp" },
   { href: "/llamadas", en: "Calls", es: "Llamadas" },
   { href: "/eod", en: "EOD", es: "EOD" },

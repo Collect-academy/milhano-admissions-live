@@ -1,27 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { as26Admin } from '@/lib/after-school/supabase-admin'
-import { revalidateTag } from 'next/cache'
+import { NextRequest, NextResponse, after } from "next/server";
+import { revalidateTag } from "next/cache";
 
-export const runtime='nodejs'
+import { as26Admin } from "@/lib/after-school/supabase-admin";
 
-export async function POST(req:NextRequest){
-  try{
-    const payload=await req.json()
-    const { data,error }=await as26Admin().rpc('as26_register_family',{p_payload:payload})
-    if(error) throw error
+export const runtime = "nodejs";
 
-    // GHL/n8n sync is intentionally decoupled from the UX.
-    // If AS26_N8N_SYNC_WEBHOOK is configured, notify it AFTER the DB commit.
-    const hook=process.env.AS26_N8N_SYNC_WEBHOOK
-    if(hook){
-      try{
-        await fetch(hook,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({registration_id:data.registration_id}),cache:'no-store'})
-      }catch{}
+export async function POST(req: NextRequest) {
+  try {
+    const payload = await req.json();
+    const { data, error } = await as26Admin().rpc("as26_register_family", {
+      p_payload: payload,
+    });
+
+    if (error) throw error;
+
+    const hook = process.env.AS26_N8N_SYNC_WEBHOOK;
+    if (hook && data?.registration_id) {
+      const registrationId = data.registration_id;
+      after(async () => {
+        try {
+          await fetch(hook, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ registration_id: registrationId }),
+            cache: "no-store",
+          });
+        } catch (error) {
+          console.error("AS26 n8n sync notification failed", error);
+        }
+      });
     }
 
-    revalidateTag('as26-summary')
-    return NextResponse.json(data,{status:201})
-  }catch(e:any){
-    return NextResponse.json({ok:false,message:e?.message||'Registration failed'},{status:400})
+    revalidateTag("as26-summary", "max");
+    return NextResponse.json(data, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { ok: false, message: error?.message || "Registration failed" },
+      { status: 400 },
+    );
   }
 }
