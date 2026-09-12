@@ -1,0 +1,19 @@
+.wrap{min-height:100vh;background:#eadfdf;padding:20px;color:#292222;font-family:Montserrat,Arial,sans-serif}
+.shell{max-width:1020px;margin:auto}
+.head{display:flex;justify-content:space-between;align-items:center;background:white;border-radius:18px;padding:14px 18px}
+.logo{width:145px;height:auto}.tag{font-size:12px;font-weight:900;color:#326450;text-transform:uppercase;letter-spacing:.08em}
+.hero{padding:32px 4px 18px}.hero h1{margin:5px 0;color:#003c32;font-size:clamp(34px,5vw,54px);line-height:1}
+.hero p{max-width:720px;line-height:1.5}
+.grid{display:grid;grid-template-columns:1fr 320px;gap:18px}.card,.summary{background:white;border-radius:18px;padding:20px}
+.card{margin-bottom:14px}.summary{position:sticky;top:16px;background:#002832;color:white}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:11px}.full{grid-column:1/-1}
+label{display:grid;gap:5px;font-size:12px;font-weight:800;color:#315d4d}
+input,select{padding:11px;border:1px solid #dbd1cf;border-radius:10px;font:inherit}
+.count{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.count button{padding:12px;border:1px solid #d7cdca;border-radius:10px;background:white;font-weight:900}
+.count button.on{background:#003c32;color:white}.student{border:1px solid #e1d8d5;border-radius:14px;padding:14px;margin-top:12px}
+.workshops{display:grid;grid-template-columns:1fr 1fr;gap:7px}.ws{display:flex;gap:6px;align-items:flex-start;font-size:11px;font-weight:700}
+.line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.15);font-size:13px}
+.total{display:flex;justify-content:space-between;align-items:end;margin:14px 0}.total strong{font-size:28px;color:#c89664}
+.btn{width:100%;padding:14px;border:0;border-radius:11px;background:#9b6836;color:white;font-weight:900;text-transform:uppercase;cursor:pointer}
+.note{font-size:11px;opacity:.75;line-height:1.4;margin-top:10px}.ok,.err{padding:10px;border-radius:10px;margin-top:10px;font-size:12px}.ok{background:#dff1e8;color:#174b36}.err{background:#ffe7e5;color:#7d2925}
+@media(max-width:760px){.grid,.fields{grid-template-columns:1fr}.workshops{grid-template-columns:1fr}.summary{position:static}.full{grid-column:auto}}
