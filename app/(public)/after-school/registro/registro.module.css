@@ -7,8 +7,21 @@
 .grid{display:grid;grid-template-columns:1fr 320px;gap:18px}.card,.summary{background:white;border-radius:18px;padding:20px}
 .card{margin-bottom:14px}.summary{position:sticky;top:16px;background:#002832;color:white}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:11px}.full{grid-column:1/-1}
-label{display:grid;gap:5px;font-size:12px;font-weight:800;color:#315d4d}
-input,select{padding:11px;border:1px solid #dbd1cf;border-radius:10px;font:inherit}
+.card label{
+  display:grid;
+  gap:5px;
+  font-size:12px;
+  font-weight:800;
+  color:#315d4d;
+}
+
+.card input,
+.card select{
+  padding:11px;
+  border:1px solid #dbd1cf;
+  border-radius:10px;
+  font:inherit;
+}
 .count{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.count button{padding:12px;border:1px solid #d7cdca;border-radius:10px;background:white;font-weight:900}
 .count button.on{background:#003c32;color:white}.student{border:1px solid #e1d8d5;border-radius:14px;padding:14px;margin-top:12px}
 .workshops{display:grid;grid-template-columns:1fr 1fr;gap:7px}.ws{display:flex;gap:6px;align-items:flex-start;font-size:11px;font-weight:700}
