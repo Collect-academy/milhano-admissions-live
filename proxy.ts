@@ -48,7 +48,9 @@ export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicAfterSchoolRoute =
     pathname === "/after-school/registro" ||
-    pathname.startsWith("/api/after-school/register");
+    pathname === "/after-school/gracias" ||
+    pathname.startsWith("/api/after-school/register") ||
+    pathname.startsWith("/api/after-school/availability");
 
   if (isPublicAfterSchoolRoute) {
     return NextResponse.next();

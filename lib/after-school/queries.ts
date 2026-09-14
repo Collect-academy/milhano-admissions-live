@@ -63,3 +63,13 @@ export async function getWorkshops() {
   if (error) throw error
   return data ?? []
 }
+
+
+export async function getWorkshopAvailability() {
+  const { data, error } = await as26Admin()
+    .from('as26_workshop_availability')
+    .select('*')
+    .order('sort_order')
+  if (error) throw error
+  return data ?? []
+}

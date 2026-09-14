@@ -34,9 +34,11 @@ export async function POST(req: NextRequest) {
     revalidateTag("as26-summary", "max");
     return NextResponse.json(data, { status: 201 });
   } catch (error: any) {
+    const message = error?.message || "Registration failed";
+    const status = String(message).includes("WORKSHOP_FULL") ? 409 : 400;
     return NextResponse.json(
-      { ok: false, message: error?.message || "Registration failed" },
-      { status: 400 },
+      { ok: false, message },
+      { status },
     );
   }
 }
