@@ -1,0 +1,1059 @@
+{
+  "name": "MILHANO | 01 | Opportunities Full Reconciliation V4.1 | Exact GHL Pipelines",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        1040
+      ],
+      "id": "427b3069-51e6-42c8-bac0-e92c6209f716",
+      "name": "Execute Full Reconciliation"
+    },
+    {
+      "parameters": {
+        "jsCode": "const now = new Date();\nreturn [{\n  json: {\n    location_id: 'ZzRtp9n8n76ARy99VzJc',\n    supabase_url: 'https://mhfncmxlpwzyuupxjlxo.supabase.co',\n    ghl_api_version: 'v3',\n\n    legacy_pipeline_id: 'L9nSVkwjFsHN5WFDs3Aa',\n    legacy_pipeline_name: 'Antiguo Leads Milhano',\n\n    setter_pipeline_id: 'GYqHbZyWUxxc3K03efVT',\n    setter_pipeline_name: 'Leads Milhano (Setter pipeline)',\n\n    closer_pipeline_id: 'z1FEJfbtOHusjdwe40Ko',\n    closer_pipeline_name: 'Leads Milhano (Closer Pipeline)',\n\n    refresh_key: 'PASTE_SAME_VALUE_AS_MILHANO_N8N_REFRESH_KEY',\n    sync_started_at: now.toISOString(),\n    workflow_name: 'MILHANO | 01 | Opportunities Full Reconciliation V4.1 | Exact GHL Pipelines'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3072,
+        1040
+      ],
+      "id": "a5a8a945-6e23-4888-ae61-4d968102be46",
+      "name": "Config | MILHANO"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('Config | MILHANO').first().json.supabase_url + '/rest/v1/milhano_sync_runs?status=eq.running' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { status: 'failed', finished_at: $('Config | MILHANO').first().json.sync_started_at, error_message: 'Corrida anterior interrumpida antes de completar el upsert.' } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3696,
+        640
+      ],
+      "id": "3b4f0242-4571-4e85-854c-fe52b5af0d25",
+      "name": "Supabase | Close Previous Running Runs",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config | MILHANO').first().json.supabase_url + '/rest/v1/milhano_sync_runs' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { sync_type: 'full_reconciliation', status: 'running', started_at: $('Config | MILHANO').first().json.sync_started_at, details: { location_id: $('Config | MILHANO').first().json.location_id, workflow: $('Config | MILHANO').first().json.workflow_name } } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3520,
+        1040
+      ],
+      "id": "f0379a2b-8671-46c8-b965-2b2ae6cbba1e",
+      "name": "Supabase | Start Sync Run",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/opportunities/pipelines",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $('Config | MILHANO').first().json.location_id }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "={{ $('Config | MILHANO').first().json.ghl_api_version }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3760,
+        1040
+      ],
+      "id": "79dfb215-797e-45e8-9727-d54235f74639",
+      "name": "GHL | Get Pipelines",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\nconst config = $('Config | MILHANO').first().json;\n\nfunction extractPipelines(payload) {\n  if (Array.isArray(payload)) return payload;\n  if (Array.isArray(payload?.pipelines)) return payload.pipelines;\n  if (Array.isArray(payload?.data?.pipelines)) return payload.data.pipelines;\n  if (Array.isArray(payload?.data)) return payload.data;\n  if (Array.isArray(payload?.body?.pipelines)) return payload.body.pipelines;\n  return [];\n}\n\nconst pipelines = extractPipelines(response);\nif (!pipelines.length) throw new Error('GHL no devolvió pipelines.');\n\nfunction norm(v) {\n  return String(v ?? '')\n    .trim()\n    .toLocaleLowerCase('es')\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '');\n}\nfunction slug(v) {\n  return norm(v).replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');\n}\nfunction classify(name) {\n  const n = norm(name);\n  if (/lost|disqual|no fit|sin continuidad/.test(n)) return 'salida';\n  if (/nurtur|no answer|seguimiento|callback|cancel/.test(n)) return 'seguimiento';\n  if (/closed|inscrito/.test(n)) return 'resultado';\n  if (/qualified|fit|tour|pasadia|meaningful|atendido|asistida|agendada/.test(n)) return 'hito';\n  return 'entrada';\n}\nfunction positive(name) {\n  const n = norm(name);\n  return /qualified|fit|meaningful|tour booked|tour attended|pasadia booked|pasadia attended|school tour agendado|school tour atendido|pasadia agendada|pasadia asistida|closed|inscrito/.test(n);\n}\nfunction findPipeline(id) {\n  return pipelines.find(p => String(p?.id ?? p?._id ?? '') === String(id));\n}\n\nconst legacy = findPipeline(config.legacy_pipeline_id);\nconst setter = findPipeline(config.setter_pipeline_id);\nconst closer = findPipeline(config.closer_pipeline_id);\n\nif (!legacy || !setter || !closer) {\n  const available = pipelines\n    .map(p => `${p?.name ?? '(sin nombre)'} [${p?.id ?? p?._id ?? '(sin id)'}]`)\n    .join(' | ');\n  const missing = [\n    !legacy ? `Antiguo Leads Milhano [${config.legacy_pipeline_id}]` : null,\n    !setter ? `Leads Milhano (Setter pipeline) [${config.setter_pipeline_id}]` : null,\n    !closer ? `Leads Milhano (Closer Pipeline) [${config.closer_pipeline_id}]` : null,\n  ].filter(Boolean).join(', ');\n  throw new Error(`No se resolvieron: ${missing}. GHL devolvió: ${available}`);\n}\n\nfunction build(role, pipeline) {\n  const stage_map = {};\n  const stages = Array.isArray(pipeline?.stages)\n    ? pipeline.stages\n    : Array.isArray(pipeline?.pipelineStages)\n      ? pipeline.pipelineStages\n      : [];\n\n  const stage_catalog_rows = stages.map((stage, index) => {\n    const stageName = String(stage?.name ?? '').trim();\n    const stageId = String(stage?.id ?? stage?._id ?? '').trim();\n    if (stageId) stage_map[stageId] = stageName;\n\n    return {\n      pipeline_id: String(pipeline.id ?? pipeline._id),\n      pipeline_name: String(pipeline.name ?? ''),\n      pipeline_role: role,\n      stage_id: stageId || null,\n      stage_name: stageName,\n      canonical_key: `${role}_${slug(stageName)}`,\n      display_order: Number(stage.position ?? stage.order ?? ((index + 1) * 10)),\n      stage_group: classify(stageName),\n      is_positive_milestone: positive(stageName),\n      updated_at: new Date().toISOString(),\n    };\n  });\n\n  return { pipeline, stage_map, stage_catalog_rows };\n}\n\nconst resolved = {\n  legacy: build('legacy', legacy),\n  setter: build('setter', setter),\n  closer: build('closer', closer),\n};\n\nconst startItems = $('Supabase | Start Sync Run').all();\nlet syncRunId = null;\nfor (const item of startItems) {\n  const v = item.json;\n  if (v?.id) syncRunId = v.id;\n  if (Array.isArray(v) && v[0]?.id) syncRunId = v[0].id;\n  if (v?.data?.id) syncRunId = v.data.id;\n  if (Array.isArray(v?.data) && v.data[0]?.id) syncRunId = v.data[0].id;\n}\nif (!syncRunId) throw new Error('No se recuperó milhano_sync_runs.id.');\n\nreturn [{\n  json: {\n    sync_run_id: syncRunId,\n\n    legacy_pipeline: resolved.legacy.pipeline,\n    legacy_stage_map: resolved.legacy.stage_map,\n\n    setter_pipeline: resolved.setter.pipeline,\n    setter_stage_map: resolved.setter.stage_map,\n\n    closer_pipeline: resolved.closer.pipeline,\n    closer_stage_map: resolved.closer.stage_map,\n\n    stage_catalog_rows: [\n      ...resolved.legacy.stage_catalog_rows,\n      ...resolved.setter.stage_catalog_rows,\n      ...resolved.closer.stage_catalog_rows,\n    ],\n\n    resolved_pipeline_ids: {\n      legacy: String(legacy.id ?? legacy._id),\n      setter: String(setter.id ?? setter._id),\n      closer: String(closer.id ?? closer._id),\n    },\n\n    resolved_pipeline_names: {\n      legacy: String(legacy.name ?? ''),\n      setter: String(setter.name ?? ''),\n      closer: String(closer.name ?? ''),\n    },\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4000,
+        1040
+      ],
+      "id": "b65d98e0-45bf-41c0-a0d0-5d5c85c9cf88",
+      "name": "Resolve | Admissions Pipelines"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config | MILHANO').first().json.supabase_url + '/rest/v1/milhano_v2_stage_map?on_conflict=pipeline_id,stage_name' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Resolve | Admissions Pipelines').first().json.stage_catalog_rows }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4160,
+        1040
+      ],
+      "id": "d8fd5508-5f16-4ab7-8e66-44a09361d55f",
+      "name": "Supabase | Register V2 Stage IDs",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/opportunities/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $('Config | MILHANO').first().json.location_id }}"
+            },
+            {
+              "name": "pipelineId",
+              "value": "={{ $('Config | MILHANO').first().json.setter_pipeline_id }}"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "getCalendarEvents",
+              "value": "true"
+            },
+            {
+              "name": "status",
+              "value": "all"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "={{ $('Config | MILHANO').first().json.ghl_api_version }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "paginationMode": "responseContainsNextURL",
+              "nextURL": "={{ $response.body.meta?.nextPageUrl }}",
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.meta?.nextPageUrl }}",
+              "limitPagesFetched": true,
+              "requestInterval": 250
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4256,
+        1040
+      ],
+      "id": "38884be3-aae1-448c-8ffe-97ba35e83e39",
+      "name": "GHL | Search Setter Opportunities",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{ok:true,next:'setter'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4400,
+        1040
+      ],
+      "id": "70b46e4e-4b59-44a8-9930-3adc64560292",
+      "name": "Continue | Run Setter Search"
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/opportunities/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $('Config | MILHANO').first().json.location_id }}"
+            },
+            {
+              "name": "pipelineId",
+              "value": "={{ $('Config | MILHANO').first().json.closer_pipeline_id }}"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "getCalendarEvents",
+              "value": "true"
+            },
+            {
+              "name": "status",
+              "value": "all"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "={{ $('Config | MILHANO').first().json.ghl_api_version }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "paginationMode": "responseContainsNextURL",
+              "nextURL": "={{ $response.body.meta?.nextPageUrl }}",
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.meta?.nextPageUrl }}",
+              "limitPagesFetched": true,
+              "requestInterval": 250
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4460,
+        1240
+      ],
+      "id": "c388ab62-42b5-4c03-b14a-4e6fba04eaf9",
+      "name": "GHL | Search Closer Opportunities",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const selection=$('Resolve | Admissions Pipelines').first().json;\nconst config=$('Config | MILHANO').first().json;\nconst now=new Date().toISOString();\n\nconst advisorNames={\n  '77kxc0w2hMphBCnyl9Fe':'Cinthia Esquivel',\n  'LTJEPAdClnxPxUd2mRXp':'Pathi Carrillo'\n};\n\nfunction toIso(value){\n  if(value===null||value===undefined||value==='') return null;\n  let normalized=value;\n  if(typeof value==='number'&&value<100000000000) normalized=value*1000;\n  const d=new Date(normalized);\n  return Number.isNaN(d.getTime())?null:d.toISOString();\n}\nfunction clean(value){\n  if(value===null||value===undefined) return null;\n  const t=String(value).trim();\n  return t.length?t:null;\n}\nfunction extract(payload){\n  if(!payload) return [];\n  if(Array.isArray(payload)) return payload.flatMap(extract);\n  if(Array.isArray(payload.opportunities)) return payload.opportunities;\n  if(Array.isArray(payload.data?.opportunities)) return payload.data.opportunities;\n  if(Array.isArray(payload.body?.opportunities)) return payload.body.opportunities;\n  return [];\n}\nfunction normalizePages(nodeName,pipeline,stageMap,role){\n  return $(nodeName).all()\n    .flatMap(item=>extract(item.json))\n    .map(opp=>{\n      const id=clean(opp.id ?? opp._id ?? opp.opportunityId);\n      if(!id) return null;\n      const contact=opp.contact&&typeof opp.contact==='object'?opp.contact:{};\n      const contactId=clean(opp.contactId ?? opp.contact_id ?? contact.id ?? contact._id);\n      const assignedUserId=clean(opp.assignedTo ?? opp.assignedToId ?? opp.assignedUserId ?? opp.userId);\n      const stageId=clean(opp.pipelineStageId ?? opp.pipeline_stage_id ?? opp.stageId);\n      const createdAt=toIso(opp.dateAdded ?? opp.createdAt ?? opp.created_at);\n      const updatedAt=toIso(opp.dateUpdated ?? opp.updatedAt ?? opp.updated_at ?? opp.lastStatusChangeAt ?? createdAt);\n      const pipelineUpdatedAt=toIso(opp.lastStageChangeAt ?? opp.pipelineStageChangedAt ?? opp.stageChangedAt ?? updatedAt);\n      const liveLostReason=clean(opp.lostReason?.name ?? opp.lostReason?.label ?? (typeof opp.lostReason==='string'?opp.lostReason:null));\n      return {\n        ghl_opportunity_id:id,\n        ghl_contact_id:contactId,\n        pipeline_id:String(pipeline.id),\n        pipeline_name:String(pipeline.name),\n        pipeline_stage_id:stageId,\n        current_stage:clean(stageMap[stageId]) ?? clean(opp.pipelineStageName) ?? clean(opp.stageName),\n        status:clean(opp.status),\n        opportunity_name:clean(opp.name ?? opp.opportunityName),\n        contact_name:clean(contact.name ?? opp.contactName ?? [contact.firstName,contact.lastName].filter(Boolean).join(' ')),\n        phone:clean(contact.phone ?? opp.phone ?? opp.contactPhone),\n        email:clean(contact.email ?? opp.email ?? opp.contactEmail),\n        source:clean(opp.source ?? contact.source),\n        assigned_user:advisorNames[assignedUserId] ?? clean(opp.assignedToName) ?? assignedUserId,\n        created_at:createdAt,\n        updated_at:updatedAt,\n        location_id:config.location_id,\n        assigned_user_id:assignedUserId,\n        pipeline_updated_at:pipelineUpdatedAt,\n        ghl_lost_reason_id:clean(opp.lostReasonId),\n        live_lost_reason:liveLostReason,\n        ghl_custom_fields:Array.isArray(opp.customFields)?opp.customFields:[],\n        ghl_calendar_events:Array.isArray(opp.calendarEvents)?opp.calendarEvents:[],\n        last_truth_synced_at:now,\n        last_synced_at:now,\n        sync_source:'ghl_truth_reconciliation_v4',\n        truth_pipeline_role:role,\n      };\n    })\n    .filter(Boolean);\n}\n\nconst legacyRows=normalizePages('GHL | Search Legacy Opportunities',selection.legacy_pipeline,selection.legacy_stage_map??{},'legacy');\nconst setterRows=normalizePages('GHL | Search Setter Opportunities',selection.setter_pipeline,selection.setter_stage_map??{},'setter');\nconst closerRows=normalizePages('GHL | Search Closer Opportunities',selection.closer_pipeline,selection.closer_stage_map??{},'closer');\n\nconst deduped=new Map();\nfor(const row of [...legacyRows,...setterRows,...closerRows]){\n  const existing=deduped.get(row.ghl_opportunity_id);\n  if(!existing || String(row.updated_at??'')>=String(existing.updated_at??'')){\n    deduped.set(row.ghl_opportunity_id,row);\n  }\n}\nconst liveRows=[...deduped.values()];\nif(!liveRows.length) throw new Error('Los 3 pipelines no devolvieron opportunities.');\n\nreturn [{json:{\n  sync_run_id:selection.sync_run_id,\n  location_id:config.location_id,\n  pipeline_ids:[String(selection.legacy_pipeline.id),String(selection.setter_pipeline.id),String(selection.closer_pipeline.id)],\n  pipeline_names:[String(selection.legacy_pipeline.name),String(selection.setter_pipeline.name),String(selection.closer_pipeline.name)],\n  legacy_records:legacyRows.length,\n  setter_records:setterRows.length,\n  closer_records:closerRows.length,\n  records_read:liveRows.length,\n  live_rows:liveRows,\n  synced_at:now\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4528,
+        1040
+      ],
+      "id": "12c34f7a-b3dc-43cb-8385-141307e2aac1",
+      "name": "Normalize | 3 Pipeline Snapshot"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Config | MILHANO').first().json.supabase_url + '/rest/v1/milhano_opportunities?select=*&limit=10000' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Range",
+              "value": "0-9999"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4800,
+        1040
+      ],
+      "id": "817e4709-5317-4797-af0d-15b038458507",
+      "name": "Supabase | Get Existing Opportunities",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Config | MILHANO').first().json.supabase_url + '/rest/v1/milhano_contacts?select=*&limit=10000' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Range",
+              "value": "0-9999"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5056,
+        1040
+      ],
+      "id": "a036d774-7982-4236-a9d8-2896ba141e5d",
+      "name": "Supabase | Get Existing Contacts",
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const snapshot = $('Normalize | 3 Pipeline Snapshot').first().json;\n\nfunction rowsFromNode(nodeName, primaryKey) {\n  const result = [];\n\n  for (const item of $(nodeName).all()) {\n    const value = item.json;\n\n    if (Array.isArray(value)) {\n      result.push(...value);\n      continue;\n    }\n\n    if (Array.isArray(value?.data)) {\n      result.push(...value.data);\n      continue;\n    }\n\n    if (Array.isArray(value?.body)) {\n      result.push(...value.body);\n      continue;\n    }\n\n    if (value && value[primaryKey]) {\n      result.push(value);\n    }\n  }\n\n  return result;\n}\n\nfunction preferLive(liveValue, existingValue) {\n  return liveValue === null || liveValue === undefined || liveValue === ''\n    ? (existingValue ?? null)\n    : liveValue;\n}\n\nconst existingOpportunities = rowsFromNode(\n  'Supabase | Get Existing Opportunities',\n  'ghl_opportunity_id'\n);\n\nconst existingContacts = rowsFromNode(\n  'Supabase | Get Existing Contacts',\n  'ghl_contact_id'\n);\n\nconst existingOpportunityMap = new Map(\n  existingOpportunities.map((row) => [row.ghl_opportunity_id, row])\n);\n\nconst existingContactMap = new Map(\n  existingContacts.map((row) => [row.ghl_contact_id, row])\n);\n\nconst opportunityRows = [];\nconst contactCandidates = new Map();\nconst opportunitiesPerContact = new Map();\n\nfor (const live of snapshot.live_rows) {\n  const existing = existingOpportunityMap.get(live.ghl_opportunity_id);\n  const isNew = !existing;\n\n  const { live_lost_reason, truth_pipeline_role, ...liveDb } = live;\n  const merged = {\n    ...(existing ?? {}),\n    ...liveDb,\n\n    // Estos datos pueden venir vacíos en algunas respuestas de GHL.\n    contact_name: preferLive(live.contact_name, existing?.contact_name),\n    phone: preferLive(live.phone, existing?.phone),\n    email: preferLive(live.email, existing?.email),\n    source: preferLive(live.source, existing?.source),\n\n    // Nunca reemplazamos campos históricos reconstruidos.\n    legacy_lead_id: existing?.legacy_lead_id ?? null,\n    original_lead_date: existing?.original_lead_date ?? null,\n    student_name: existing?.student_name ?? null,\n    school_cycle: existing?.school_cycle ?? null,\n    level: existing?.level ?? null,\n    grade_interest: existing?.grade_interest ?? null,\n    priority: existing?.priority ?? null,\n    historical_advisor: existing?.historical_advisor ?? null,\n    admission_route: existing?.admission_route ?? null,\n    direct_admission_reason: existing?.direct_admission_reason ?? null,\n    no_fit_reason: existing?.no_fit_reason ?? null,\n    lost_reason: live.live_lost_reason ?? existing?.lost_reason ?? null,\n    historical_call_count: existing?.historical_call_count ?? null,\n    historical_comments: existing?.historical_comments ?? null,\n\n    // Campo NOT NULL: se conserva para migrados y sólo se crea para nuevos.\n    history_scope:\n      existing?.history_scope ??\n      (isNew ? 'live_from_ghl' : 'live_from_ghl'),\n\n    // Conservamos la procedencia de la semilla; los campos sync_* señalan lo live.\n    record_source:\n      existing?.record_source ??\n      'ghl_api_full_reconciliation',\n\n    synced_at: snapshot.synced_at,\n    last_synced_at: snapshot.synced_at,\n    sync_source: 'ghl_full_reconciliation'\n  };\n\n  opportunityRows.push(merged);\n\n  if (merged.ghl_contact_id) {\n    opportunitiesPerContact.set(\n      merged.ghl_contact_id,\n      (opportunitiesPerContact.get(merged.ghl_contact_id) ?? 0) + 1\n    );\n\n    const currentCandidate = contactCandidates.get(merged.ghl_contact_id) ?? {};\n    contactCandidates.set(merged.ghl_contact_id, {\n      ghl_contact_id: merged.ghl_contact_id,\n      contact_name: preferLive(merged.contact_name, currentCandidate.contact_name),\n      phone: preferLive(merged.phone, currentCandidate.phone),\n      email: preferLive(merged.email, currentCandidate.email),\n      latest_opportunity_updated_at:\n        !currentCandidate.latest_opportunity_updated_at ||\n        String(merged.updated_at ?? '') > String(currentCandidate.latest_opportunity_updated_at ?? '')\n          ? merged.updated_at\n          : currentCandidate.latest_opportunity_updated_at\n    });\n  }\n}\n\nconst contactRows = [];\n\nfor (const [contactId, candidate] of contactCandidates.entries()) {\n  const existing = existingContactMap.get(contactId);\n  const isNew = !existing;\n\n  contactRows.push({\n    ...(existing ?? {}),\n    ghl_contact_id: contactId,\n    contact_name: preferLive(candidate.contact_name, existing?.contact_name),\n    phone: preferLive(candidate.phone, existing?.phone),\n    email: preferLive(candidate.email, existing?.email),\n    opportunity_count:\n      existing?.opportunity_count ??\n      opportunitiesPerContact.get(contactId) ??\n      1,\n    first_seen_in_export:\n      existing?.first_seen_in_export ??\n      (isNew ? snapshot.synced_at : null),\n    last_seen_updated_at:\n      preferLive(\n        candidate.latest_opportunity_updated_at,\n        existing?.last_seen_updated_at\n      ),\n    record_source:\n      existing?.record_source ??\n      'ghl_api_full_reconciliation',\n    synced_at: snapshot.synced_at\n  });\n}\n\nif (opportunityRows.length !== snapshot.records_read) {\n  throw new Error(\n    `La conciliación preparó ${opportunityRows.length} filas, pero GHL reportó ${snapshot.records_read}.`\n  );\n}\n\nreturn [{\n  json: {\n    sync_run_id: snapshot.sync_run_id,\n    location_id: snapshot.location_id,\n    pipeline_ids: snapshot.pipeline_ids,\n    pipeline_names: snapshot.pipeline_names,\n    legacy_records: snapshot.legacy_records,\n    setter_records: snapshot.setter_records,\n    closer_records: snapshot.closer_records,\n    records_read: snapshot.records_read,\n    existing_opportunities: existingOpportunities.length,\n    new_opportunities:\n      opportunityRows.filter(\n        (row) => !existingOpportunityMap.has(row.ghl_opportunity_id)\n      ).length,\n    existing_contacts: existingContacts.length,\n    contacts_to_upsert: contactRows.length,\n    opportunity_rows: opportunityRows,\n    contact_rows: contactRows,\n    finished_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5312,
+        1040
+      ],
+      "id": "bfd0c13c-0987-4bfb-88f6-cbfd299bd7f9",
+      "name": "Merge | Preserve Historical Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config | MILHANO').first().json.supabase_url + '/rest/v1/milhano_contacts?on_conflict=ghl_contact_id&select=ghl_contact_id' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Merge | Preserve Historical Data').first().json.contact_rows }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5568,
+        1040
+      ],
+      "id": "f209305b-36b8-455a-aa82-c8f3c1923d97",
+      "name": "Supabase | Upsert Contacts",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config | MILHANO').first().json.supabase_url + '/rest/v1/milhano_opportunities?on_conflict=ghl_opportunity_id&select=ghl_opportunity_id' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Merge | Preserve Historical Data').first().json.opportunity_rows }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5840,
+        1040
+      ],
+      "id": "39485524-ab95-4377-a899-8e468ebc35e4",
+      "name": "Supabase | Upsert Opportunities",
+      "executeOnce": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const merged = $('Merge | Preserve Historical Data').first().json;\nfunction responseCount(nodeName) {\n  let count = 0;\n  for (const item of $(nodeName).all()) {\n    const value = item.json;\n    if (Array.isArray(value)) count += value.length;\n    else if (Array.isArray(value?.data)) count += value.data.length;\n    else if (value && Object.keys(value).length > 0) count += 1;\n  }\n  return count;\n}\nconst baseline = null;\nreturn [{ json: {\n  sync_run_id: merged.sync_run_id,\n  location_id: merged.location_id,\n  pipeline_ids: merged.pipeline_ids,\n  pipeline_names: merged.pipeline_names,\n  legacy_records: merged.legacy_records,\n  setter_records: merged.setter_records,\n  closer_records: merged.closer_records,\n  records_read: merged.records_read,\n  existing_opportunities: merged.existing_opportunities,\n  new_opportunities: merged.new_opportunities,\n  contacts_to_upsert: merged.contacts_to_upsert,\n  contacts_returned: responseCount('Supabase | Upsert Contacts'),\n  opportunities_returned: responseCount('Supabase | Upsert Opportunities'),\n  baseline_response: baseline,\n  finished_at: new Date().toISOString()\n} }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6096,
+        1040
+      ],
+      "id": "4e685921-f8a3-468e-8a5e-301b0747bc5a",
+      "name": "Build | Success Summary"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('Config | MILHANO').first().json.supabase_url + '/rest/v1/milhano_sync_runs?id=eq.' + $json.sync_run_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { status: 'success', records_read: $json.records_read, records_inserted: $json.new_opportunities, records_updated: $json.records_read - $json.new_opportunities, records_failed: 0, finished_at: $json.finished_at, details: { location_id: $json.location_id, pipeline_ids: $json.pipeline_ids, pipeline_names: $json.pipeline_names, setter_records: $json.setter_records, closer_records: $json.closer_records, existing_opportunities_before_sync: $json.existing_opportunities, new_opportunities: $json.new_opportunities, contacts_upserted: $json.contacts_to_upsert, opportunities_upserted: $json.records_read, baseline: $json.baseline_response } } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        6352,
+        1040
+      ],
+      "id": "d18e87cd-3109-4783-8c2d-49b977d2ab78",
+      "name": "Supabase | Complete Sync Run",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary=$('Build | Success Summary').first().json;\nreturn [{json:{\n  ok:true,\n  message:'Conciliación GHL completa: Legacy + Setter + Closer.',\n  pipelines:summary.pipeline_names,\n  legacy_opportunities:summary.legacy_records,\n  setter_opportunities:summary.setter_records,\n  closer_opportunities:summary.closer_records,\n  opportunities_read:summary.records_read,\n  opportunities_updated:summary.records_read-summary.new_opportunities,\n  opportunities_inserted:summary.new_opportunities,\n  contacts_upserted:summary.contacts_to_upsert,\n  sync_run_id:summary.sync_run_id,\n  finished_at:summary.finished_at\n}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6608,
+        1040
+      ],
+      "id": "6e82b7f8-1261-4dfd-9b45-24f1cff53f7b",
+      "name": "Result | Full Reconciliation"
+    },
+    {
+      "parameters": {
+        "content": "## MILHANO — Full Reconciliation V4.1 · Exact GHL Truth\n\nPipelines confirmed directly from GHL:\n- Antiguo Leads Milhano — `L9nSVkwjFsHN5WFDs3Aa`\n- Leads Milhano (Setter pipeline) — `GYqHbZyWUxxc3K03efVT`\n- Leads Milhano (Closer Pipeline) — `z1FEJfbtOHusjdwe40Ko`\n\nNo pipeline names or IDs are inferred.\n\nApply `MILHANO_V19_1_ADMISSIONS_TRUTH_SEPTEMBER_EXACT_PIPELINES.sql` before running this workflow.\n\nThis workflow intentionally does NOT use a `milhano_admissions_pipeline_registry` table.",
+        "height": 370,
+        "width": 700
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2848,
+        560
+      ],
+      "id": "06cb713e-19f0-4dd0-84db-9dbaa1292e26",
+      "name": "README | Truth V4.1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "milhano-opportunities-reconcile-v4",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        3200,
+        700
+      ],
+      "id": "1567d5c0-2b84-4268-947c-38e22f0188a1",
+      "name": "Webhook | Full Reconciliation V4",
+      "webhookId": "c0c00dc5-96c1-48eb-a220-e488d3a4bba0"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input=$input.first().json;\nconst expected='PASTE_SAME_VALUE_AS_MILHANO_N8N_REFRESH_KEY';\nconst supplied=String(input.query?.key ?? input.body?.key ?? '').trim();\nif(!expected || expected.startsWith('PASTE_')) throw new Error('Edita Validate | Reconciliation Key y pega la misma key de Vercel.');\nif(supplied!==expected) throw new Error('Reconciliation key inválida.');\nreturn [{json:{ok:true,requested_at:new Date().toISOString()}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3400,
+        700
+      ],
+      "id": "3b9da823-c5aa-4e6b-a3fa-43cc40a9bdb2",
+      "name": "Validate | Reconciliation Key"
+    },
+    {
+      "parameters": {
+        "url": "https://services.leadconnectorhq.com/opportunities/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "locationId",
+              "value": "={{ $('Config | MILHANO').first().json.location_id }}"
+            },
+            {
+              "name": "pipelineId",
+              "value": "={{ $('Resolve | Admissions Pipelines').first().json.legacy_pipeline.id }}"
+            },
+            {
+              "name": "limit",
+              "value": "100"
+            },
+            {
+              "name": "getCalendarEvents",
+              "value": "true"
+            },
+            {
+              "name": "status",
+              "value": "all"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "={{ $('Config | MILHANO').first().json.ghl_api_version }}"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "pagination": {
+            "pagination": {
+              "paginationMode": "responseContainsNextURL",
+              "nextURL": "={{ $response.body.meta?.nextPageUrl }}",
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ !$response.body.meta?.nextPageUrl }}",
+              "limitPagesFetched": true,
+              "requestInterval": 250
+            }
+          },
+          "timeout": 120000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4240,
+        820
+      ],
+      "id": "468edd91-4b91-4eca-88b4-ee2a45a25262",
+      "name": "GHL | Search Legacy Opportunities",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{ok:true,next:'closer'}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4480,
+        1060
+      ],
+      "id": "39af150b-c712-4999-aa1a-15f7b49249bb",
+      "name": "Continue | Run Closer Search"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute Full Reconciliation": {
+      "main": [
+        [
+          {
+            "node": "Config | MILHANO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config | MILHANO": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Start Sync Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Start Sync Run": {
+      "main": [
+        [
+          {
+            "node": "GHL | Get Pipelines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Get Pipelines": {
+      "main": [
+        [
+          {
+            "node": "Resolve | Admissions Pipelines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Register V2 Stage IDs": {
+      "main": [
+        [
+          {
+            "node": "GHL | Search Legacy Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Search Setter Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Continue | Run Closer Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Search Closer Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Normalize | 3 Pipeline Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Get Existing Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Get Existing Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Get Existing Contacts": {
+      "main": [
+        [
+          {
+            "node": "Merge | Preserve Historical Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge | Preserve Historical Data": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Upsert Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Upsert Contacts": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Upsert Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Upsert Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Build | Success Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build | Success Summary": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Complete Sync Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Complete Sync Run": {
+      "main": [
+        [
+          {
+            "node": "Result | Full Reconciliation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Close Previous Running Runs": {
+      "main": [
+        []
+      ]
+    },
+    "Resolve | Admissions Pipelines": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Register V2 Stage IDs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize | 3 Pipeline Snapshot": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Get Existing Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue | Run Setter Search": {
+      "main": [
+        [
+          {
+            "node": "GHL | Search Setter Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Search Legacy Opportunities": {
+      "main": [
+        [
+          {
+            "node": "Continue | Run Setter Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue | Run Closer Search": {
+      "main": [
+        [
+          {
+            "node": "GHL | Search Closer Opportunities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook | Full Reconciliation V4": {
+      "main": [
+        [
+          {
+            "node": "Validate | Reconciliation Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate | Reconciliation Key": {
+      "main": [
+        [
+          {
+            "node": "Config | MILHANO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "meta": {
+    "instanceId": "78e06ca99ecba4a6beed399bde7ce7c4355c1ebb2f45fc14c201b98f111c233d"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
