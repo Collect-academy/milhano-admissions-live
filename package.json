@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.10.0",
+    "@stripe/stripe-js": "^9.16.0",
+    "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "latest",
     "lucide-react": "latest",
     "next": "latest",
@@ -16,7 +19,7 @@
     "react-dom": "latest",
     "recharts": "latest",
     "server-only": "latest",
-    "@supabase/ssr": "^0.12.3"
+    "stripe": "^22.6.2"
   },
   "devDependencies": {
     "@types/node": "latest",
