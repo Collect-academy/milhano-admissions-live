@@ -62,28 +62,38 @@ export type LeadDetail = {
     phone: string | null;
     email: string | null;
     source: string | null;
+    pipeline_id: string | null;
+    pipeline_name: string | null;
+    pipeline_stage_id: string | null;
     current_stage: string | null;
     status: string | null;
     assigned_user: string | null;
-    historical_advisor: string | null;
+    assigned_user_id: string | null;
     grade_interest: string | null;
     level: string | null;
     priority: string | null;
-    original_lead_date: string | null;
     created_at: string | null;
     updated_at: string | null;
+    pipeline_updated_at: string | null;
+    lost_reason: string | null;
+    ghl_lost_reason_id: string | null;
     historical_comments: string | null;
+    last_truth_synced_at: string | null;
   };
-  schoolTour: {
-    scheduled_for: string | null;
-    attendance_status: string;
-    attended_at: string | null;
-    has_objection: boolean;
-    objection_summary: string | null;
-    school_tour_notes: string | null;
-    no_show_reason: string | null;
-    school_tour_updated_at: string | null;
-  };
+  appointments: Array<{
+    appointment_id: string;
+    appointment_type: string;
+    calendar_id: string;
+    calendar_name: string | null;
+    title: string | null;
+    appointment_status: string;
+    date_added: string | null;
+    date_updated: string | null;
+    start_time: string | null;
+    end_time: string | null;
+    address: string | null;
+    notes: string | null;
+  }>;
   stageEvents: Array<{
     event_id: string;
     from_stage: string | null;
@@ -92,17 +102,20 @@ export type LeadDetail = {
     event_source: string | null;
     note: string | null;
   }>;
-  calls: Array<{
+  recentActivity: Array<{
     event_id: string;
+    channel: string;
     direction: string;
+    message_type: string | null;
+    delivery_status: string | null;
     call_status: string | null;
     call_duration_seconds: number | null;
     is_connected_raw: boolean;
     is_meaningful_conversation: boolean;
+    is_meaningful_whatsapp: boolean;
     event_timestamp: string;
   }>;
 };
-
 function normalizeNumbers<T extends Record<string, unknown>>(
   rows: T[] | null,
 ): T[] {
@@ -229,92 +242,24 @@ export async function getLeadDetail(
   opportunityId: string,
 ): Promise<LeadDetail | null> {
   const supabase = createSupabaseAdmin();
+  const result = await supabase.rpc(
+    "milhano_get_admissions_lead_detail_v19",
+    { p_opportunity_id: opportunityId },
+  );
 
-  const [
-    opportunityResult,
-    tourResult,
-    stageResult,
-    callsResult,
-  ] = await Promise.all([
-    supabase
-      .from("milhano_opportunities")
-      .select(
-        "ghl_opportunity_id, ghl_contact_id, opportunity_name, contact_name, student_name, phone, email, source, current_stage, status, assigned_user, historical_advisor, grade_interest, level, priority, original_lead_date, created_at, updated_at, historical_comments",
-      )
-      .eq("ghl_opportunity_id", opportunityId)
-      .maybeSingle(),
-    supabase
-      .from("vw_milhano_school_tour_details")
-      .select(
-        "scheduled_for, attendance_status, attended_at, has_objection, objection_summary, school_tour_notes, no_show_reason, school_tour_updated_at",
-      )
-      .eq("ghl_opportunity_id", opportunityId)
-      .maybeSingle(),
-    supabase
-      .from("milhano_stage_events")
-      .select(
-        "event_id, from_stage, to_stage, event_timestamp, event_source, note",
-      )
-      .eq("ghl_opportunity_id", opportunityId)
-      .eq("is_valid", true)
-      .order("event_timestamp", { ascending: false })
-      .limit(100),
-    supabase
-      .from("milhano_communication_events")
-      .select(
-        "event_id, direction, call_status, call_duration_seconds, is_connected_raw, is_meaningful_conversation, event_timestamp",
-      )
-      .eq("ghl_opportunity_id", opportunityId)
-      .ilike("channel", "call")
-      .order("event_timestamp", { ascending: false })
-      .limit(50),
-  ]);
-
-  if (opportunityResult.error) {
+  if (result.error) {
     throw new Error(
-      `Unable to load the opportunity: ${opportunityResult.error.message}`,
+      `Unable to load GHL truth detail: ${result.error.message}`,
     );
   }
 
-  if (!opportunityResult.data) {
-    return null;
-  }
+  if (!result.data) return null;
 
-  if (tourResult.error) {
-    throw new Error(
-      `Unable to load School Tour details: ${tourResult.error.message}`,
-    );
-  }
-
-  if (stageResult.error) {
-    throw new Error(
-      `Unable to load stage history: ${stageResult.error.message}`,
-    );
-  }
-
-  if (callsResult.error) {
-    throw new Error(
-      `Unable to load call history: ${callsResult.error.message}`,
-    );
-  }
-
-  const tour = tourResult.data;
-
+  const payload = result.data as Record<string, unknown>;
   return {
-    opportunity: opportunityResult.data,
-    schoolTour: {
-      scheduled_for: tour?.scheduled_for ?? null,
-      attendance_status:
-        tour?.attendance_status ?? "unknown",
-      attended_at: tour?.attended_at ?? null,
-      has_objection: tour?.has_objection ?? false,
-      objection_summary: tour?.objection_summary ?? null,
-      school_tour_notes: tour?.school_tour_notes ?? null,
-      no_show_reason: tour?.no_show_reason ?? null,
-      school_tour_updated_at:
-        tour?.school_tour_updated_at ?? null,
-    },
-    stageEvents: stageResult.data ?? [],
-    calls: callsResult.data ?? [],
+    opportunity: payload.opportunity as LeadDetail["opportunity"],
+    appointments: (payload.appointments ?? []) as LeadDetail["appointments"],
+    stageEvents: (payload.stage_events ?? []) as LeadDetail["stageEvents"],
+    recentActivity: (payload.recent_activity ?? []) as LeadDetail["recentActivity"],
   };
 }

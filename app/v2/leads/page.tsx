@@ -44,20 +44,21 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
       <section className="panel">
         <div className="table-scroll">
           <table>
-            <thead><tr><th>Lead / alumno</th><th>Contacto</th><th>Owner actual</th><th>Pipeline</th><th>Stage actual</th><th>Source</th><th>Fecha lead</th></tr></thead>
+            <thead><tr><th>Lead / alumno</th><th>Contacto</th><th>Owner actual</th><th>Pipeline</th><th>Stage actual</th><th>Status</th><th>Source</th><th>Fecha lead</th></tr></thead>
             <tbody>
               {leads.map((lead) => (
                 <tr key={lead.ghl_opportunity_id}>
-                  <td><strong>{lead.lead_name}</strong></td>
+                  <td><Link className="table-primary-link" href={`/leads/${encodeURIComponent(lead.ghl_opportunity_id)}`}><strong>{lead.lead_name}</strong></Link></td>
                   <td>{lead.contact_name ?? "—"}</td>
                   <td>{lead.operational_owner ?? "—"}</td>
                   <td>{lead.current_pipeline_role ?? "—"}</td>
                   <td>{lead.current_stage ?? "—"}</td>
+                  <td>{lead.opportunity_status ?? "—"}{lead.lost_reason ? ` · ${lead.lost_reason}` : ""}</td>
                   <td>{lead.source ?? "—"}</td>
                   <td>{dateLabel(lead.lead_at.slice(0,10))}</td>
                 </tr>
               ))}
-              {!leads.length ? <tr><td colSpan={7}>Sin opportunities para este hito.</td></tr> : null}
+              {!leads.length ? <tr><td colSpan={8}>Sin opportunities para este hito.</td></tr> : null}
             </tbody>
           </table>
         </div>

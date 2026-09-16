@@ -138,8 +138,8 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       eyebrow="Milhano · Admissions V2"
       statusLabel={`${tr(locale, "Period", "Periodo")} ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
       subtitle={tr(locale,
-        "Current Setter + Closer operation with a unified admissions view.",
-        "Operación actual Setter + Closer con vista unificada de admisiones.")}
+        "GHL truth across the Legacy, Setter and Closer admissions pipelines.",
+        "Verdad de GHL en los pipelines Legacy, Setter y Closer de admisiones.")}
       title={tr(locale, "Admissions V2", "Admisiones V2")}
     >
       <div className="v2-toolbar">
@@ -148,8 +148,8 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       </div>
 
       <div className="v2-cutover-note">
-        <strong>V2 · operación actual.</strong>
-        <span>El histórico previo permanece en <Link href="/legacy">V1 · Legacy</Link>.</span>
+        <strong>Septiembre · GHL.</strong>
+        <span>El periodo usa la fecha de creación real de cada opportunity desde el 1 de septiembre.</span>
       </div>
 
       <DateRangeFilter basePath="/" range={range} locale={locale} />
@@ -158,7 +158,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         <div className="panel-heading compact-panel-heading">
           <div>
             <p className="eyebrow">INVENTARIO ACTUAL · GHL</p>
-            <h2>Opportunities en los pipelines V2</h2>
+            <h2>Opportunities del periodo en los 3 pipelines</h2>
           </div>
           {payload.inventory.unmapped_stage_opportunities > 0 ? (
             <p className="panel-note">{number(payload.inventory.unmapped_stage_opportunities)} opportunity(s) en stage sin mapear.</p>
@@ -166,11 +166,18 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         </div>
         <div className="kpi-grid v2-inventory-grid">
           <KpiCard
-            helper="Setter + Closer actuales"
+            helper="Legacy + Setter + Closer"
             icon={Layers3}
             label="Total Opportunities"
             locale={locale}
             value={number(payload.inventory.total_opportunities)}
+          />
+          <KpiCard
+            helper="Pipeline anterior · Leads Milhano"
+            icon={Layers3}
+            label="Legacy Pipeline"
+            locale={locale}
+            value={number(payload.inventory.legacy_opportunities)}
           />
           <KpiCard
             helper="Leads Milhano (Setter Pipeline)"

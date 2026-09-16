@@ -2,7 +2,7 @@ import "server-only";
 
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 
-export const ADMISSIONS_V2_CUTOVER = "2026-09-08";
+export const ADMISSIONS_V2_CUTOVER = "2026-09-01";
 
 export type V2CascadeMetric = {
   metric_key: string;
@@ -25,12 +25,14 @@ export type AdmissionsV2Payload = {
     cutover_date: string;
     effective_start: string;
     effective_end: string;
-    setter_pipeline_id: string;
-    closer_pipeline_id: string;
+    legacy_pipeline_id: string | null;
+    setter_pipeline_id: string | null;
+    closer_pipeline_id: string | null;
     pasadia_calendar_id: string;
   };
   inventory: {
     total_opportunities: number;
+    legacy_opportunities: number;
     setter_opportunities: number;
     closer_opportunities: number;
     open_opportunities: number;
@@ -85,7 +87,10 @@ export type AdmissionsV2Lead = {
   source: string | null;
   operational_owner: string | null;
   current_pipeline_role: string | null;
+  pipeline_name: string | null;
   current_stage: string | null;
+  opportunity_status: string | null;
+  lost_reason: string | null;
   lead_at: string;
 };
 
