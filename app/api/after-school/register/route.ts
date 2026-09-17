@@ -6,12 +6,41 @@ import { as26Admin } from "@/lib/after-school/supabase-admin";
 
 export const runtime = "nodejs";
 
+function normalizeWhatsappPhone(
+  raw: unknown,
+  dialCode: unknown,
+) {
+  const value = typeof raw === "string" ? raw.trim() : "";
+  const digits = value.replace(/\D/g, "");
+
+  if (!digits) return "";
+
+  if (value.startsWith("+")) {
+    return `+${digits}`;
+  }
+
+  if (value.startsWith("00")) {
+    return `+${digits.replace(/^00/, "")}`;
+  }
+
+  const dialDigits =
+    typeof dialCode === "string"
+      ? dialCode.replace(/\D/g, "")
+      : "52";
+
+  if (digits.startsWith(dialDigits) && digits.length > 10) {
+    return `+${digits}`;
+  }
+
+  return `+${dialDigits}${digits}`;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const payload = await req.json();
+    const incoming = await req.json();
 
-    const participants = Array.isArray(payload?.students)
-      ? payload.students.length
+    const participants = Array.isArray(incoming?.students)
+      ? incoming.students.length
       : 0;
 
     if (participants < 1 || participants > 4) {
@@ -20,6 +49,72 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+
+    const tutorName =
+      typeof incoming?.tutor?.name === "string"
+        ? incoming.tutor.name.trim()
+        : "";
+
+    const tutorEmail =
+      typeof incoming?.tutor?.email === "string"
+        ? incoming.tutor.email.trim().toLowerCase()
+        : "";
+
+    const tutorPhone = normalizeWhatsappPhone(
+      incoming?.tutor?.phone,
+      incoming?.tutor?.phone_dial_code,
+    );
+
+    const phoneDigits = tutorPhone.replace(/\D/g, "");
+
+    if (
+      !tutorName ||
+      !tutorEmail ||
+      phoneDigits.length < 7 ||
+      phoneDigits.length > 15
+    ) {
+      return NextResponse.json(
+        { ok: false, message: "Revisa los datos del tutor responsable." },
+        { status: 400 },
+      );
+    }
+
+    const students = incoming.students.map((student: any, index: number) => ({
+      ...student,
+      student_index: index + 1,
+      age: Number(student?.age),
+      workshop_ids: Array.isArray(student?.workshop_ids)
+        ? Array.from(
+            new Set(
+              student.workshop_ids
+                .filter((value: unknown) => typeof value === "string")
+                .map((value: string) => value.trim())
+                .filter(Boolean),
+            ),
+          )
+        : [],
+    }));
+
+    if (students.some((student: any) => student.workshop_ids.length === 0)) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Selecciona al menos un taller para cada alumno.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const payload = {
+      ...incoming,
+      tutor: {
+        ...incoming.tutor,
+        name: tutorName,
+        phone: tutorPhone,
+        email: tutorEmail,
+      },
+      students,
+    };
 
     const { data, error } = await as26Admin().rpc("as26_register_family", {
       p_payload: payload,
@@ -33,8 +128,10 @@ export async function POST(req: NextRequest) {
       throw new Error("No se recibió registration_id.");
     }
 
-    // Notificación inicial a n8n:
-    // el registro existe, pero todavía está pendiente de pago.
+    // Initial n8n notification. `ghl_contact` intentionally uses only
+    // GoHighLevel core Contact fields: name, phone and email.
+    // Extra fields are additive, so the existing workflow can continue
+    // consuming registration_id while the Upsert Tutor node is updated.
     const hook = process.env.AS26_N8N_SYNC_WEBHOOK;
 
     if (hook) {
@@ -45,6 +142,16 @@ export async function POST(req: NextRequest) {
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               registration_id: registrationId,
+              ghl_contact: {
+                name: tutorName,
+                phone: tutorPhone,
+                email: tutorEmail,
+              },
+              students: students.map((student: any) => ({
+                student_index: student.student_index,
+                name: student.name,
+                workshop_ids: student.workshop_ids,
+              })),
             }),
             cache: "no-store",
           });
@@ -98,10 +205,7 @@ export async function POST(req: NextRequest) {
           },
         ],
 
-        customer_email:
-          typeof payload?.tutor?.email === "string"
-            ? payload.tutor.email
-            : undefined,
+        customer_email: tutorEmail,
 
         client_reference_id: registrationId,
 
@@ -109,6 +213,7 @@ export async function POST(req: NextRequest) {
           registration_id: registrationId,
           source: "milhano_after_school_2026",
           participants: String(participants),
+          offer: "week_pass_all_workshops",
         },
 
         payment_intent_data: {
@@ -116,6 +221,7 @@ export async function POST(req: NextRequest) {
             registration_id: registrationId,
             source: "milhano_after_school_2026",
             participants: String(participants),
+            offer: "week_pass_all_workshops",
           },
         },
 

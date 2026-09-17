@@ -7,6 +7,10 @@ import {
   EmbeddedCheckoutProvider,
 } from '@stripe/react-stripe-js'
 
+import {
+  DEFAULT_PHONE_COUNTRY,
+  PHONE_COUNTRIES,
+} from '@/lib/after-school/phone-countries'
 import styles from './registro.module.css'
 
 type Workshop={
@@ -34,7 +38,7 @@ type Student={
   age:string
   grade_raw:string
   school:string
-  workshop_id:string
+  workshop_ids:string[]
 }
 
 const blank=():Student=>({
@@ -42,16 +46,52 @@ const blank=():Student=>({
   age:'',
   grade_raw:'',
   school:'',
-  workshop_id:''
+  workshop_ids:[]
 })
 
 const stripeKey=process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 const stripePromise=stripeKey ? loadStripe(stripeKey) : null
 
+function countryFlag(iso:string){
+  return iso
+    .toUpperCase()
+    .replace(/./g,char=>
+      String.fromCodePoint(127397+char.charCodeAt(0))
+    )
+}
+
+function phoneForSubmit(raw:string,dialCode:string){
+  const trimmed=raw.trim()
+  const digits=trimmed.replace(/\D/g,'')
+
+  if(!digits) return ''
+
+  if(trimmed.startsWith('+')){
+    return `+${digits}`
+  }
+
+  if(trimmed.startsWith('00')){
+    return `+${digits.replace(/^00/,'')}`
+  }
+
+  const dialDigits=dialCode.replace(/\D/g,'')
+
+  // Also accept a full international number pasted without the + sign.
+  if(
+    digits.startsWith(dialDigits)&&
+    digits.length>10
+  ){
+    return `+${digits}`
+  }
+
+  return `+${dialDigits}${digits}`
+}
+
 export default function RegistrationForm({embed=false}:{embed?:boolean}){
   const [count,setCount]=useState(1)
   const [students,setStudents]=useState<Student[]>([blank()])
   const [tutor,setTutor]=useState({name:'',phone:'',email:''})
+  const [phoneCountry,setPhoneCountry]=useState(DEFAULT_PHONE_COUNTRY)
   const [consent,setConsent]=useState(false)
   const [options,setOptions]=useState<Options|null>(null)
   const [loadingOptions,setLoadingOptions]=useState(true)
@@ -62,6 +102,11 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
 
   const price=options?.price_per_student_mxn??50
   const total=useMemo(()=>count*price,[count,price])
+
+  const selectedPhoneCountry=useMemo(
+    ()=>PHONE_COUNTRIES.find(c=>c.iso===phoneCountry)??PHONE_COUNTRIES[0],
+    [phoneCountry]
+  )
 
   const loadOptions=async()=>{
     setLoadingOptions(true)
@@ -85,12 +130,13 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
         (j.workshops||[]).map((w:Workshop)=>w.id)
       )
 
+      // If a workshop filled while the form was open, remove only that
+      // selection and keep the rest of the student's choices.
       setStudents(old=>
-        old.map(s=>
-          s.workshop_id&&!activeIds.has(s.workshop_id)
-            ? {...s,workshop_id:''}
-            : s
-        )
+        old.map(s=>({
+          ...s,
+          workshop_ids:s.workshop_ids.filter(id=>activeIds.has(id))
+        }))
       )
     }catch(e:any){
       setStatus({
@@ -122,17 +168,47 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
       old.map((s,k)=>k===i?{...s,...p}:s)
     )
 
-  const workshopName=(id:string)=>
-    options?.workshops.find(w=>w.id===id)?.name||
-    'Selecciona taller'
+  const toggleWorkshop=(studentIndex:number,workshopId:string)=>{
+    setStudents(old=>
+      old.map((student,index)=>{
+        if(index!==studentIndex) return student
+
+        const alreadySelected=student.workshop_ids.includes(workshopId)
+
+        return {
+          ...student,
+          workshop_ids:alreadySelected
+            ? student.workshop_ids.filter(id=>id!==workshopId)
+            : [...student.workshop_ids,workshopId]
+        }
+      })
+    )
+  }
+
+  const workshopNames=(ids:string[])=>{
+    if(!ids.length) return 'Selecciona talleres'
+
+    const names=ids
+      .map(id=>options?.workshops.find(w=>w.id===id)?.name)
+      .filter(Boolean)
+
+    return names.length
+      ? names.join(', ')
+      : 'Selecciona talleres'
+  }
 
   const submit=async()=>{
     setStatus(null)
 
+    const normalizedPhone=phoneForSubmit(
+      tutor.phone,
+      selectedPhoneCountry.dialCode
+    )
+
     if(
-      !tutor.name||
-      !tutor.email||
-      !tutor.phone||
+      !tutor.name.trim()||
+      !tutor.email.trim()||
+      !normalizedPhone||
       !consent
     ){
       return setStatus({
@@ -141,17 +217,26 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
       })
     }
 
+    const phoneDigits=normalizedPhone.replace(/\D/g,'')
+
+    if(phoneDigits.length<7||phoneDigits.length>15){
+      return setStatus({
+        type:'err',
+        msg:'Revisa el número de WhatsApp y su clave de país.'
+      })
+    }
+
     for(const s of students){
       if(
-        !s.name||
+        !s.name.trim()||
         !s.age||
         !s.grade_raw||
-        !s.school||
-        !s.workshop_id
+        !s.school.trim()||
+        s.workshop_ids.length===0
       ){
         return setStatus({
           type:'err',
-          msg:'Completa todos los datos y selecciona un taller para cada alumno.'
+          msg:'Completa todos los datos y selecciona al menos un taller para cada alumno.'
         })
       }
     }
@@ -162,7 +247,13 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
       const q=new URLSearchParams(location.search)
 
       const payload={
-        tutor,
+        tutor:{
+          name:tutor.name.trim(),
+          phone:normalizedPhone,
+          email:tutor.email.trim().toLowerCase(),
+          phone_country_code:selectedPhoneCountry.iso,
+          phone_dial_code:selectedPhoneCountry.dialCode,
+        },
         students:students.map((s,i)=>({
           ...s,
           student_index:i+1,
@@ -202,7 +293,7 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
           await loadOptions()
 
           throw new Error(
-            'Uno de los talleres acaba de llenar sus 20 lugares. Ya actualizamos las opciones; selecciona otro taller.'
+            'Uno de los talleres seleccionados acaba de llenar sus 20 lugares. Ya actualizamos las opciones; revisa la selección e inténtalo de nuevo.'
           )
         }
 
@@ -268,7 +359,7 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
               lineHeight:1.5
             }}
           >
-            {count} participante{count>1?'s':''} · Total: <b>${total} MXN</b>
+            {count} participante{count>1?'s':''} · Semana completa · Total: <b>${total} MXN</b>
           </p>
         </div>
 
@@ -313,16 +404,34 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
 
           <label>
             WhatsApp
-            <input
-              autoComplete="tel"
-              value={tutor.phone}
-              onChange={e=>
-                setTutor({
-                  ...tutor,
-                  phone:e.target.value
-                })
-              }
-            />
+            <div className={styles.phoneRow}>
+              <select
+                className={styles.countryPicker}
+                aria-label="Clave de país de WhatsApp"
+                value={phoneCountry}
+                onChange={e=>setPhoneCountry(e.target.value)}
+              >
+                {PHONE_COUNTRIES.map(country=>
+                  <option value={country.iso} key={country.iso}>
+                    {countryFlag(country.iso)} {country.name} {country.dialCode}
+                  </option>
+                )}
+              </select>
+
+              <input
+                className={styles.phoneInput}
+                autoComplete="tel"
+                inputMode="tel"
+                placeholder="999 123 4567"
+                value={tutor.phone}
+                onChange={e=>
+                  setTutor({
+                    ...tutor,
+                    phone:e.target.value
+                  })
+                }
+              />
+            </div>
           </label>
 
           <label>
@@ -346,8 +455,8 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
         <h2>2 · ¿Cuántos alumnos?</h2>
 
         <p className={styles.helper}>
-          Cada alumno reserva <b>un taller</b>.
-          Precio: <b>$50 MXN por alumno/taller</b>.
+          Cada alumno puede elegir <b>todos los talleres que quiera</b>.
+          El precio de <b>$50 MXN por alumno</b> incluye la <b>semana completa de talleres</b>.
         </p>
 
         <div className={styles.count}>
@@ -441,35 +550,40 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
                 />
               </label>
 
-              <label className={styles.full}>
-                Taller que desea probar
+              <fieldset className={`${styles.full} ${styles.workshopFieldset}`}>
+                <legend>Talleres que desea probar</legend>
 
-                <select
-                  value={s.workshop_id}
-                  onChange={e=>
-                    update(i,{
-                      workshop_id:e.target.value
-                    })
-                  }
-                  disabled={loadingOptions}
-                >
-                  <option value="">
-                    {loadingOptions
-                      ?'Consultando cupos…'
-                      :'Selecciona un taller'
-                    }
-                  </option>
+                <p className={styles.workshopHelper}>
+                  Marca todos los que le interesen. No hay límite de selección.
+                </p>
 
-                  {(options?.workshops||[]).map(w=>
-                    <option
-                      value={w.id}
-                      key={w.id}
-                    >
-                      {w.name} · {w.remaining} lugar{w.remaining===1?'':'es'} disponible{w.remaining===1?'':'s'}
-                    </option>
-                  )}
-                </select>
-              </label>
+                {loadingOptions
+                  ? <div className={styles.workshopLoading}>Consultando cupos…</div>
+                  : <div className={styles.workshopGrid}>
+                      {(options?.workshops||[]).map(w=>{
+                        const checked=s.workshop_ids.includes(w.id)
+
+                        return <label
+                          className={`${styles.workshopOption} ${checked?styles.workshopOptionOn:''}`}
+                          key={w.id}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={()=>toggleWorkshop(i,w.id)}
+                          />
+
+                          <span>
+                            <b>{w.name}</b>
+                            <small>
+                              {w.remaining} lugar{w.remaining===1?'':'es'} disponible{w.remaining===1?'':'s'}
+                            </small>
+                          </span>
+                        </label>
+                      })}
+                    </div>
+                }
+              </fieldset>
 
             </div>
           </div>
@@ -510,7 +624,7 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
             </b>
 
             <small>
-              {workshopName(s.workshop_id)}
+              {workshopNames(s.workshop_ids)}
             </small>
           </span>
 
@@ -544,7 +658,7 @@ export default function RegistrationForm({embed=false}:{embed?:boolean}){
       </button>
 
       <div className={styles.note}>
-        Cada pase corresponde a un taller de 2 horas por semana para un participante. El total se calcula automáticamente y no se puede editar.
+        Cada pase incluye acceso a todos los talleres de la semana para un participante. El total se calcula automáticamente y no se puede editar.
       </div>
 
       {status&&
