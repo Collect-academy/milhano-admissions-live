@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 
 import { resolveDateRange } from "@/lib/date-range";
 import { getPipelineOperationalData } from "@/lib/data";
+import { opportunityOperationalDate } from "@/lib/operational-date";
 import { stageLabel, ownerLabel } from "@/lib/terminology";
 import type { PipelineFilters } from "@/lib/types";
 
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
     "School Cycle",
     "Priority",
     "Original Lead Date",
+    "Operational Cycle",
     "Created",
     "Updated",
     "Days Since Update",
@@ -69,6 +71,7 @@ export async function GET(request: NextRequest) {
     row.school_cycle,
     row.priority,
     row.original_lead_date,
+    opportunityOperationalDate(row.created_at ?? row.original_lead_date),
     row.created_at,
     row.updated_at,
     row.days_since_update,

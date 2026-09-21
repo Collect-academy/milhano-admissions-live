@@ -6,6 +6,7 @@ import { dateRangeQuery, resolveDateRange, type DateRange } from "@/lib/date-ran
 import { dateLabel } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr } from "@/lib/locale";
+import { formatMeridaDateTime, opportunityOperationalDate } from "@/lib/operational-date";
 
 type SearchParams = Record<string, string | string[] | undefined>;
 type Scope = "general" | "setter" | "closer";
@@ -65,7 +66,8 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
                 <th>{tr(locale, "Current stage", "Stage actual")}</th>
                 <th>{tr(locale, "Status", "Estatus")}</th>
                 <th>Source</th>
-                <th>{tr(locale, "Lead date", "Fecha lead")}</th>
+                <th>{tr(locale, "Opportunity created (Mérida)", "Opportunity creada (Mérida)")}</th>
+                <th>{tr(locale, "Opportunity cycle", "Ciclo de opportunity")}</th>
               </tr>
             </thead>
             <tbody>
@@ -78,11 +80,12 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
                   <td>{lead.current_stage ?? "—"}</td>
                   <td>{lead.opportunity_status ?? "—"}{lead.lost_reason ? ` · ${lead.lost_reason}` : ""}</td>
                   <td>{lead.source ?? "—"}</td>
-                  <td>{dateLabel(lead.lead_at.slice(0,10))}</td>
+                  <td>{formatMeridaDateTime(lead.lead_at, locale)}</td>
+                  <td>{dateLabel(opportunityOperationalDate(lead.lead_at) ?? lead.lead_at.slice(0, 10))}</td>
                 </tr>
               ))}
               {!leads.length ? (
-                <tr><td colSpan={8}>{tr(locale, "No opportunities for this milestone.", "Sin opportunities para este hito.")}</td></tr>
+                <tr><td colSpan={9}>{tr(locale, "No opportunities for this milestone.", "Sin opportunities para este hito.")}</td></tr>
               ) : null}
             </tbody>
           </table>

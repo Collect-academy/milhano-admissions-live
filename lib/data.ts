@@ -2,8 +2,8 @@ import "server-only";
 
 import { canonicalAdvisorName } from "@/lib/identity";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
+import { opportunityInOperationalRange } from "@/lib/operational-date";
 import {
-  dateInRange,
   rangeEndExclusiveTimestamp,
   rangeStartTimestamp,
   type DateRange,
@@ -785,20 +785,7 @@ function pipelineDateInRange(
   value: string | null | undefined,
   range: DateRange,
 ): boolean {
-  if (!value) return false;
-
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return false;
-
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Merida",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(parsed);
-  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-  const localDate = `${map.year}-${map.month}-${map.day}`;
-  return localDate >= range.start && localDate <= range.end;
+  return opportunityInOperationalRange(value, range.start, range.end);
 }
 
 export async function getPipelineOperationalData(
@@ -813,9 +800,7 @@ export async function getPipelineOperationalData(
 
   const allRows = baseRows
     .filter((row) =>
-      row.original_lead_date
-        ? dateInRange(row.original_lead_date, range)
-        : pipelineDateInRange(row.created_at, range),
+      pipelineDateInRange(row.created_at ?? row.original_lead_date, range),
     )
     .map((row) => ({
       ...row,

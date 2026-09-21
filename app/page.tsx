@@ -102,7 +102,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         metrics={payload.general}
         metricTooltips={cascadeTooltips}
         range={range}
-        note={tr(locale, "Setter = entry-date cohort · Closer = real events in the selected period", "Setter = cohorte por fecha de entrada · Closer = eventos reales del periodo")}
+        note={tr(locale, "Setter = 2:30 PM Mérida operational cohort · Closer = real events in the selected period", "Setter = cohorte operativa con corte 2:30 p. m. Mérida · Closer = eventos reales del periodo")}
       />
       <div className="v2-two-cascades">
         <AdmissionsV2Cascade
@@ -196,8 +196,8 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       </div>
 
       <div className="v2-cutover-note">
-        <strong>Septiembre · GHL.</strong>
-        <span>El periodo usa la fecha de creación real de cada opportunity desde el 1 de septiembre.</span>
+        <strong>{tr(locale, "GHL truth · 2:30 PM operational cutoff", "Verdad GHL · corte operativo 2:30 p. m.")}</strong>
+        <span>{tr(locale, "Setter/New Lead cohorts use the opportunity creation timestamp in Mérida with a 2:30 PM cutoff. Friday after 2:30 PM, Saturday, Sunday and Monday before 2:30 PM report as Monday. Appointments and Closer events keep their real calendar date.", "Las cohortes Setter/New Lead usan el timestamp de creación en Mérida con corte a las 2:30 p. m. Viernes después de 2:30 p. m., sábado, domingo y lunes antes de 2:30 p. m. reportan como lunes. Las citas y eventos de Closer conservan su fecha calendario real.")}</span>
       </div>
 
       <DateRangeFilter basePath="/" range={range} locale={locale} />

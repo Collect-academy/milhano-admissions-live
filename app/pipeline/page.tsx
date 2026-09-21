@@ -11,9 +11,10 @@ import {
   resolveDateRange,
 } from "@/lib/date-range";
 import { getPipelineOperationalData } from "@/lib/data";
-import { number } from "@/lib/format";
+import { dateLabel, number } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr } from "@/lib/locale";
+import { opportunityOperationalDate } from "@/lib/operational-date";
 import { HelpTip } from "@/components/help-tip";
 import { conceptDefinition, stageConceptDefinition } from "@/lib/concepts";
 import {
@@ -101,6 +102,11 @@ export default async function PipelinePage({
       subtitle={tr(locale, "Search, filter and open lead-level details from the GHL replica.", "Busca, filtra y abre detalles de leads desde la réplica de GHL.")}
       statusLabel={`${number(data.totalFiltered)} ${tr(locale, "results", "resultados")} · ${range.label}`}
     >
+      <div className="v2-cutover-note">
+        <strong>{tr(locale, "Operational day · 2:30 PM cutoff", "Día operativo · corte 2:30 p. m.")}</strong>
+        <span>{tr(locale, "Opportunity creation is grouped by the Mérida operating cycle. Friday after 2:30 PM through Monday before 2:30 PM belongs to Monday. Appointment dates are not shifted.", "La creación de opportunities se agrupa por el ciclo operativo de Mérida. Viernes después de 2:30 p. m. hasta lunes antes de 2:30 p. m. pertenece al lunes. Las fechas de citas no se recorren.")}</span>
+      </div>
+
       <DateRangeFilter
         basePath="/pipeline"
         preserve={{
@@ -294,6 +300,7 @@ export default async function PipelinePage({
                   <th>Source <HelpTip text={conceptDefinition("raw_source", locale)} /></th>
                   <th>{tr(locale, "Grade", "Grado")}</th>
                   <th>{tr(locale, "Phone", "Teléfono")}</th>
+                  <th>{tr(locale, "Operational Cycle", "Ciclo Operativo")}</th>
                   <th>{tr(locale, "Days Since Update", "Días Sin Actualizar")}</th>
                 </tr>
               </thead>
@@ -325,6 +332,7 @@ export default async function PipelinePage({
                     </td>
                     <td>{row.grade_interest ?? "—"}</td>
                     <td>{row.phone ?? "—"}</td>
+                    <td>{dateLabel(opportunityOperationalDate(row.created_at ?? row.original_lead_date))}</td>
                     <td>{row.days_since_update ?? "—"}</td>
                   </tr>
                 ))}
