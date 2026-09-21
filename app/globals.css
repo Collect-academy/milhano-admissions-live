@@ -5947,3 +5947,76 @@ html[data-theme="dark"] .student-note-item {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ==========================================================
+   V20 · Stage cascade + async closer cues
+========================================================== */
+
+.v2-kpi-card-async {
+  border-color: rgba(187, 139, 47, 0.34);
+  background: var(--gold-soft);
+}
+
+.v2-kpi-card-async .v2-kpi-icon {
+  background: rgba(187, 139, 47, 0.15);
+  color: var(--gold);
+}
+
+.v2-kpi-card-closed {
+  border-color: rgba(23, 107, 82, 0.3);
+  background: var(--green-soft);
+}
+
+.v2-info-scorecard-row {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 12px;
+}
+
+.v2-info-scorecard {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-width: min(100%, 330px);
+  border: 1px solid rgba(166, 76, 76, 0.24);
+  border-radius: 12px;
+  background: var(--red-soft);
+  padding: 9px 11px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.v2-info-scorecard:hover {
+  border-color: rgba(166, 76, 76, 0.42);
+}
+
+.v2-info-scorecard-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(166, 76, 76, 0.12);
+  color: var(--red);
+}
+
+.v2-info-scorecard > span:nth-child(2) {
+  display: grid;
+  gap: 2px;
+}
+
+.v2-info-scorecard strong {
+  font-size: 0.72rem;
+}
+
+.v2-info-scorecard small {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.v2-info-scorecard b {
+  font-size: 1.3rem;
+  letter-spacing: -0.04em;
+}

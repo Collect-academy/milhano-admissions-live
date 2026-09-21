@@ -19,6 +19,7 @@ const labels: Record<string,string> = {
   trial_days_booked: "Pasadía Booked",
   trial_days_showed: "Pasadía Attended",
   closed: "Closed",
+  disqualified: "Disqualified",
 };
 
 export default async function V2MetricLeadsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
@@ -28,16 +29,13 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
   const metric = Array.isArray(params.metric) ? params.metric[0] : params.metric ?? "new_leads";
   const rawScope = Array.isArray(params.scope) ? params.scope[0] : params.scope;
   const scope: Scope = rawScope === "setter" || rawScope === "closer" ? rawScope : "general";
-  const allLeads = await getAdmissionsV2MetricLeads(metric, range.start, range.end);
-  const leads = scope === "general"
-    ? allLeads
-    : allLeads.filter((lead) => lead.current_pipeline_role === scope);
+  const leads = await getAdmissionsV2MetricLeads(metric, scope, range.start, range.end);
 
   return (
     <DashboardLayout
       eyebrow={`Admissions V2 · ${scope === "general" ? "General" : scope === "setter" ? "Setter" : "Closer"}`}
       title={labels[metric] ?? metric}
-      subtitle="Opportunities actuales que cumplen este hito dentro del alcance seleccionado."
+      subtitle="Opportunities que cumplen este hito según la lógica de la cascada seleccionada."
       statusLabel={`${dateLabel(range.start)} – ${dateLabel(range.end)}`}
     >
       <div className="detail-actions"><Link className="secondary-button" href={`/?${dateRangeQuery(range)}`}>← Volver a V2</Link></div>

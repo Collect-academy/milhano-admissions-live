@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   Activity,
   CheckCircle2,
+  CircleX,
   ContactRound,
   MessageCircleReply,
   MessageSquareText,
@@ -26,6 +27,7 @@ const iconByMetric = {
   trial_days_booked: Route,
   trial_days_showed: School,
   closed: UserRoundCheck,
+  disqualified: CircleX,
 } as const;
 
 export function AdmissionsV2Cascade({
@@ -37,6 +39,7 @@ export function AdmissionsV2Cascade({
   compact = false,
   clickable = true,
   scope = "general",
+  infoMetric,
 }: {
   eyebrow: string;
   title: string;
@@ -46,6 +49,7 @@ export function AdmissionsV2Cascade({
   compact?: boolean;
   clickable?: boolean;
   scope?: "general" | "setter" | "closer";
+  infoMetric?: V2CascadeMetric & { helper?: string };
 }) {
   const query = dateRangeQuery(range);
 
@@ -62,6 +66,12 @@ export function AdmissionsV2Cascade({
       <div className="v2-funnel-flow">
         {metrics.map((metric, index) => {
           const Icon = iconByMetric[metric.metric_key as keyof typeof iconByMetric] ?? Activity;
+          const toneClass =
+            scope === "closer" && ["school_tours_attended", "trial_days_showed"].includes(metric.metric_key)
+              ? "v2-kpi-card-async"
+              : scope === "closer" && metric.metric_key === "closed"
+                ? "v2-kpi-card-closed"
+                : "";
           const body = (
             <>
               <div className="v2-kpi-topline">
@@ -77,18 +87,34 @@ export function AdmissionsV2Cascade({
             <div className="v2-funnel-step" key={metric.metric_key}>
               {clickable ? (
                 <Link
-                  className="v2-kpi-card"
+                  className={`v2-kpi-card ${toneClass}`}
                   href={`/v2/leads?metric=${encodeURIComponent(metric.metric_key)}&scope=${scope}&${query}`}
                 >
                   {body}
                 </Link>
               ) : (
-                <article className="v2-kpi-card v2-kpi-card-static">{body}</article>
+                <article className={`v2-kpi-card v2-kpi-card-static ${toneClass}`}>{body}</article>
               )}
             </div>
           );
         })}
       </div>
+
+      {infoMetric ? (
+        <div className="v2-info-scorecard-row">
+          <Link
+            className="v2-info-scorecard"
+            href={`/v2/leads?metric=${encodeURIComponent(infoMetric.metric_key)}&scope=${scope}&${query}`}
+          >
+            <span className="v2-info-scorecard-icon"><CircleX size={16} strokeWidth={1.9} /></span>
+            <span>
+              <strong>{infoMetric.label}</strong>
+              {infoMetric.helper ? <small>{infoMetric.helper}</small> : null}
+            </span>
+            <b>{number(infoMetric.value)}</b>
+          </Link>
+        </div>
+      ) : null}
     </section>
   );
 }

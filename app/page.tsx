@@ -80,6 +80,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         scope="general"
         metrics={payload.general}
         range={range}
+        note="Setter = cohorte por fecha de entrada · Closer = eventos reales del periodo"
       />
       <div className="v2-two-cascades">
         <AdmissionsV2Cascade
@@ -89,6 +90,12 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
           scope="setter"
           metrics={payload.setter.funnel}
           range={range}
+          infoMetric={{
+            metric_key: "disqualified",
+            label: "Disqualified",
+            value: payload.informational.disqualified,
+            helper: "Movidos a Disqualified en el periodo",
+          }}
         />
         <AdmissionsV2Cascade
           compact
@@ -97,6 +104,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
           scope="closer"
           metrics={payload.closer.funnel}
           range={range}
+          note="Booked = creación · Attended / Closed = fecha real del evento"
         />
       </div>
     </>
@@ -106,6 +114,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
     <>
       <AdmissionsV2Cascade
         clickable={false}
+        scope="general"
         eyebrow="GENERAL · MANUAL EOD"
         title="Cascada General"
         metrics={manualGeneral}
@@ -115,6 +124,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         <AdmissionsV2Cascade
           clickable={false}
           compact
+          scope="setter"
           eyebrow="SETTER · MANUAL EOD"
           title="Cascada Setter"
           metrics={manualSetter}
@@ -123,6 +133,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         <AdmissionsV2Cascade
           clickable={false}
           compact
+          scope="closer"
           eyebrow="CLOSER · MANUAL EOD"
           title="Cascada Closer"
           metrics={manualCloser}

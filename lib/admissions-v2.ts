@@ -39,6 +39,9 @@ export type AdmissionsV2Payload = {
     unmapped_stage_opportunities: number;
   };
   general: V2CascadeMetric[];
+  informational: {
+    disqualified: number;
+  };
   setter: {
     owner: string;
     pipeline_id: string;
@@ -141,13 +144,15 @@ export async function getAdmissionsV2Payload(
 
 export async function getAdmissionsV2MetricLeads(
   metricKey: string,
+  scope: "general" | "setter" | "closer",
   start: string,
   end: string,
 ): Promise<AdmissionsV2Lead[]> {
   const effective = clampV2Range(start, end);
   const supabase = createSupabaseAdmin();
-  const result = await supabase.rpc("milhano_get_v2_metric_leads", {
+  const result = await supabase.rpc("milhano_get_v2_metric_leads_scoped", {
     p_metric_key: metricKey,
+    p_scope: scope,
     p_start: effective.start,
     p_end: effective.end,
   });
