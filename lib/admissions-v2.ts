@@ -41,6 +41,16 @@ export type AdmissionsV2Payload = {
   general: V2CascadeMetric[];
   informational: {
     disqualified: number;
+    no_answer: number;
+  };
+  booking_breakdown: {
+    school_tours: { total: number; cohort: number; external: number };
+    trial_days: { total: number; cohort: number; external: number };
+  };
+  response_breakdown: {
+    total: number;
+    in_period: number;
+    after_period: number;
   };
   setter: {
     owner: string;

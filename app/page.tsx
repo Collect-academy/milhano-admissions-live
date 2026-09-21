@@ -72,39 +72,76 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
   const manualSetter = manualGeneral.slice(0, 5);
   const manualCloser = manualGeneral.slice(5);
 
+  const responseTooltip = tr(
+    locale,
+    `${payload.response_breakdown.total} from the selected cohort have responded: ${payload.response_breakdown.in_period} during the selected period and ${payload.response_breakdown.after_period} after it.`,
+    `${payload.response_breakdown.total} de la cohorte seleccionada ya respondieron: ${payload.response_breakdown.in_period} dentro del periodo y ${payload.response_breakdown.after_period} después del periodo.`,
+  );
+  const tourBookingTooltip = tr(
+    locale,
+    `${payload.booking_breakdown.school_tours.total} bookings created in the period: ${payload.booking_breakdown.school_tours.cohort} belong to leads created in the selected period and ${payload.booking_breakdown.school_tours.external} to leads created outside it.`,
+    `${payload.booking_breakdown.school_tours.total} bookings creados en el periodo: ${payload.booking_breakdown.school_tours.cohort} corresponden a leads creados en el periodo seleccionado y ${payload.booking_breakdown.school_tours.external} a leads creados fuera de él.`,
+  );
+  const trialBookingTooltip = tr(
+    locale,
+    `${payload.booking_breakdown.trial_days.total} bookings created in the period: ${payload.booking_breakdown.trial_days.cohort} belong to leads created in the selected period and ${payload.booking_breakdown.trial_days.external} to leads created outside it.`,
+    `${payload.booking_breakdown.trial_days.total} bookings creados en el periodo: ${payload.booking_breakdown.trial_days.cohort} corresponden a leads creados en el periodo seleccionado y ${payload.booking_breakdown.trial_days.external} a leads creados fuera de él.`,
+  );
+  const cascadeTooltips = {
+    responded_leads: responseTooltip,
+    school_tours_booked: tourBookingTooltip,
+    trial_days_booked: trialBookingTooltip,
+  };
+
   const automaticCascades = (
     <>
       <AdmissionsV2Cascade
         eyebrow="GENERAL · AUTO"
-        title="Cascada General"
+        title={tr(locale, "General Cascade", "Cascada General")}
         scope="general"
         metrics={payload.general}
+        metricTooltips={cascadeTooltips}
         range={range}
-        note="Setter = cohorte por fecha de entrada · Closer = eventos reales del periodo"
+        note={tr(locale, "Setter = entry-date cohort · Closer = real events in the selected period", "Setter = cohorte por fecha de entrada · Closer = eventos reales del periodo")}
       />
       <div className="v2-two-cascades">
         <AdmissionsV2Cascade
           compact
           eyebrow="SETTER · PATY"
-          title="Cascada Setter"
+          title={tr(locale, "Setter Cascade", "Cascada Setter")}
           scope="setter"
           metrics={payload.setter.funnel}
+          metricTooltips={{ responded_leads: responseTooltip }}
           range={range}
-          infoMetric={{
-            metric_key: "disqualified",
-            label: "Disqualified",
-            value: payload.informational.disqualified,
-            helper: "Movidos a Disqualified en el periodo",
-          }}
+          infoMetrics={[
+            {
+              metric_key: "no_answer",
+              label: "No Answer",
+              value: payload.informational.no_answer,
+              helper: tr(locale, "Contacted cohort currently in a No Answer stage", "Cohorte contactada actualmente en un stage de No Answer"),
+              tone: "warning",
+            },
+            {
+              metric_key: "disqualified",
+              label: tr(locale, "Disqualified", "Descalificados"),
+              value: payload.informational.disqualified,
+              helper: tr(locale, "Moved to Disqualified during the period", "Movidos a Disqualified en el periodo"),
+              tone: "danger",
+            },
+          ]}
         />
         <AdmissionsV2Cascade
           compact
           eyebrow="CLOSER · CINTHIA"
-          title="Cascada Closer"
+          title={tr(locale, "Closer Cascade", "Cascada Closer")}
           scope="closer"
           metrics={payload.closer.funnel}
+          metricTooltips={{
+            school_tours_booked: tourBookingTooltip,
+            trial_days_booked: trialBookingTooltip,
+          }}
           range={range}
-          note="Booked = creación · Attended / Closed = fecha real del evento"
+          note={tr(locale, "Booked = creation date · Attended / Closed = real event date", "Booked = creación · Attended / Closed = fecha real del evento")}
         />
       </div>
     </>

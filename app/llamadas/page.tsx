@@ -146,6 +146,22 @@ export default async function CallsPage({
         </div>
       </section>
 
+      {!selected.length ? (
+        <section className="scope-banner calls-data-diagnostic">
+          <Timer size={19} />
+          <div>
+            <strong>{tr(locale, "No call records were stored for this period", "No se almacenaron llamadas para este periodo")}</strong>
+            <span>
+              {data.latestCallAt
+                ? tr(locale,
+                    `Latest call currently stored: ${dateTimeLabel(data.latestCallAt)}. The calls sync reports ${data.syncStatus ?? "unknown"}${data.syncLastSuccessAt ? ` (last run ${dateTimeLabel(data.syncLastSuccessAt)})` : ""}.`,
+                    `Última llamada actualmente almacenada: ${dateTimeLabel(data.latestCallAt)}. El sync de llamadas reporta ${data.syncStatus ?? "desconocido"}${data.syncLastSuccessAt ? ` (última ejecución ${dateTimeLabel(data.syncLastSuccessAt)})` : ""}.`)
+                : tr(locale, "No call event is currently stored in Supabase.", "Actualmente no hay ningún evento de llamada almacenado en Supabase.")}
+            </span>
+          </div>
+        </section>
+      ) : null}
+
       <section className="kpi-grid">
         <KpiCard
           label={`${tr(locale, "Number of Dials", "Llamadas GHL")} · ${range.label}`}

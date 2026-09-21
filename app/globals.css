@@ -6020,3 +6020,61 @@ html[data-theme="dark"] .student-note-item {
   font-size: 1.3rem;
   letter-spacing: -0.04em;
 }
+
+/* ==========================================================
+   V20.3 · explanatory cascade cards
+========================================================== */
+
+.v2-info-scorecard-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.v2-info-scorecard-warning {
+  border-color: rgba(187, 139, 47, 0.32);
+  background: var(--gold-soft);
+}
+
+.v2-info-scorecard-warning:hover {
+  border-color: rgba(187, 139, 47, 0.5);
+}
+
+.v2-info-scorecard-warning .v2-info-scorecard-icon {
+  background: rgba(187, 139, 47, 0.14);
+  color: var(--gold);
+}
+
+.v2-info-scorecard-danger {
+  border-color: rgba(166, 76, 76, 0.24);
+  background: var(--red-soft);
+}
+
+.v2-info-scorecard-danger:hover {
+  border-color: rgba(166, 76, 76, 0.42);
+}
+
+.calls-data-diagnostic {
+  border-color: rgba(187, 139, 47, 0.34);
+  background: var(--gold-soft);
+}
+
+.v2-kpi-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+}
+
+.v2-kpi-tooltip-hint {
+  display: inline-grid;
+  width: 17px;
+  height: 17px;
+  flex: 0 0 17px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 0.58rem;
+  font-weight: 900;
+  cursor: help;
+}

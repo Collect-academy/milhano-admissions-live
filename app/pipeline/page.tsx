@@ -1,12 +1,10 @@
 import Link from "next/link";
-import { Download, Filter, Search, UsersRound } from "lucide-react";
+import { Download, Filter, Layers3, Search, UsersRound } from "lucide-react";
 
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DateRangeFilter } from "@/components/date-range-filter";
 import { EmptyState } from "@/components/empty-state";
 import { KpiCard } from "@/components/kpi-card";
-import { OperationalCascade } from "@/components/operational-cascade";
-import { getOperationalCascade } from "@/lib/cascade";
 import {
   dateRangeParams,
   dateRangeQuery,
@@ -38,6 +36,7 @@ function buildFilters(params: SearchParams): PipelineFilters {
     stage: first(params.stage),
     owner: first(params.owner),
     source: first(params.source),
+    pipeline: first(params.pipeline),
     status: first(params.status),
     inactivity: first(params.inactivity),
     range: first(params.range),
@@ -74,10 +73,7 @@ export default async function PipelinePage({
   const locale = await getDashboardLocale();
   const filters = buildFilters(params);
   const range = resolveDateRange(params);
-  const [data, cascade] = await Promise.all([
-    getPipelineOperationalData(filters, range),
-    getOperationalCascade(range),
-  ]);
+  const data = await getPipelineOperationalData(filters, range);
 
   const open = data.rows.filter(
     (row) => row.status.toLowerCase() === "open",
@@ -106,6 +102,7 @@ export default async function PipelinePage({
           stage: filters.stage,
           owner: filters.owner,
           source: filters.source,
+          pipeline: filters.pipeline,
           status: filters.status,
           inactivity: filters.inactivity,
         }}
@@ -113,34 +110,42 @@ export default async function PipelinePage({
         locale={locale}
       />
 
-      <OperationalCascade metrics={cascade} range={range} locale={locale} />
+      <section className="scope-banner">
+        <Layers3 size={19} />
+        <div>
+          <strong>
+            {tr(locale, "Pipeline scope", "Alcance de pipeline")}: {filters.pipeline || tr(locale, "All admissions pipelines", "Todos los pipelines de admisiones")}
+          </strong>
+          <span>{data.pipelines.length ? data.pipelines.join(" · ") : tr(locale, "No pipeline names found for the selected period.", "No se encontraron nombres de pipeline para el periodo seleccionado.")}</span>
+        </div>
+      </section>
 
       <section className="kpi-grid pipeline-kpi-grid">
         <KpiCard
-          label="Filtered Results"
+          label={tr(locale, "Filtered Results", "Resultados filtrados")}
           value={number(data.totalFiltered)}
-          helper={`${number(data.totalRows)} leads in ${range.label}`}
+          helper={`${number(data.totalRows)} ${tr(locale, "opportunities in", "opportunities en")} ${range.label}`}
           icon={Filter}
           locale={locale}
         />
         <KpiCard
-          label="Open on This Page"
+          label={tr(locale, "Open on This Page", "Abiertas en esta página")}
           value={number(open)}
-          helper="Current operational status"
+          helper={tr(locale, "Current operational status", "Estatus operativo actual")}
           icon={UsersRound}
           locale={locale}
         />
         <KpiCard
-          label="8+ Days on This Page"
+          label={tr(locale, "8+ Days on This Page", "8+ días en esta página")}
           value={number(stale)}
-          helper="No recent update"
+          helper={tr(locale, "No recent update", "Sin actualización reciente")}
           icon={Search}
           locale={locale}
         />
         <KpiCard
-          label="Unassigned on This Page"
+          label={tr(locale, "Unassigned on This Page", "Sin asignar en esta página")}
           value={number(unassigned)}
-          helper="Owner review required"
+          helper={tr(locale, "Owner review required", "Requiere revisar responsable")}
           icon={UsersRound}
           locale={locale}
         />
@@ -149,7 +154,7 @@ export default async function PipelinePage({
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Filters</p>
+            <p className="eyebrow">{tr(locale, "Filters", "Filtros")}</p>
             <h2>{tr(locale, "Find an Opportunity", "Buscar una Opportunity")}</h2>
           </div>
           <Link className="button-link" href={exportUrl}>
@@ -168,7 +173,7 @@ export default async function PipelinePage({
             <input
               defaultValue={filters.q ?? ""}
               name="q"
-              placeholder="Name, phone, email or student"
+              placeholder={tr(locale, "Name, phone, email or student", "Nombre, teléfono, email o alumno")}
             />
           </label>
 
@@ -180,6 +185,16 @@ export default async function PipelinePage({
                 <option key={value} value={value}>
                   {stageLabel(value, locale)}
                 </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="filter-field">
+            <span>Pipeline</span>
+            <select defaultValue={filters.pipeline ?? ""} name="pipeline">
+              <option value="">{tr(locale, "All Pipelines", "Todos los Pipelines")}</option>
+              {data.pipelines.map((value) => (
+                <option key={value} value={value}>{value}</option>
               ))}
             </select>
           </label>
@@ -266,6 +281,7 @@ export default async function PipelinePage({
               <thead>
                 <tr>
                   <th>Lead</th>
+                  <th>Pipeline</th>
                   <th>{tr(locale, "Current Stage", "Stage Actual")}</th>
                   <th>{tr(locale, "Status", "Estatus")}</th>
                   <th>{tr(locale, "Owner", "Asesora")}</th>
@@ -291,6 +307,7 @@ export default async function PipelinePage({
                         {row.email ?? row.opportunity_name}
                       </span>
                     </td>
+                    <td>{row.pipeline_name ?? "—"}</td>
                     <td>{stageLabel(row.current_stage, locale)} <HelpTip text={stageConceptDefinition(row.current_stage, locale)} /></td>
                     <td>{row.status}</td>
                     <td>{ownerLabel(row.operational_owner, locale)}</td>

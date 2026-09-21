@@ -244,6 +244,9 @@ export type CallsDashboardData = {
   daily: CallDaily[];
   byUser: CallDailyUser[];
   outcomes: CallOutcome[];
+  latestCallAt: string | null;
+  syncStatus: string | null;
+  syncLastSuccessAt: string | null;
 };
 
 export type EodData = {
@@ -261,6 +264,7 @@ export type PipelineOpportunity = {
   phone: string | null;
   email: string | null;
   source: string | null;
+  pipeline_name: string | null;
   current_stage: string;
   status: string;
   operational_owner: string;
@@ -280,6 +284,7 @@ export type PipelineFilters = {
   stage?: string;
   owner?: string;
   source?: string;
+  pipeline?: string;
   status?: string;
   inactivity?: string;
   range?: string;
@@ -298,6 +303,7 @@ export type PipelineOperationalData = {
   stages: string[];
   owners: string[];
   sources: string[];
+  pipelines: string[];
   statuses: string[];
   inactivityBuckets: string[];
 };

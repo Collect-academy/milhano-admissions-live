@@ -6,6 +6,7 @@ import {
   ContactRound,
   MessageCircleReply,
   MessageSquareText,
+  PhoneOff,
   Route,
   School,
   UserRoundCheck,
@@ -27,8 +28,14 @@ const iconByMetric = {
   trial_days_booked: Route,
   trial_days_showed: School,
   closed: UserRoundCheck,
+  no_answer: PhoneOff,
   disqualified: CircleX,
 } as const;
+
+type InfoMetric = V2CascadeMetric & {
+  helper?: string;
+  tone?: "warning" | "danger" | "neutral";
+};
 
 export function AdmissionsV2Cascade({
   eyebrow,
@@ -39,7 +46,8 @@ export function AdmissionsV2Cascade({
   compact = false,
   clickable = true,
   scope = "general",
-  infoMetric,
+  infoMetrics = [],
+  metricTooltips = {},
 }: {
   eyebrow: string;
   title: string;
@@ -49,7 +57,8 @@ export function AdmissionsV2Cascade({
   compact?: boolean;
   clickable?: boolean;
   scope?: "general" | "setter" | "closer";
-  infoMetric?: V2CascadeMetric & { helper?: string };
+  infoMetrics?: InfoMetric[];
+  metricTooltips?: Record<string, string | undefined>;
 }) {
   const query = dateRangeQuery(range);
 
@@ -72,21 +81,26 @@ export function AdmissionsV2Cascade({
               : scope === "closer" && metric.metric_key === "closed"
                 ? "v2-kpi-card-closed"
                 : "";
+          const tooltip = metricTooltips[metric.metric_key];
           const body = (
             <>
               <div className="v2-kpi-topline">
                 <span className="v2-step-number">{String(index + 1).padStart(2, "0")}</span>
                 <span className="v2-kpi-icon"><Icon size={16} strokeWidth={1.9} /></span>
               </div>
-              <p className="v2-kpi-label">{metric.label}</p>
+              <div className="v2-kpi-label-row">
+                <p className="v2-kpi-label">{metric.label}</p>
+                {tooltip ? <span aria-label={tooltip} className="v2-kpi-tooltip-hint" title={tooltip}>i</span> : null}
+              </div>
               <p className="v2-kpi-value">{number(metric.value)}</p>
             </>
           );
 
           return (
-            <div className="v2-funnel-step" key={metric.metric_key}>
+            <div className="v2-funnel-step" key={metric.metric_key} title={tooltip}>
               {clickable ? (
                 <Link
+                  aria-label={tooltip ? `${metric.label}. ${tooltip}` : metric.label}
                   className={`v2-kpi-card ${toneClass}`}
                   href={`/v2/leads?metric=${encodeURIComponent(metric.metric_key)}&scope=${scope}&${query}`}
                 >
@@ -100,19 +114,25 @@ export function AdmissionsV2Cascade({
         })}
       </div>
 
-      {infoMetric ? (
+      {infoMetrics.length ? (
         <div className="v2-info-scorecard-row">
-          <Link
-            className="v2-info-scorecard"
-            href={`/v2/leads?metric=${encodeURIComponent(infoMetric.metric_key)}&scope=${scope}&${query}`}
-          >
-            <span className="v2-info-scorecard-icon"><CircleX size={16} strokeWidth={1.9} /></span>
-            <span>
-              <strong>{infoMetric.label}</strong>
-              {infoMetric.helper ? <small>{infoMetric.helper}</small> : null}
-            </span>
-            <b>{number(infoMetric.value)}</b>
-          </Link>
+          {infoMetrics.map((infoMetric) => {
+            const InfoIcon = iconByMetric[infoMetric.metric_key as keyof typeof iconByMetric] ?? CircleX;
+            return (
+              <Link
+                className={`v2-info-scorecard v2-info-scorecard-${infoMetric.tone ?? "neutral"}`}
+                href={`/v2/leads?metric=${encodeURIComponent(infoMetric.metric_key)}&scope=${scope}&${query}`}
+                key={infoMetric.metric_key}
+              >
+                <span className="v2-info-scorecard-icon"><InfoIcon size={16} strokeWidth={1.9} /></span>
+                <span>
+                  <strong>{infoMetric.label}</strong>
+                  {infoMetric.helper ? <small>{infoMetric.helper}</small> : null}
+                </span>
+                <b>{number(infoMetric.value)}</b>
+              </Link>
+            );
+          })}
         </div>
       ) : null}
     </section>

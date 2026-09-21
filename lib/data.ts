@@ -1,7 +1,5 @@
 import "server-only";
 
-import { unstable_cache } from "next/cache";
-
 import { canonicalAdvisorName } from "@/lib/identity";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import {
@@ -570,7 +568,7 @@ export async function getCallsDashboardData(
 ): Promise<CallsDashboardData> {
   const supabase = createSupabaseAdmin();
 
-  const [dailyResult, byUserResult, outcomesResult] =
+  const [dailyResult, byUserResult, outcomesResult, latestCallResult, healthResult] =
     await Promise.all([
       supabase
         .from("vw_milhano_calls_daily")
@@ -594,11 +592,27 @@ export async function getCallsDashboardData(
         )
         .order("call_timestamp", { ascending: false })
         .limit(1000),
+      supabase
+        .from("milhano_communication_events")
+        .select("event_timestamp")
+        .eq("channel", "Call")
+        .order("event_timestamp", { ascending: false })
+        .limit(1),
+      supabase
+        .from("vw_milhano_system_health")
+        .select("status,last_success_at")
+        .eq("component_key", "calls_live")
+        .limit(1),
     ]);
 
   assertResult(dailyResult, "Unable to query daily calls");
   assertResult(byUserResult, "Unable to query calls by advisor");
   assertResult(outcomesResult, "Unable to query call outcomes");
+  assertResult(latestCallResult, "Unable to query latest call event");
+  assertResult(healthResult, "Unable to query calls sync health");
+
+  const latestCallRow = (latestCallResult.data ?? [])[0] as { event_timestamp?: string } | undefined;
+  const healthRow = (healthResult.data ?? [])[0] as { status?: string; last_success_at?: string } | undefined;
 
   return {
     daily: normalizeNumbers(
@@ -617,6 +631,9 @@ export async function getCallsDashboardData(
     outcomes: normalizeNumbers(
       outcomesResult.data,
     ) as unknown as CallOutcome[],
+    latestCallAt: latestCallRow?.event_timestamp ?? null,
+    syncStatus: healthRow?.status ?? null,
+    syncLastSuccessAt: healthRow?.last_success_at ?? null,
   };
 }
 
@@ -701,7 +718,7 @@ async function loadPipelineBaseRows(): Promise<PipelineOpportunity[]> {
   const result = await supabase
     .from("vw_milhano_pipeline_current")
     .select(
-      "ghl_opportunity_id, opportunity_name, contact_name, student_name, phone, email, source, current_stage, status, operational_owner, created_at, original_lead_date, updated_at, days_since_update, inactivity_bucket, grade_interest, level, school_cycle, priority",
+      "ghl_opportunity_id, opportunity_name, contact_name, student_name, phone, email, source, pipeline_name, current_stage, status, operational_owner, created_at, original_lead_date, updated_at, days_since_update, inactivity_bucket, grade_interest, level, school_cycle, priority",
     )
     .order("stage_display_order")
     .order("days_since_update", { ascending: false, nullsFirst: false })
@@ -711,23 +728,36 @@ async function loadPipelineBaseRows(): Promise<PipelineOpportunity[]> {
   return normalizeNumbers(result.data) as unknown as PipelineOpportunity[];
 }
 
-const cachedPipelineBaseRows = unstable_cache(
-  loadPipelineBaseRows,
-  ["milhano-pipeline-base-v17"],
-  { revalidate: 60 },
-);
+function pipelineDateInRange(
+  value: string | null | undefined,
+  range: DateRange,
+): boolean {
+  if (!value) return false;
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return false;
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Merida",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(parsed);
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const localDate = `${map.year}-${map.month}-${map.day}`;
+  return localDate >= range.start && localDate <= range.end;
+}
 
 export async function getPipelineOperationalData(
   filters: PipelineFilters,
   range: DateRange,
   paginate = true,
 ): Promise<PipelineOperationalData> {
-  const allRows = (await cachedPipelineBaseRows())
+  const allRows = (await loadPipelineBaseRows())
     .filter((row) =>
-      dateInRange(
-        row.original_lead_date || row.created_at,
-        range,
-      ),
+      row.original_lead_date
+        ? dateInRange(row.original_lead_date, range)
+        : pipelineDateInRange(row.created_at, range),
     )
     .map((row) => ({
       ...row,
@@ -740,6 +770,7 @@ export async function getPipelineOperationalData(
   const stage = normalizeFilter(filters.stage);
   const owner = normalizeFilter(filters.owner);
   const source = normalizeFilter(filters.source);
+  const pipeline = normalizeFilter(filters.pipeline);
   const status = normalizeFilter(filters.status);
   const inactivity = normalizeFilter(filters.inactivity);
 
@@ -761,6 +792,13 @@ export async function getPipelineOperationalData(
     if (
       source &&
       normalizeFilter(row.source ?? "Sin fuente") !== source
+    ) {
+      return false;
+    }
+
+    if (
+      pipeline &&
+      normalizeFilter(row.pipeline_name ?? "Sin pipeline") !== pipeline
     ) {
       return false;
     }
@@ -839,6 +877,9 @@ export async function getPipelineOperationalData(
     ),
     sources: uniqueSorted(
       allRows.map((row) => row.source ?? "Sin fuente"),
+    ),
+    pipelines: uniqueSorted(
+      allRows.map((row) => row.pipeline_name ?? "Sin pipeline"),
     ),
     statuses: uniqueSorted(
       allRows.map((row) => row.status),
