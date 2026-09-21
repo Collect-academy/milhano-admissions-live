@@ -25,6 +25,16 @@ export type StudentDirectoryRow = {
   form_4_status: StudentFormStatus;
 };
 
+export type StudentDirectoryFilters = {
+  level?: string;
+  grade?: string;
+};
+
+export type StudentDirectoryFilterOptions = {
+  levels: string[];
+  grades: string[];
+};
+
 export type StudentRow = {
   id: string;
   student_code: string | null;
@@ -125,7 +135,10 @@ export const requireStudentModuleContext = cache(async (): Promise<StudentModule
   };
 });
 
-export async function getStudentDirectory(query = ""): Promise<StudentDirectoryRow[]> {
+export async function getStudentDirectory(
+  query = "",
+  filters: StudentDirectoryFilters = {},
+): Promise<StudentDirectoryRow[]> {
   await requireStudentModuleContext();
   const supabase = await createSupabaseServerClient();
 
@@ -143,12 +156,54 @@ export async function getStudentDirectory(query = ""): Promise<StudentDirectoryR
     );
   }
 
+  const level = filters.level?.trim();
+  const grade = filters.grade?.trim();
+  if (level) request = request.eq("level", level);
+  if (grade) request = request.eq("grade", grade);
+
   const result = await request;
   if (result.error) {
     throw new Error(`No se pudo cargar el directorio de alumnos: ${result.error.message}`);
   }
 
   return (result.data ?? []) as StudentDirectoryRow[];
+}
+
+export async function getStudentDirectoryFilterOptions(): Promise<StudentDirectoryFilterOptions> {
+  await requireStudentModuleContext();
+  const supabase = await createSupabaseServerClient();
+  const result = await supabase
+    .from("vw_milhano_student_directory")
+    .select("level, grade")
+    .eq("is_active", true)
+    .limit(500);
+
+  if (result.error) {
+    throw new Error(`No se pudieron cargar los filtros de alumnos: ${result.error.message}`);
+  }
+
+  const optionRows = (result.data ?? []) as Array<{ level: string | null; grade: string | null }>;
+
+  const levels: string[] = [...new Set(
+    optionRows.map((row) => String(row.level ?? "").trim()).filter(Boolean),
+  )];
+  const levelOrder: Record<string, number> = {
+    primaria: 0,
+    secundaria: 1,
+    preparatoria: 2,
+    prepa: 2,
+  };
+  levels.sort((a, b) => {
+    const rankA = levelOrder[a.toLocaleLowerCase("es")] ?? 9;
+    const rankB = levelOrder[b.toLocaleLowerCase("es")] ?? 9;
+    return rankA - rankB || a.localeCompare(b, "es", { numeric: true });
+  });
+
+  const grades: string[] = [...new Set(
+    optionRows.map((row) => String(row.grade ?? "").trim()).filter(Boolean),
+  )].sort((a, b) => a.localeCompare(b, "es", { numeric: true }));
+
+  return { levels, grades };
 }
 
 export async function getStudent(studentId: string): Promise<StudentRow> {

@@ -6502,3 +6502,11 @@ where metric_key in (
   'trial_days_booked','trial_days_showed','closed'
 )
 order by display_order;
+
+-- V20.4 guard: Trial Day metrics must remain editable/visible in Manual EOD.
+begin;
+update public.milhano_eod_metric_catalog
+set is_active = true
+where metric_key in ('trial_days_booked','trial_days_showed')
+  and is_active is distinct from true;
+commit;

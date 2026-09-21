@@ -728,6 +728,35 @@ async function loadPipelineBaseRows(): Promise<PipelineOpportunity[]> {
   return normalizeNumbers(result.data) as unknown as PipelineOpportunity[];
 }
 
+async function loadPipelineStageOptions(): Promise<string[]> {
+  const supabase = createSupabaseAdmin();
+  const result = await supabase
+    .from("milhano_v2_stage_map")
+    .select("stage_name, pipeline_role, display_order")
+    .in("pipeline_role", ["setter", "closer", "legacy"]);
+
+  // Pipeline Detail must remain usable even if the canonical map cannot be read.
+  // In that unlikely case, the page falls back to stages present in the replica.
+  if (result.error) return [];
+
+  const roleOrder: Record<string, number> = { setter: 0, closer: 1, legacy: 2 };
+  const ordered = [...(result.data ?? [])].sort((a, b) => {
+    const roleDiff = (roleOrder[a.pipeline_role ?? ""] ?? 9) - (roleOrder[b.pipeline_role ?? ""] ?? 9);
+    if (roleDiff !== 0) return roleDiff;
+    return Number(a.display_order ?? 999) - Number(b.display_order ?? 999);
+  });
+
+  const seen = new Set<string>();
+  const stages: string[] = [];
+  for (const row of ordered) {
+    const value = String(row.stage_name ?? "").trim();
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    stages.push(value);
+  }
+  return stages;
+}
+
 function pipelineDateInRange(
   value: string | null | undefined,
   range: DateRange,
@@ -753,7 +782,12 @@ export async function getPipelineOperationalData(
   range: DateRange,
   paginate = true,
 ): Promise<PipelineOperationalData> {
-  const allRows = (await loadPipelineBaseRows())
+  const [baseRows, canonicalStages] = await Promise.all([
+    loadPipelineBaseRows(),
+    loadPipelineStageOptions(),
+  ]);
+
+  const allRows = baseRows
     .filter((row) =>
       row.original_lead_date
         ? dateInRange(row.original_lead_date, range)
@@ -869,9 +903,17 @@ export async function getPipelineOperationalData(
       ? PIPELINE_PAGE_SIZE
       : filteredRows.length,
     totalPages,
-    stages: uniqueSorted(
-      allRows.map((row) => row.current_stage),
-    ),
+    stages: (() => {
+      const canonicalSet = new Set(canonicalStages);
+      return [
+        ...canonicalStages,
+        ...uniqueSorted(
+          allRows
+            .map((row) => row.current_stage)
+            .filter((value) => !canonicalSet.has(value)),
+        ),
+      ];
+    })(),
     owners: uniqueSorted(
       allRows.map((row) => row.operational_owner),
     ),

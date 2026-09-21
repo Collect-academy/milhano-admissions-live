@@ -6,6 +6,8 @@ import { logout } from "@/app/login/actions";
 import { isSupabaseAuthConfigured } from "@/lib/auth";
 import { DisplayPreferences } from "@/components/display-preferences";
 import { requireStudentModuleContext } from "@/lib/student-records";
+import { getDashboardLocale } from "@/lib/i18n";
+import { tr } from "@/lib/locale";
 
 type Props = {
   eyebrow: string;
@@ -16,7 +18,10 @@ type Props = {
 };
 
 export async function StudentModuleLayout({ eyebrow, title, subtitle, statusLabel, children }: Props) {
-  const context = await requireStudentModuleContext();
+  const [context, locale] = await Promise.all([
+    requireStudentModuleContext(),
+    getDashboardLocale(),
+  ]);
   const individualAuth = isSupabaseAuthConfigured();
 
   return (
@@ -26,14 +31,14 @@ export async function StudentModuleLayout({ eyebrow, title, subtitle, statusLabe
           <span className="brand-mark">M</span>
           <div>
             <strong>Milhano</strong>
-            <span>Expediente escolar</span>
+            <span>{tr(locale, "School records", "Expediente escolar")}</span>
           </div>
         </div>
 
-        <nav className="app-nav" aria-label="Expediente escolar">
+        <nav className="app-nav" aria-label={tr(locale, "School records", "Expediente escolar")}>
           <Link className="nav-link nav-link-active" href="/alumnos">
             <UsersRound size={14} />
-            Alumnos
+            {tr(locale, "Students", "Alumnos")}
           </Link>
           {context.user.role === "admin" ? (
             <Link className="nav-link" href="/">
@@ -44,16 +49,16 @@ export async function StudentModuleLayout({ eyebrow, title, subtitle, statusLabe
         </nav>
 
         <div className="session-controls">
-          <DisplayPreferences locale="es" />
+          <DisplayPreferences locale={locale} />
           <div className="session-user">
             <strong>{context.user.displayName}</strong>
-            <span>Expediente escolar</span>
+            <span>{tr(locale, "School records", "Expediente escolar")}</span>
           </div>
           {individualAuth ? (
             <form action={logout}>
-              <button aria-label="Cerrar sesión" type="submit">
+              <button aria-label={tr(locale, "Sign out", "Cerrar sesión")} type="submit">
                 <LogOut size={16} />
-                Salir
+                {tr(locale, "Sign Out", "Salir")}
               </button>
             </form>
           ) : null}
@@ -77,8 +82,8 @@ export async function StudentModuleLayout({ eyebrow, title, subtitle, statusLabe
       {children}
 
       <footer className="footer student-footer">
-        <span>Milhano · Expediente escolar</span>
-        <span>Información resguardada en Supabase con permisos por formato.</span>
+        <span>Milhano · {tr(locale, "School records", "Expediente escolar")}</span>
+        <span>{tr(locale, "Information protected in Supabase with per-form permissions.", "Información resguardada en Supabase con permisos por formato.")}</span>
       </footer>
     </main>
   );

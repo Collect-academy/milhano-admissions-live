@@ -18,6 +18,21 @@ export const CASCADE_METRICS = [
 export type CascadeMetricKey = (typeof CASCADE_METRICS)[number]["key"];
 
 const STAGE_LABELS_EN: Record<string, string> = {
+  "New Lead": "New Lead",
+  "No answer - Day 1": "No answer - Day 1",
+  "No answer - Day 2": "No answer - Day 2",
+  "No answer - Day 3": "No answer - Day 3",
+  "Never Answered / Nurturing A": "Never Answered / Nurturing A",
+  "Meaningful Conversation": "Meaningful Conversation",
+  Callback: "Callback",
+  Disqualified: "Disqualified",
+  "Tour Booked": "Tour Booked",
+  "Tour Cancelled / No show - Nurturing B": "Tour Cancelled / No-show - Nurturing B",
+  "Tour Attended": "Tour Attended",
+  "Pasadia Booked": "Trial Day Booked",
+  "Pasadia Cancelled / No Show - Nurturing B": "Trial Day Cancelled / No-show - Nurturing B",
+  "Pasadia Attended": "Trial Day Attended",
+  "Closed / Enrolled": "Closed / Enrolled",
   "Cliente potencial": "New Lead",
   "No responde": "No Response",
   Seguimiento: "Follow-up",
@@ -37,6 +52,21 @@ const STAGE_LABELS_EN: Record<string, string> = {
 };
 
 const STAGE_LABELS_ES: Record<string, string> = {
+  "New Lead": "Lead nuevo",
+  "No answer - Day 1": "Sin respuesta - Día 1",
+  "No answer - Day 2": "Sin respuesta - Día 2",
+  "No answer - Day 3": "Sin respuesta - Día 3",
+  "Never Answered / Nurturing A": "Nunca respondió / Nurturing A",
+  "Meaningful Conversation": "Conversación significativa",
+  Callback: "Callback",
+  Disqualified: "Descalificado",
+  "Tour Booked": "School Tour agendado",
+  "Tour Cancelled / No show - Nurturing B": "School Tour cancelado / No-show - Nurturing B",
+  "Tour Attended": "School Tour asistido",
+  "Pasadia Booked": "Pasadía agendada",
+  "Pasadia Cancelled / No Show - Nurturing B": "Pasadía cancelada / No-show - Nurturing B",
+  "Pasadia Attended": "Pasadía asistida",
+  "Closed / Enrolled": "Inscrito / Closed",
   "Cliente potencial": "Lead nuevo",
   "No responde": "No responde",
   Seguimiento: "Seguimiento",
