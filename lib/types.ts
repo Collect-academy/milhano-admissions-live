@@ -293,6 +293,13 @@ export type PipelineFilters = {
   page?: number;
 };
 
+export type PipelineRole = "setter" | "closer" | "legacy";
+
+export type PipelineStageOption = {
+  value: string;
+  roles: PipelineRole[];
+};
+
 export type PipelineOperationalData = {
   rows: PipelineOpportunity[];
   totalFiltered: number;
@@ -300,7 +307,7 @@ export type PipelineOperationalData = {
   page: number;
   pageSize: number;
   totalPages: number;
-  stages: string[];
+  stages: PipelineStageOption[];
   owners: string[];
   sources: string[];
   pipelines: string[];

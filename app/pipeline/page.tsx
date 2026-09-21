@@ -20,7 +20,7 @@ import {
   ownerLabel,
   stageLabel,
 } from "@/lib/terminology";
-import type { PipelineFilters } from "@/lib/types";
+import type { PipelineFilters, PipelineRole } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +62,12 @@ function queryString(
 
   const query = params.toString();
   return query ? `?${query}` : "";
+}
+
+function pipelineRoleLabel(role: PipelineRole): string {
+  if (role === "setter") return "Setter";
+  if (role === "closer") return "Closer";
+  return "Legacy";
 }
 
 export default async function PipelinePage({
@@ -181,9 +187,9 @@ export default async function PipelinePage({
             <span>{tr(locale, "Current Stage", "Stage Actual")}</span>
             <select defaultValue={filters.stage ?? ""} name="stage">
               <option value="">{tr(locale, "All Stages", "Todos los Stages")}</option>
-              {data.stages.map((value) => (
-                <option key={value} value={value}>
-                  {stageLabel(value, locale)}
+              {data.stages.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {stageLabel(option.value, locale)} · {option.roles.map(pipelineRoleLabel).join(" / ")}
                 </option>
               ))}
             </select>

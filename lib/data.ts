@@ -24,6 +24,8 @@ import type {
   PipelineFilters,
   PipelineOperationalData,
   PipelineOpportunity,
+  PipelineRole,
+  PipelineStageOption,
   PipelineSummary,
   StaleOpportunity,
   SyncRun,
@@ -728,7 +730,22 @@ async function loadPipelineBaseRows(): Promise<PipelineOpportunity[]> {
   return normalizeNumbers(result.data) as unknown as PipelineOpportunity[];
 }
 
-async function loadPipelineStageOptions(): Promise<string[]> {
+const PIPELINE_ROLE_ORDER: Record<PipelineRole, number> = {
+  setter: 0,
+  closer: 1,
+  legacy: 2,
+};
+
+function pipelineRoleFromName(
+  pipelineName: string | null | undefined,
+): PipelineRole {
+  const value = pipelineName?.trim().toLocaleLowerCase("es") ?? "";
+  if (value.includes("setter")) return "setter";
+  if (value.includes("closer")) return "closer";
+  return "legacy";
+}
+
+async function loadPipelineStageOptions(): Promise<PipelineStageOption[]> {
   const supabase = createSupabaseAdmin();
   const result = await supabase
     .from("milhano_v2_stage_map")
@@ -739,22 +756,29 @@ async function loadPipelineStageOptions(): Promise<string[]> {
   // In that unlikely case, the page falls back to stages present in the replica.
   if (result.error) return [];
 
-  const roleOrder: Record<string, number> = { setter: 0, closer: 1, legacy: 2 };
   const ordered = [...(result.data ?? [])].sort((a, b) => {
-    const roleDiff = (roleOrder[a.pipeline_role ?? ""] ?? 9) - (roleOrder[b.pipeline_role ?? ""] ?? 9);
+    const leftRole = a.pipeline_role as PipelineRole;
+    const rightRole = b.pipeline_role as PipelineRole;
+    const roleDiff = (PIPELINE_ROLE_ORDER[leftRole] ?? 9) - (PIPELINE_ROLE_ORDER[rightRole] ?? 9);
     if (roleDiff !== 0) return roleDiff;
     return Number(a.display_order ?? 999) - Number(b.display_order ?? 999);
   });
 
-  const seen = new Set<string>();
-  const stages: string[] = [];
+  const stages = new Map<string, PipelineStageOption>();
   for (const row of ordered) {
     const value = String(row.stage_name ?? "").trim();
-    if (!value || seen.has(value)) continue;
-    seen.add(value);
-    stages.push(value);
+    const role = row.pipeline_role as PipelineRole;
+    if (!value || !(role in PIPELINE_ROLE_ORDER)) continue;
+
+    const existing = stages.get(value);
+    if (existing) {
+      if (!existing.roles.includes(role)) existing.roles.push(role);
+      continue;
+    }
+
+    stages.set(value, { value, roles: [role] });
   }
-  return stages;
+  return [...stages.values()];
 }
 
 function pipelineDateInRange(
@@ -782,7 +806,7 @@ export async function getPipelineOperationalData(
   range: DateRange,
   paginate = true,
 ): Promise<PipelineOperationalData> {
-  const [baseRows, canonicalStages] = await Promise.all([
+  const [baseRows, canonicalStageOptions] = await Promise.all([
     loadPipelineBaseRows(),
     loadPipelineStageOptions(),
   ]);
@@ -904,15 +928,32 @@ export async function getPipelineOperationalData(
       : filteredRows.length,
     totalPages,
     stages: (() => {
-      const canonicalSet = new Set(canonicalStages);
-      return [
-        ...canonicalStages,
-        ...uniqueSorted(
-          allRows
-            .map((row) => row.current_stage)
-            .filter((value) => !canonicalSet.has(value)),
+      const stageMap = new Map(
+        canonicalStageOptions.map((option) => [
+          option.value,
+          { ...option, roles: [...option.roles] },
+        ]),
+      );
+
+      for (const row of allRows) {
+        const value = row.current_stage?.trim();
+        if (!value) continue;
+
+        const role = pipelineRoleFromName(row.pipeline_name);
+        const existing = stageMap.get(value);
+        if (existing) {
+          if (!existing.roles.includes(role)) existing.roles.push(role);
+        } else {
+          stageMap.set(value, { value, roles: [role] });
+        }
+      }
+
+      return [...stageMap.values()].map((option) => ({
+        ...option,
+        roles: [...option.roles].sort(
+          (a, b) => PIPELINE_ROLE_ORDER[a] - PIPELINE_ROLE_ORDER[b],
         ),
-      ];
+      }));
     })(),
     owners: uniqueSorted(
       allRows.map((row) => row.operational_owner),

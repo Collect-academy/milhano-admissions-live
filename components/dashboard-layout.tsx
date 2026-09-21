@@ -51,9 +51,7 @@ export async function DashboardLayout({
         <AppNav locale={locale} showStudents={user.role === "admin"} />
         <div className="session-controls">
           <DisplayPreferences locale={locale} />
-          {user.username?.toLowerCase() !== "monacashflow" ? (
-            <LanguageToggle locale={locale} />
-          ) : null}
+          <LanguageToggle locale={locale} />
           <div className="session-user">
             <strong>{user.displayName}</strong>
             <span>{locale === "es" ? ({ advisor: "Asesora", admin: "Admin", viewer: "Dirección", student_staff: "Expediente escolar" } as const)[user.role] : roleLabels[user.role]}</span>
