@@ -23,6 +23,7 @@ export type StudentDirectoryRow = {
   form_2_status: StudentFormStatus;
   form_3_status: StudentFormStatus;
   form_4_status: StudentFormStatus;
+  form_5_status: StudentFormStatus;
 };
 
 export type StudentDirectoryFilters = {
@@ -117,6 +118,7 @@ export const requireStudentModuleContext = cache(async (): Promise<StudentModule
     form_2: defaultPermission("form_2"),
     form_3: defaultPermission("form_3"),
     form_4: defaultPermission("form_4"),
+    form_5: defaultPermission("form_5"),
   };
 
   for (const row of permissionsResult.data ?? []) {
@@ -144,7 +146,7 @@ export async function getStudentDirectory(
 
   let request = supabase
     .from("vw_milhano_student_directory")
-    .select("student_id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, photo_url, is_active, form_1_status, form_2_status, form_3_status, form_4_status")
+    .select("student_id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, photo_url, is_active, form_1_status, form_2_status, form_3_status, form_4_status, form_5_status")
     .eq("is_active", true)
     .order("full_name", { ascending: true })
     .limit(500);
@@ -228,7 +230,7 @@ export async function getStudentDirectoryRow(studentId: string): Promise<Student
   const supabase = await createSupabaseServerClient();
   const result = await supabase
     .from("vw_milhano_student_directory")
-    .select("student_id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, photo_url, is_active, form_1_status, form_2_status, form_3_status, form_4_status")
+    .select("student_id, student_code, first_name, last_name, full_name, level, grade, group_name, tutor_name, photo_url, is_active, form_1_status, form_2_status, form_3_status, form_4_status, form_5_status")
     .eq("student_id", studentId)
     .maybeSingle();
 
@@ -249,7 +251,9 @@ export async function getStudentFormRecords(
       ? "form_2"
       : definitionCode.startsWith("form_3")
         ? "form_3"
-        : "form_4";
+        : definitionCode.startsWith("form_4")
+          ? "form_4"
+          : "form_5";
 
   if (!context.permissions[formCode].can_view_content) return [];
 

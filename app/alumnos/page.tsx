@@ -143,6 +143,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                   <th>{tr(locale, "Form 2", "Formato 2")}</th>
                   <th>{tr(locale, "Form 3", "Formato 3")}</th>
                   <th>{tr(locale, "Form 4", "Formato 4")}</th>
+                  <th>{tr(locale, "Form 5", "Formato 5")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -165,6 +166,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Sea
                     <td>{formCell({ studentId: student.student_id, label: tr(locale, "Form 2", "Formato 2"), formCode: "form_2", status: student.form_2_status, canOpen: context.permissions.form_2.can_view_content, confidentialLabel })}</td>
                     <td>{formCell({ studentId: student.student_id, label: tr(locale, "Form 3", "Formato 3"), formCode: "form_3", status: student.form_3_status, canOpen: context.permissions.form_3.can_view_content, confidentialLabel })}</td>
                     <td>{formCell({ studentId: student.student_id, label: tr(locale, "Form 4", "Formato 4"), formCode: "form_4", status: student.form_4_status, canOpen: context.permissions.form_4.can_view_content, confidentialLabel })}</td>
+                    <td>{formCell({ studentId: student.student_id, label: tr(locale, "Form 5", "Formato 5"), formCode: "form_5", status: student.form_5_status, canOpen: context.permissions.form_5.can_view_content, confidentialLabel })}</td>
                   </tr>
                 ))}
               </tbody>

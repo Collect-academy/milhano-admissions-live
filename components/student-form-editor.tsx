@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, Cloud, LoaderCircle, Plus, Printer, Trash2, TriangleAlert } from "lucide-react";
 
 import { saveStudentFormRecord } from "@/app/alumnos/actions";
+import type { Locale } from "@/lib/locale";
 import { StudentPhotoUploader } from "@/components/student-photo-uploader";
 import {
   completionProgress,
@@ -24,6 +25,7 @@ type Props = {
   initialSavedAt?: string | null;
   canEdit: boolean;
   initialPhotoUrl?: string | null;
+  locale?: Locale;
 };
 
 function stringValue(value: StudentFieldValue | undefined): string {
@@ -67,6 +69,7 @@ export function StudentFormEditor({
   initialSavedAt,
   canEdit,
   initialPhotoUrl,
+  locale = "es",
 }: Props) {
   const [payload, setPayload] = useState<StudentPayload>(initialPayload);
   const [recordId, setRecordId] = useState<string | null>(initialRecordId);
@@ -195,14 +198,14 @@ export function StudentFormEditor({
       <article className="student-document">
         <div className="student-document-title print-only">
           <strong>Milhano</strong>
-          <h1>{definition.title}</h1>
+          <h1>{locale === "en" && definition.titleEn ? definition.titleEn : definition.title}</h1>
         </div>
 
         {definition.sections.map((section) => (
           <section className="student-form-section" key={section.title}>
             <div className="student-section-heading">
-              <h2>{section.title}</h2>
-              {section.description ? <p>{section.description}</p> : null}
+              <h2>{locale === "en" && section.titleEn ? section.titleEn : section.title}</h2>
+              {(locale === "en" && section.descriptionEn ? section.descriptionEn : section.description) ? <p>{locale === "en" && section.descriptionEn ? section.descriptionEn : section.description}</p> : null}
             </div>
 
             <div className="student-form-grid">
@@ -229,7 +232,7 @@ export function StudentFormEditor({
                   const selected = arrayValue(value);
                   return (
                     <fieldset className={`${classes} student-field-full`} key={field.key}>
-                      <legend>{field.label} <span className={filled ? "required-ok" : "required-missing"}>*</span></legend>
+                      <legend>{locale === "en" && field.labelEn ? field.labelEn : field.label} <span className={filled ? "required-ok" : "required-missing"}>*</span></legend>
                       <div className="student-checkbox-grid">
                         {(field.options ?? []).map((option) => (
                           <label key={option}>
@@ -252,7 +255,7 @@ export function StudentFormEditor({
                   return (
                     <div className={`${classes} student-field-full`} key={field.key}>
                       <div className="student-field-label-row">
-                        <span>{field.label} <span className={filled ? "required-ok" : "required-missing"}>*</span></span>
+                        <span>{locale === "en" && field.labelEn ? field.labelEn : field.label} <span className={filled ? "required-ok" : "required-missing"}>*</span></span>
                         {canEdit ? (
                           <button className="secondary-button no-print" onClick={() => addAbc(field.key)} type="button">
                             <Plus size={14} /> Agregar registro
@@ -283,7 +286,7 @@ export function StudentFormEditor({
 
                 return (
                   <label className={classes} key={field.key}>
-                    <span>{field.label} <span className={filled ? "required-ok" : "required-missing"}>*</span></span>
+                    <span>{locale === "en" && field.labelEn ? field.labelEn : field.label} <span className={filled ? "required-ok" : "required-missing"}>*</span></span>
                     {field.helper ? <small>{field.helper}</small> : null}
                     {field.type === "textarea" ? (
                       <textarea

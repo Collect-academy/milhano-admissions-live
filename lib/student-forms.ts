@@ -1,10 +1,11 @@
-export type StudentFormCode = "form_1" | "form_2" | "form_3" | "form_4";
+export type StudentFormCode = "form_1" | "form_2" | "form_3" | "form_4" | "form_5";
 export type StudentDefinitionCode =
   | "form_1_profile"
   | "form_2_observation"
   | "form_3_evaluation"
   | "form_4_piap"
-  | "form_4_review";
+  | "form_4_review"
+  | "form_5_interview";
 
 export type StudentFormStatus = "none" | "incomplete" | "complete";
 
@@ -32,6 +33,7 @@ export type StudentFieldType =
 export type StudentFormField = {
   key: string;
   label: string;
+  labelEn?: string;
   type: StudentFieldType;
   placeholder?: string;
   options?: string[];
@@ -43,7 +45,9 @@ export type StudentFormField = {
 
 export type StudentFormSection = {
   title: string;
+  titleEn?: string;
   description?: string;
+  descriptionEn?: string;
   fields: StudentFormField[];
 };
 
@@ -51,7 +55,9 @@ export type StudentFormDefinition = {
   code: StudentDefinitionCode;
   formCode: StudentFormCode;
   title: string;
+  titleEn?: string;
   shortTitle: string;
+  shortTitleEn?: string;
   confidential: boolean;
   multiple: boolean;
   sections: StudentFormSection[];
@@ -366,6 +372,67 @@ export const studentFormDefinitions: Record<StudentDefinitionCode, StudentFormDe
           { key: "decision", label: "Decisión posterior", type: "select", options: ["Objetivo alcanzado", "En progreso · Mantener", "Ajuste de estrategias", "Escalamiento"] },
           { key: "decision_notes", label: "Decisiones, ajustes y notas", type: "textarea" },
           { key: "next_review_date", label: "Próxima fecha de revisión", type: "date" },
+        ],
+      },
+    ],
+  },
+
+  form_5_interview: {
+    code: "form_5_interview",
+    formCode: "form_5",
+    title: "Entrevista del Alumno",
+    titleEn: "Student Interview",
+    shortTitle: "Formato 5",
+    shortTitleEn: "Form 5",
+    confidential: false,
+    multiple: true,
+    sections: [
+      {
+        title: "1. Tu forma de aprender y trabajar (Estilo de Aprendizaje y Dinámica)",
+        titleEn: "1. How you learn and work (Learning Style and Dynamics)",
+        description: "¿Cómo sientes que aprendes mejor y qué te ayuda a trabajar a tu gusto?",
+        descriptionEn: "How do you feel you learn best, and what helps you work comfortably?",
+        fields: [
+          { key: "learning_understanding", label: "1. ¿De qué manera sientes que entiendes más rápido los temas: cuando te los explican hablando, cuando ves dibujos y videos, ¿o cuando haces actividades prácticas y te mueves (kinestésico)?", labelEn: "1. How do you feel you understand topics more quickly: when they are explained verbally, when you see drawings and videos, or when you do hands-on activities and move around (kinesthetic)?", type: "textarea", span: "full" },
+          { key: "class_pace", label: "2. ¿Cómo te sientes con el tiempo de las clases? ¿Sientes que el ritmo de trabajo va muy rápido, muy lento o justo a tu medida?", labelEn: "2. How do you feel about the pace of classes? Does the work feel too fast, too slow, or just right for you?", type: "textarea", span: "full" },
+          { key: "work_preference", label: "3. ¿Cómo prefieres hacer tus tareas y actividades: tú solo/a, con un compañero/a o en un equipo pequeño?", labelEn: "3. How do you prefer to do your assignments and activities: by yourself, with a partner, or in a small group?", type: "textarea", span: "full" },
+          { key: "attention_distractors", label: "4. ¿Qué tan fácil o difícil te resulta mantener la atención en clase? ¿Hay cosas en el salón que te distraen con frecuencia?", labelEn: "4. How easy or difficult is it for you to stay focused in class? Are there things in the classroom that often distract you?", type: "textarea", span: "full" },
+          { key: "teacher_supports", label: "5. De las cosas que hace el maestro o maestra para explicarte (como dar indicaciones paso a paso o poner recordatorios en el pizarrón), ¿qué es lo que sientes que más te ayuda?", labelEn: "5. Of the things your teacher does to explain something to you (such as giving step-by-step instructions or putting reminders on the board), what do you feel helps you the most?", type: "textarea", span: "full" },
+        ],
+      },
+      {
+        title: "2. Tus emociones y cómo te sientes en la escuela (Perfil Socioemocional)",
+        titleEn: "2. Your emotions and how you feel at school (Socioemotional Profile)",
+        description: "¿Cómo te sientes contigo mismo/a y qué pasa cuando las cosas se ponen difíciles?",
+        descriptionEn: "How do you feel about yourself, and what happens when things get difficult?",
+        fields: [
+          { key: "academic_feelings", label: "6. ¿Cómo te sientes con tus calificaciones y tus trabajos escolares? ¿Hay alguna materia que sientas que te cuesta más trabajo o te preocupe?", labelEn: "6. How do you feel about your grades and schoolwork? Is there a subject that feels more difficult or worries you?", type: "textarea", span: "full" },
+          { key: "school_motivators", label: "7. ¿Qué actividades o temas te hacen sentir feliz, entusiasmado/a y con ganas de participar en la escuela?", labelEn: "7. What activities or topics make you feel happy, excited, and eager to participate at school?", type: "textarea", span: "full" },
+          { key: "mistake_reaction", label: "8. Cuando un ejercicio no te sale a la primera o te equivocas, ¿qué sientes en ese momento?", labelEn: "8. When you do not get an exercise right the first time or make a mistake, what do you feel in that moment?", type: "textarea", span: "full" },
+          { key: "school_stressors", label: "9. ¿Hay situaciones en el salón o en la escuela que te hagan sentir estresado/a, triste o molesto/a?", labelEn: "9. Are there situations in the classroom or at school that make you feel stressed, sad, or upset?", type: "textarea", span: "full" },
+          { key: "self_regulation", label: "10. Cuando te sientes abrumado/a, enojado/a o con mucha ansiedad, ¿qué cosas o actividades te ayudan a calmarte y volver a sentirte bien?", labelEn: "10. When you feel overwhelmed, angry, or very anxious, what things or activities help you calm down and feel better again?", type: "textarea", span: "full" },
+        ],
+      },
+      {
+        title: "3. Tus relaciones con los demás (Red de Relaciones y Entorno Social)",
+        titleEn: "3. Your relationships with others (Relationship Network and Social Environment)",
+        description: "¿Cómo te sientes al convivir con tus compañeros, maestros y familia?",
+        descriptionEn: "How do you feel when interacting with classmates, teachers, and family?",
+        fields: [
+          { key: "peer_integration", label: "11. ¿Cómo te sientes en el recreo y en los trabajos en equipo con tus compañeros? ¿Sientes que te integras con facilidad o prefieres estar solo/a?", labelEn: "11. How do you feel during recess and group work with your classmates? Do you feel you integrate easily, or do you prefer to be by yourself?", type: "textarea", span: "full" },
+          { key: "conflict_resolution", label: "12. Cuando surge algún problema o discusión con un compañero/a, ¿cómo te sientes para resolverlo?", labelEn: "12. When a problem or disagreement comes up with a classmate, how do you feel about resolving it?", type: "textarea", span: "full" },
+          { key: "teacher_trust", label: "13. ¿Cómo sientes la confianza y la relación con tus maestros? ¿Te sientes cómodo/a pidiéndoles ayuda cuando no entiendes algo o te sientes mal?", labelEn: "13. How do you feel about the trust and relationship you have with your teachers? Do you feel comfortable asking them for help when you do not understand something or do not feel well?", type: "textarea", span: "full" },
+          { key: "home_support", label: "14. ¿Cómo te sientes con el apoyo que recibes en casa para hacer tus tareas o estudiar?", labelEn: "14. How do you feel about the support you receive at home for homework or studying?", type: "textarea", span: "full" },
+        ],
+      },
+      {
+        title: "4. Salud y apoyos externos (Salud y Vinculación Externa)",
+        titleEn: "4. Health and external support (Health and External Coordination)",
+        description: "¿Cómo te sientes respecto a tus cuidados diarios o visitas a especialistas?",
+        descriptionEn: "How do you feel about your daily care or visits with specialists?",
+        fields: [
+          { key: "health_safety", label: "15. Si tienes alguna alergia o condición médica, ¿te sientes seguro/a y bien cuidado/a en la escuela?", labelEn: "15. If you have an allergy or medical condition, do you feel safe and well cared for at school?", type: "textarea", span: "full" },
+          { key: "external_professional_support", label: "16. Si acudes con un profesional fuera de la escuela (como un psicólogo, regularizador o doctor), ¿cómo te sientes en esas sesiones y qué tanto sientes que te ayudan en tu día a día?", labelEn: "16. If you see a professional outside school (such as a psychologist, tutor, or doctor), how do you feel during those sessions and how much do you feel they help you in your daily life?", type: "textarea", span: "full" },
         ],
       },
     ],

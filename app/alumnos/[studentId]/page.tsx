@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { ArrowLeft, BookOpenText, CalendarDays, FileText, NotebookPen, UserRound } from "lucide-react";
+import { ArrowLeft, BookOpenText, CalendarDays, FileText, MessageCircleQuestion, NotebookPen, UserRound } from "lucide-react";
 
 import { StudentModuleLayout } from "@/components/student-module-layout";
 import { StudentNotesPanel } from "@/components/student-notes-panel";
 import { ConfidentialTooltip, StudentStatusIcon } from "@/components/student-status";
 import { getStudent, getStudentDirectoryRow, getStudentFormRecords, getStudentNotes, getStudentPhotoSignedUrl, requireStudentModuleContext } from "@/lib/student-records";
+import { getDashboardLocale } from "@/lib/i18n";
+import { tr } from "@/lib/locale";
 import type { StudentFormCode, StudentFormStatus } from "@/lib/student-forms";
 
 export const dynamic = "force-dynamic";
@@ -42,14 +44,16 @@ function statusCard({
 
 export default async function StudentDetailPage({ params }: { params: Promise<{ studentId: string }> }) {
   const { studentId } = await params;
-  const [context, student, directory, observations, evaluations, piaps, notes] = await Promise.all([
+  const [context, student, directory, observations, evaluations, piaps, interviews, notes, locale] = await Promise.all([
     requireStudentModuleContext(),
     getStudent(studentId),
     getStudentDirectoryRow(studentId),
     getStudentFormRecords(studentId, "form_2_observation"),
     getStudentFormRecords(studentId, "form_3_evaluation"),
     getStudentFormRecords(studentId, "form_4_piap", null),
+    getStudentFormRecords(studentId, "form_5_interview", null),
     getStudentNotes(studentId),
+    getDashboardLocale(),
   ]);
   const photoUrl = student.photo_path ? await getStudentPhotoSignedUrl(student.photo_path) : student.photo_url;
 
@@ -75,6 +79,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
         {statusCard({ studentId, formCode: "form_2", title: "Observación Conductual en Aula", description: "Historial de observaciones, escalas y registros A-B-C.", status: directory.form_2_status, canOpen: context.permissions.form_2.can_view_content })}
         {statusCard({ studentId, formCode: "form_3", title: "Evaluación Psicopedagógica", description: "Evaluación inicial y reevaluaciones psicopedagógicas.", status: directory.form_3_status, canOpen: context.permissions.form_3.can_view_content })}
         {statusCard({ studentId, formCode: "form_4", title: "PIAP", description: "Planes de intervención y sus revisiones periódicas.", status: directory.form_4_status, canOpen: context.permissions.form_4.can_view_content })}
+        {statusCard({ studentId, formCode: "form_5", title: tr(locale, "Student Interview", "Entrevista del Alumno"), description: tr(locale, "Open-ended interviews about learning, emotions, relationships and support.", "Entrevistas abiertas sobre aprendizaje, emociones, relaciones y apoyos."), status: directory.form_5_status, canOpen: context.permissions.form_5.can_view_content })}
       </section>
 
       <section className="panel student-recent-panel">
@@ -83,6 +88,7 @@ export default async function StudentDetailPage({ params }: { params: Promise<{ 
           <article><CalendarDays size={18} /><div><strong>Observaciones</strong><span>{observations.length ? `${observations.length} registro(s) · última ${formatDate(observations[0]?.occurred_on ?? null)}` : "Sin registros"}</span></div></article>
           <article><BookOpenText size={18} /><div><strong>Evaluaciones</strong><span>{evaluations.length ? `${evaluations.length} registro(s) · última ${formatDate(evaluations[0]?.occurred_on ?? null)}` : "Sin registros"}</span></div></article>
           <article><FileText size={18} /><div><strong>PIAP</strong><span>{piaps.length ? `${piaps.length} plan(es) · último ${formatDate(piaps[0]?.occurred_on ?? null)}` : "Sin registros"}</span></div></article>
+          <article><MessageCircleQuestion size={18} /><div><strong>{tr(locale, "Interviews", "Entrevistas")}</strong><span>{interviews.length ? `${interviews.length} ${tr(locale, "record(s)", "registro(s)")} · ${tr(locale, "latest", "última")} ${formatDate(interviews[0]?.occurred_on ?? null)}` : tr(locale, "No records", "Sin registros")}</span></div></article>
           <article><NotebookPen size={18} /><div><strong>Bitácora</strong><span>{notes.length ? `${notes.length} nota(s) · última ${formatDate(notes[0]?.occurred_on ?? null)}` : "Sin registros"}</span></div></article>
         </div>
         <StudentNotesPanel canWrite studentId={studentId} notes={notes} />

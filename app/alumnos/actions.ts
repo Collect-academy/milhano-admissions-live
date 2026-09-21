@@ -20,7 +20,8 @@ function definitionFormCode(definitionCode: StudentDefinitionCode) {
   if (definitionCode === "form_1_profile") return "form_1" as const;
   if (definitionCode === "form_2_observation") return "form_2" as const;
   if (definitionCode === "form_3_evaluation") return "form_3" as const;
-  return "form_4" as const;
+  if (definitionCode === "form_4_piap" || definitionCode === "form_4_review") return "form_4" as const;
+  return "form_5" as const;
 }
 
 export async function createStudent(formData: FormData) {
@@ -85,6 +86,8 @@ export async function createStudentFormRecord(input: {
       psychologist_name: "Psic. Ricardo Soxme Pool",
       teacher_tutor: student.tutor_name ?? "",
     };
+  } else if (input.definitionCode === "form_5_interview") {
+    payload = {};
   } else if (input.definitionCode === "form_4_review") {
     if (!input.parentRecordId) throw new Error("La revisión requiere un PIAP padre.");
     const supabaseForSequence = await createSupabaseServerClient();
@@ -154,6 +157,7 @@ function buildTitle(definitionCode: StudentDefinitionCode, payload: StudentPaylo
     return `${kind}${dateLabel}`;
   }
   if (definitionCode === "form_4_piap") return `PIAP${dateLabel}`;
+  if (definitionCode === "form_5_interview") return `Entrevista del alumno${dateLabel}`;
   return `${sequenceNo ?? 1}ª revisión${dateLabel}`;
 }
 
@@ -168,21 +172,24 @@ export async function saveStudentFormRecord(input: {
   if (!context.permissions[formCode].can_edit) throw new Error("No tienes permiso para editar este formato.");
 
   const supabase = await createSupabaseServerClient();
-  const occurredOn = deriveOccurredOn(input.definitionCode, input.payload);
   let recordId = input.recordId;
   let sequenceNo: number | null = null;
+  let currentOccurredOn: string | null = null;
 
   if (recordId) {
     const currentResult = await supabase
       .from("milhano_student_form_records")
-      .select("sequence_no")
+      .select("sequence_no, occurred_on")
       .eq("id", recordId)
       .eq("student_id", input.studentId)
       .maybeSingle();
     if (currentResult.error) throw new Error(currentResult.error.message);
     sequenceNo = currentResult.data?.sequence_no ?? null;
+    currentOccurredOn = currentResult.data?.occurred_on ?? null;
   }
 
+  const occurredOn = deriveOccurredOn(input.definitionCode, input.payload)
+    ?? (input.definitionCode === "form_5_interview" ? currentOccurredOn ?? today() : null);
   const title = buildTitle(input.definitionCode, input.payload, occurredOn, sequenceNo);
 
   if (!recordId) {
