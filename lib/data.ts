@@ -4,6 +4,7 @@ import { canonicalAdvisorName } from "@/lib/identity";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 import { opportunityInOperationalRange } from "@/lib/operational-date";
 import {
+  dateInRange,
   rangeEndExclusiveTimestamp,
   rangeStartTimestamp,
   type DateRange,
