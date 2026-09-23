@@ -79,13 +79,13 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
   );
   const tourBookingTooltip = tr(
     locale,
-    `${payload.booking_breakdown.school_tours.total} bookings created in the period: ${payload.booking_breakdown.school_tours.cohort} belong to leads created in the selected period and ${payload.booking_breakdown.school_tours.external} to leads created outside it.`,
-    `${payload.booking_breakdown.school_tours.total} bookings creados en el periodo: ${payload.booking_breakdown.school_tours.cohort} corresponden a leads creados en el periodo seleccionado y ${payload.booking_breakdown.school_tours.external} a leads creados fuera de él.`,
+    `${payload.booking_breakdown.school_tours.total} School Tour appointments scheduled inside the selected period. Each appointment counts separately, including siblings sharing one contact.`,
+    `${payload.booking_breakdown.school_tours.total} citas de School Tour programadas dentro del periodo seleccionado. Cada cita cuenta por separado, incluso entre hermanos que comparten contacto.`,
   );
   const trialBookingTooltip = tr(
     locale,
-    `${payload.booking_breakdown.trial_days.total} bookings created in the period: ${payload.booking_breakdown.trial_days.cohort} belong to leads created in the selected period and ${payload.booking_breakdown.trial_days.external} to leads created outside it.`,
-    `${payload.booking_breakdown.trial_days.total} bookings creados en el periodo: ${payload.booking_breakdown.trial_days.cohort} corresponden a leads creados en el periodo seleccionado y ${payload.booking_breakdown.trial_days.external} a leads creados fuera de él.`,
+    `${payload.booking_breakdown.trial_days.total} Trial Day appointments scheduled inside the selected period. Each appointment counts separately, including siblings sharing one contact.`,
+    `${payload.booking_breakdown.trial_days.total} citas de Pasadía programadas dentro del periodo seleccionado. Cada cita cuenta por separado, incluso entre hermanos que comparten contacto.`,
   );
   const cascadeTooltips = {
     responded_leads: responseTooltip,
@@ -141,7 +141,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
             trial_days_booked: trialBookingTooltip,
           }}
           range={range}
-          note={tr(locale, "Booked = creation date · Attended / Closed = real event date", "Booked = creación · Attended / Closed = fecha real del evento")}
+          note={tr(locale, "Booked / Attended = scheduled appointment date · Closed = real close-event date", "Booked / Attended = fecha programada de la cita · Closed = fecha real del cierre")}
         />
       </div>
     </>

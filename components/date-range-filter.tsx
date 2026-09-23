@@ -70,14 +70,14 @@ export function DateRangeFilter({ basePath, range, preserve = {}, locale = "en" 
         <input name="range" type="hidden" value="custom" />
         <label>
           <span>{tr(locale, "From", "Desde")}</span>
-          <input defaultValue={range.start} max={range.end} name="from" required type="date" />
+          <input defaultValue={range.start} name="from" required type="date" />
         </label>
         <label>
           <span>{tr(locale, "To", "Hasta")}</span>
-          <input defaultValue={range.end} min={range.start} name="to" required type="date" />
+          <input defaultValue={range.end} name="to" required type="date" />
         </label>
         <button className="date-custom-button" type="submit">
-          {tr(locale, "Custom", "Personalizado")}
+          {tr(locale, "Show Custom", "Mostrar")}
         </button>
       </form>
     </section>

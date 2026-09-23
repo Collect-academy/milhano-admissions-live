@@ -90,6 +90,7 @@ export type AdmissionsV2Payload = {
 };
 
 export type AdmissionsV2Lead = {
+  metric_row_id?: string | null;
   ghl_opportunity_id: string;
   ghl_contact_id: string | null;
   lead_name: string;
@@ -105,7 +106,23 @@ export type AdmissionsV2Lead = {
   opportunity_status: string | null;
   lost_reason: string | null;
   lead_at: string;
+  metric_at?: string | null;
+  metric_event_id?: string | null;
+  metric_title?: string | null;
+  metric_status?: string | null;
 };
+
+const ADMISSIONS_V2_EVENT_METRICS = new Set([
+  "school_tours_booked",
+  "school_tours_attended",
+  "trial_days_booked",
+  "trial_days_showed",
+  "closed",
+]);
+
+export function isAdmissionsV2EventMetric(metricKey: string): boolean {
+  return ADMISSIONS_V2_EVENT_METRICS.has(metricKey);
+}
 
 function normalizeNumericValues(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(normalizeNumericValues);
@@ -160,6 +177,22 @@ export async function getAdmissionsV2MetricLeads(
 ): Promise<AdmissionsV2Lead[]> {
   const effective = clampV2Range(start, end);
   const supabase = createSupabaseAdmin();
+
+  if (isAdmissionsV2EventMetric(metricKey)) {
+    const result = await supabase.rpc("milhano_get_v2_closer_metric_events", {
+      p_metric_key: metricKey,
+      p_scope: scope,
+      p_start: effective.start,
+      p_end: effective.end,
+    });
+
+    if (result.error) {
+      throw new Error(`Unable to load V2 metric events: ${result.error.message}`);
+    }
+
+    return (result.data ?? []) as AdmissionsV2Lead[];
+  }
+
   const result = await supabase.rpc("milhano_get_v2_metric_leads_scoped", {
     p_metric_key: metricKey,
     p_scope: scope,
@@ -171,5 +204,8 @@ export async function getAdmissionsV2MetricLeads(
     throw new Error(`Unable to load V2 metric leads: ${result.error.message}`);
   }
 
-  return (result.data ?? []) as AdmissionsV2Lead[];
+  return ((result.data ?? []) as AdmissionsV2Lead[]).map((lead) => ({
+    ...lead,
+    metric_row_id: `opportunity:${lead.ghl_opportunity_id}`,
+  }));
 }
