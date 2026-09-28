@@ -39,7 +39,7 @@ export default async function LeadershipPage({ searchParams }: { searchParams: P
         <div className="kpi-grid leadership-kpi-grid">
           {kpis.map((kpi, index) => {
             const Icon = icons[index] ?? CalendarCheck2;
-            return <KpiCard key={kpi.kpi_key} icon={Icon} label={kpi.label_es} locale={locale} value={number(kpi.value)} helper={kpi.school_cycle ?? ""} />;
+            return <KpiCard key={kpi.kpi_key} icon={Icon} label={kpi.label_es} locale={locale} value={number(kpi.value)} helper={kpi.school_cycle ?? undefined} />;
           })}
         </div>
       </section>
