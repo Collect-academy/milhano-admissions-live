@@ -19,14 +19,14 @@ export async function getAttendanceDay(date: string, grade = ""): Promise<Attend
   if (grade) studentsQuery = studentsQuery.eq("grade", grade);
   const [students, attendance] = await Promise.all([
     studentsQuery,
-    admin.from("milhano_student_attendance").select("student_id,status,note").eq("attendance_date", date),
+    admin.from("milhano_student_attendance").select("student_id,status,notes").eq("attendance_date", date),
   ]);
   if (students.error) throw new Error(students.error.message);
   if (attendance.error) throw new Error(attendance.error.message);
   const byStudent = new Map((attendance.data ?? []).map((row) => [row.student_id, row]));
   return (students.data ?? []).map((student) => {
     const mark = byStudent.get(student.id);
-    return { student_id: student.id, full_name: student.full_name, level: student.level, grade: student.grade, group_name: student.group_name, status: (mark?.status ?? null) as AttendanceStatus, note: mark?.note ?? "" };
+    return { student_id: student.id, full_name: student.full_name, level: student.level, grade: student.grade, group_name: student.group_name, status: (mark?.status ?? null) as AttendanceStatus, note: mark?.notes ?? "" };
   });
 }
 

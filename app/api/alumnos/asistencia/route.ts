@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     const deleted = await admin.from("milhano_student_attendance").delete().eq("attendance_date", date).in("student_id", ids);
     if (deleted.error) return NextResponse.json({ error: deleted.error.message }, { status: 500 });
   } else {
-    const rows = ids.map((studentId: string) => ({ student_id: studentId, attendance_date: date, status, note, marked_by: context.user.id, marked_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
+    const rows = ids.map((studentId: string) => ({ student_id: studentId, attendance_date: date, status, notes: note, marked_by: context.user.id, marked_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
     const saved = await admin.from("milhano_student_attendance").upsert(rows, { onConflict: "student_id,attendance_date" });
     if (saved.error) return NextResponse.json({ error: saved.error.message }, { status: 500 });
   }
