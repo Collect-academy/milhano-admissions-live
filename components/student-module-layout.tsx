@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, LogOut, UsersRound } from "lucide-react";
+import { ArrowLeft, CalendarCheck2, LogOut, UsersRound } from "lucide-react";
 
 import { logout } from "@/app/login/actions";
 import { isSupabaseAuthConfigured } from "@/lib/auth";
@@ -36,9 +36,13 @@ export async function StudentModuleLayout({ eyebrow, title, subtitle, statusLabe
         </div>
 
         <nav className="app-nav" aria-label={tr(locale, "School records", "Expediente escolar")}>
-          <Link className="nav-link nav-link-active" href="/alumnos">
+          <Link className="nav-link" href="/alumnos">
             <UsersRound size={14} />
             {tr(locale, "Students", "Alumnos")}
+          </Link>
+          <Link className="nav-link" href="/alumnos/asistencia">
+            <CalendarCheck2 size={14} />
+            {tr(locale, "Attendance", "Asistencia")}
           </Link>
           {context.user.role === "admin" ? (
             <Link className="nav-link" href="/">

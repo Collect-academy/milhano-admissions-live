@@ -48,7 +48,11 @@ export async function DashboardLayout({
             <span>Admissions OS</span>
           </div>
         </div>
-        <AppNav locale={locale} showStudents={user.role === "admin"} />
+        <AppNav
+          locale={locale}
+          showStudents={true}
+          showLeadership={user.role === "admin" || /thierry|cinthia/i.test(`${user.username ?? ""} ${user.email ?? ""} ${user.displayName}`)}
+        />
         <div className="session-controls">
           <DisplayPreferences locale={locale} />
           <LanguageToggle locale={locale} />

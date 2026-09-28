@@ -19,10 +19,11 @@ const primaryLinks = [
 
 const afterSchoolLink = { href: "/after-school", en: "After School", es: "After School" };
 
-export function AppNav({ locale, showStudents = false }: { locale: Locale; showStudents?: boolean }) {
+export function AppNav({ locale, showStudents = false, showLeadership = false }: { locale: Locale; showStudents?: boolean; showLeadership?: boolean }) {
   const pathname = usePathname();
   const links = [
     ...primaryLinks,
+    ...(showLeadership ? [{ href: "/direccion", en: "Leadership", es: "Dirección" }] : []),
     ...(showStudents ? [{ href: "/alumnos", en: "Students", es: "Alumnos" }] : []),
     afterSchoolLink,
   ];
