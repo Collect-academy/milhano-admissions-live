@@ -11,17 +11,21 @@ import {
   YAxis,
 } from "recharts";
 
-import type { AgentActivityAnalysis, AgentScatterPoint } from "@/lib/agent-analytics";
+import type { AgentActivityAnalysis, AgentDirectoryEntry, AgentScatterPoint } from "@/lib/agent-analytics";
 import type { Locale } from "@/lib/locale";
 import { tr } from "@/lib/locale";
 
-const labels: Record<AgentScatterPoint["kind"], { en: string; es: string }> = {
-  assignment: { en: "Opportunity owner assignment", es: "Asignación owner de opportunity" },
-  crm_stage: { en: "CRM stage", es: "Movimiento CRM" },
-  call: { en: "Call", es: "Llamada" },
-  whatsapp: { en: "WhatsApp", es: "WhatsApp" },
-  communication: { en: "Communication", es: "Comunicación" },
+const PATHI_ID = "LTJEPAdClnxPxUd2mRXp";
+const CINTHIA_ID = "77kxc0w2hMphBCnyl9Fe";
+const MIGUEL_ID = "CVHK8CdZzT6A7zLxr5Sg";
+
+const knownColors: Record<string, string> = {
+  [PATHI_ID]: "#8A9099",
+  [CINTHIA_ID]: "#2F6FDB",
+  [MIGUEL_ID]: "#2C8A62",
 };
+
+const fallbackColors = ["#C47A1A", "#8A5CC2", "#C65366", "#2E8FA3", "#B58A22"];
 
 function hourLabel(value: number) {
   const hour = Math.floor(value);
@@ -29,19 +33,28 @@ function hourLabel(value: number) {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
+function displayName(agentId: string, agents: AgentDirectoryEntry[]) {
+  return agents.find((agent) => agent.ghl_user_id === agentId)?.display_name ?? `GHL · ${agentId.slice(-6)}`;
+}
+
+function colorFor(agentId: string, index: number) {
+  return knownColors[agentId] ?? fallbackColors[index % fallbackColors.length];
+}
+
 type ScatterTooltipProps = {
   active?: boolean;
   payload?: Array<{ payload?: AgentScatterPoint }>;
   locale: Locale;
+  agents: AgentDirectoryEntry[];
 };
 
-function ScatterTooltipContent({ active, payload, locale }: ScatterTooltipProps) {
+function ScatterTooltipContent({ active, payload, locale, agents }: ScatterTooltipProps) {
   const point = payload?.[0]?.payload;
   if (!active || !point) return null;
 
   return (
     <div className="agent-scatter-tooltip">
-      <strong>{locale === "es" ? labels[point.kind].es : labels[point.kind].en}</strong>
+      <strong>{displayName(point.agentId, agents)}</strong>
       <span>{point.date}</span>
       <span><b>{tr(locale, "Interaction time", "Hora de interacción")}:</b> {point.time}</span>
       <span><b>{tr(locale, "Number of interactions", "Número de interacciones")}:</b> {point.y}</span>
@@ -49,8 +62,22 @@ function ScatterTooltipContent({ active, payload, locale }: ScatterTooltipProps)
   );
 }
 
-export function AgentActivityScatter({ data, locale }: { data: AgentActivityAnalysis; locale: Locale }) {
-  const series = (kind: AgentScatterPoint["kind"]) => data.scatter.filter((point) => point.kind === kind);
+export function AgentActivityScatter({
+  data,
+  locale,
+  agents,
+}: {
+  data: AgentActivityAnalysis;
+  locale: Locale;
+  agents: AgentDirectoryEntry[];
+}) {
+  const activeAgentIds = [...new Set(data.scatter.map((point) => point.agentId))];
+  const series = activeAgentIds.map((agentId, index) => ({
+    agentId,
+    name: displayName(agentId, agents),
+    color: colorFor(agentId, index),
+    points: data.scatter.filter((point) => point.agentId === agentId),
+  }));
 
   return (
     <section className="panel agent-activity-panel">
@@ -90,12 +117,19 @@ export function AgentActivityScatter({ data, locale }: { data: AgentActivityAnal
                 tick={{ fontSize: 11 }}
               />
               <YAxis type="number" dataKey="y" allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip cursor={{ strokeDasharray: "3 3" }} content={<ScatterTooltipContent locale={locale} />} />
+              <Tooltip
+                cursor={{ strokeDasharray: "3 3" }}
+                content={<ScatterTooltipContent locale={locale} agents={agents} />}
+              />
               <Legend />
-              <Scatter data={series("crm_stage")} name={tr(locale, "CRM stages", "Movimientos CRM")} fill="var(--green)" />
-              <Scatter data={series("assignment")} name={tr(locale, "Opportunity assignments", "Asignaciones de opportunity")} fill="var(--gold)" />
-              <Scatter data={series("call")} name={tr(locale, "Calls", "Llamadas")} fill="var(--blue)" />
-              <Scatter data={series("whatsapp")} name="WhatsApp" fill="var(--red)" />
+              {series.map((agent) => (
+                <Scatter
+                  key={agent.agentId}
+                  data={agent.points}
+                  name={agent.name}
+                  fill={agent.color}
+                />
+              ))}
             </ScatterChart>
           </ResponsiveContainer>
         ) : (

@@ -26,8 +26,8 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
           <p className="panel-note">
             {tr(
               locale,
-              "A worked opportunity is counted once when it leaves New Lead for another Setter stage. Contact ownership is not used in these metrics.",
-              "Una opportunity se cuenta como trabajada una sola vez cuando sale de New Lead hacia otro stage del Setter. El owner del contacto no se usa en estas métricas.",
+              "A worked opportunity is counted once when it leaves New Lead for another operational stage, including a direct handoff to Tour Booked. During the current historical transition, an unassigned opportunity is attributed to Paty. Contact ownership is not used.",
+              "Una opportunity se cuenta como trabajada una sola vez cuando sale de New Lead hacia otro stage operativo, incluido un traspaso directo a Tour Booked. Durante esta transición histórica, una opportunity sin assignee se atribuye a Paty. El owner del contacto no se usa.",
             )}
           </p>
         </div>

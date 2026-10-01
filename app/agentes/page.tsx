@@ -107,13 +107,13 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
       </section>
 
       <AgentConversionFunnel data={journey} locale={locale} />
-      <AgentActivityScatter data={activity} locale={locale} />
+      <AgentActivityScatter data={activity} locale={locale} agents={agents} />
 
       <p className="agent-analysis-footnote">
         {tr(
           locale,
-          "Stage actions use Opportunity owner-at-event. Calls and WhatsApp are included only when GHL provides an attributable user and the communication is not automated. Opportunity-owner changes can appear as CRM activity; Contact owner remains an internal operational safeguard and is not counted here.",
-          "Las acciones de stage usan el owner de la Opportunity al momento del evento. Llamadas y WhatsApp se incluyen sólo cuando GHL entrega un usuario atribuible y la comunicación no es automatizada. Los cambios de owner de la Opportunity pueden aparecer como actividad CRM; el owner del Contact queda como seguro operativo interno y no se cuenta aquí.",
+          "Stage actions use Opportunity owner-at-event. During the current historical transition, opportunities with no assignee are attributed to Paty as the legacy-agent fallback. Contact owner remains an internal operational safeguard and is never used as the dashboard unit.",
+          "Las acciones de stage usan el owner de la Opportunity al momento del evento. Durante esta transición histórica, las opportunities sin assignee se atribuyen a Paty como fallback de la agente histórica. El owner del Contact queda sólo como seguro operativo interno y nunca se usa como unidad del dashboard.",
         )}
       </p>
     </DashboardLayout>
