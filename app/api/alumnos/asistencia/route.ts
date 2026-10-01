@@ -6,6 +6,12 @@ const cleanNote = (value: unknown) => String(value ?? "").trim().slice(0, 1000);
 const cleanStatus = (value: unknown): "present" | "absent" | null =>
   value === "present" || value === "absent" ? value : null;
 
+type AttendanceRow = {
+  studentId: string;
+  status: "present" | "absent" | null;
+  note: string;
+};
+
 export async function POST(request: Request) {
   const context = await requireStudentModuleContext();
   const body = await request.json();
@@ -15,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
   }
 
-  const incomingRows = Array.isArray(body.rows)
+  const incomingRows: AttendanceRow[] = Array.isArray(body.rows)
     ? body.rows.slice(0, 500).map((row: Record<string, unknown>) => ({
         studentId: String(row?.studentId ?? "").trim(),
         status: cleanStatus(row?.status),
@@ -27,7 +33,7 @@ export async function POST(request: Request) {
   const legacyIds = Array.isArray(body.studentIds)
     ? body.studentIds.map(String)
     : [String(body.studentId ?? "")].filter(Boolean);
-  const rows = incomingRows.length
+  const rows: AttendanceRow[] = incomingRows.length
     ? incomingRows
     : legacyIds.map((studentId: string) => ({
         studentId,

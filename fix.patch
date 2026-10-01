@@ -1,0 +1,18 @@
+diff --git a/app/api/alumnos/asistencia/route.ts b/app/api/alumnos/asistencia/route.ts
+--- a/app/api/alumnos/asistencia/route.ts
++++ b/app/api/alumnos/asistencia/route.ts
+@@
+ const cleanStatus = (value: unknown): "present" | "absent" | null =>
+   value === "present" || value === "absent" ? value : null;
++
++type AttendanceRow = {
++  studentId: string;
++  status: "present" | "absent" | null;
++  note: string;
++};
+@@
+-  const incomingRows = Array.isArray(body.rows)
++  const incomingRows: AttendanceRow[] = Array.isArray(body.rows)
+@@
+-  const rows = incomingRows.length
++  const rows: AttendanceRow[] = incomingRows.length
