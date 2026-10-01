@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { AdmissionsV2Cascade } from "@/components/admissions-v2-cascade";
+import { AgentProductivity } from "@/components/agent-productivity";
 import { AdmissionsVersionSwitcher } from "@/components/admissions-version-switcher";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
@@ -24,6 +25,7 @@ import {
   type V2CascadeMetric,
 } from "@/lib/admissions-v2";
 import { resolveDateRange, type DateRange } from "@/lib/date-range";
+import { getAgentProductivity } from "@/lib/agent-productivity";
 import { dateLabel, number } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr } from "@/lib/locale";
@@ -54,7 +56,11 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       ? savedSource
       : "ghl";
 
-  const payload = await getAdmissionsV2Payload(range.start, range.end);
+  const selectedAgentId = Array.isArray(params.agent) ? params.agent[0] ?? "" : params.agent ?? "";
+  const [payload, agentProductivity] = await Promise.all([
+    getAdmissionsV2Payload(range.start, range.end),
+    getAgentProductivity(range, selectedAgentId),
+  ]);
   const stageMapReady = payload.stage_map.resolved_stage_ids >= payload.stage_map.expected_stage_rows;
 
   const manualGeneral: V2CascadeMetric[] = [
@@ -107,7 +113,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       <div className="v2-two-cascades">
         <AdmissionsV2Cascade
           compact
-          eyebrow="SETTER · PATY"
+          eyebrow="SETTER · EQUIPO"
           title={tr(locale, "Setter Cascade", "Cascada Setter")}
           scope="setter"
           metrics={payload.setter.funnel}
@@ -132,7 +138,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         />
         <AdmissionsV2Cascade
           compact
-          eyebrow="CLOSER · CINTHIA"
+          eyebrow="CLOSER · EQUIPO"
           title={tr(locale, "Closer Cascade", "Cascada Closer")}
           scope="closer"
           metrics={payload.closer.funnel}
@@ -200,7 +206,14 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         <span>{tr(locale, "Setter/New Lead cohorts use the opportunity creation timestamp in Mérida with a 2:30 PM cutoff. Friday after 2:30 PM, Saturday, Sunday and Monday before 2:30 PM report as Monday. Appointments and Closer events keep their real calendar date.", "Las cohortes Setter/New Lead usan el timestamp de creación en Mérida con corte a las 2:30 p. m. Viernes después de 2:30 p. m., sábado, domingo y lunes antes de 2:30 p. m. reportan como lunes. Las citas y eventos de Closer conservan su fecha calendario real.")}</span>
       </div>
 
-      <DateRangeFilter basePath="/" range={range} locale={locale} />
+      <DateRangeFilter basePath="/" range={range} locale={locale} preserve={{ agent: selectedAgentId || undefined }} />
+
+      <AgentProductivity
+        data={agentProductivity}
+        range={range}
+        selectedAgentId={selectedAgentId}
+        locale={locale}
+      />
 
       <section className="panel v2-inventory-panel">
         <div className="panel-heading compact-panel-heading">
@@ -267,8 +280,8 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       </section>
 
       <div className="v2-two-cascades">
-        <V2CurrentStages title="Setter Pipeline" owner={payload.setter.owner} stages={payload.setter.current_stages} />
-        <V2CurrentStages title="Closer Pipeline" owner={payload.closer.owner} stages={payload.closer.current_stages} />
+        <V2CurrentStages title="Setter Pipeline" owner="Equipo" stages={payload.setter.current_stages} />
+        <V2CurrentStages title="Closer Pipeline" owner="Equipo" stages={payload.closer.current_stages} />
       </div>
     </DashboardLayout>
   );

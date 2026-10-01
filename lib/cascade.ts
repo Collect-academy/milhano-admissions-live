@@ -256,8 +256,23 @@ export async function getLeadDetail(
   if (!result.data) return null;
 
   const payload = result.data as Record<string, unknown>;
+  const opportunity = payload.opportunity as LeadDetail["opportunity"];
+
+  if (opportunity?.assigned_user_id) {
+    const owner = await supabase
+      .from("milhano_app_users")
+      .select("display_name")
+      .eq("ghl_user_id", opportunity.assigned_user_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!owner.error && owner.data?.display_name) {
+      opportunity.assigned_user = owner.data.display_name;
+    }
+  }
+
   return {
-    opportunity: payload.opportunity as LeadDetail["opportunity"],
+    opportunity,
     appointments: (payload.appointments ?? []) as LeadDetail["appointments"],
     stageEvents: (payload.stage_events ?? []) as LeadDetail["stageEvents"],
     recentActivity: (payload.recent_activity ?? []) as LeadDetail["recentActivity"],

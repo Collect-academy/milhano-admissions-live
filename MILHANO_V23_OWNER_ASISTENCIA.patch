@@ -1,0 +1,986 @@
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -10,6 +10,7 @@
+ } from "lucide-react";
+ 
+ import { AdmissionsV2Cascade } from "@/components/admissions-v2-cascade";
++import { AgentProductivity } from "@/components/agent-productivity";
+ import { AdmissionsVersionSwitcher } from "@/components/admissions-version-switcher";
+ import { DashboardLayout } from "@/components/dashboard-layout";
+ import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
+@@ -24,6 +25,7 @@
+   type V2CascadeMetric,
+ } from "@/lib/admissions-v2";
+ import { resolveDateRange, type DateRange } from "@/lib/date-range";
++import { getAgentProductivity } from "@/lib/agent-productivity";
+ import { dateLabel, number } from "@/lib/format";
+ import { getDashboardLocale } from "@/lib/i18n";
+ import { tr } from "@/lib/locale";
+@@ -54,7 +56,11 @@
+       ? savedSource
+       : "ghl";
+ 
+-  const payload = await getAdmissionsV2Payload(range.start, range.end);
++  const selectedAgentId = Array.isArray(params.agent) ? params.agent[0] ?? "" : params.agent ?? "";
++  const [payload, agentProductivity] = await Promise.all([
++    getAdmissionsV2Payload(range.start, range.end),
++    getAgentProductivity(range, selectedAgentId),
++  ]);
+   const stageMapReady = payload.stage_map.resolved_stage_ids >= payload.stage_map.expected_stage_rows;
+ 
+   const manualGeneral: V2CascadeMetric[] = [
+@@ -107,7 +113,7 @@
+       <div className="v2-two-cascades">
+         <AdmissionsV2Cascade
+           compact
+-          eyebrow="SETTER · PATY"
++          eyebrow="SETTER · EQUIPO"
+           title={tr(locale, "Setter Cascade", "Cascada Setter")}
+           scope="setter"
+           metrics={payload.setter.funnel}
+@@ -132,7 +138,7 @@
+         />
+         <AdmissionsV2Cascade
+           compact
+-          eyebrow="CLOSER · CINTHIA"
++          eyebrow="CLOSER · EQUIPO"
+           title={tr(locale, "Closer Cascade", "Cascada Closer")}
+           scope="closer"
+           metrics={payload.closer.funnel}
+@@ -200,7 +206,14 @@
+         <span>{tr(locale, "Setter/New Lead cohorts use the opportunity creation timestamp in Mérida with a 2:30 PM cutoff. Friday after 2:30 PM, Saturday, Sunday and Monday before 2:30 PM report as Monday. Appointments and Closer events keep their real calendar date.", "Las cohortes Setter/New Lead usan el timestamp de creación en Mérida con corte a las 2:30 p. m. Viernes después de 2:30 p. m., sábado, domingo y lunes antes de 2:30 p. m. reportan como lunes. Las citas y eventos de Closer conservan su fecha calendario real.")}</span>
+       </div>
+ 
+-      <DateRangeFilter basePath="/" range={range} locale={locale} />
++      <DateRangeFilter basePath="/" range={range} locale={locale} preserve={{ agent: selectedAgentId || undefined }} />
++
++      <AgentProductivity
++        data={agentProductivity}
++        range={range}
++        selectedAgentId={selectedAgentId}
++        locale={locale}
++      />
+ 
+       <section className="panel v2-inventory-panel">
+         <div className="panel-heading compact-panel-heading">
+@@ -267,8 +280,8 @@
+       </section>
+ 
+       <div className="v2-two-cascades">
+-        <V2CurrentStages title="Setter Pipeline" owner={payload.setter.owner} stages={payload.setter.current_stages} />
+-        <V2CurrentStages title="Closer Pipeline" owner={payload.closer.owner} stages={payload.closer.current_stages} />
++        <V2CurrentStages title="Setter Pipeline" owner="Equipo" stages={payload.setter.current_stages} />
++        <V2CurrentStages title="Closer Pipeline" owner="Equipo" stages={payload.closer.current_stages} />
+       </div>
+     </DashboardLayout>
+   );
+--- a/app/alumnos/asistencia/page.tsx
++++ b/app/alumnos/asistencia/page.tsx
+@@ -15,5 +15,5 @@
+  const reportEnd=valid(one(p.reportEnd),date),reportStart=valid(one(p.reportStart),monthStart(reportEnd)),reportLevel=one(p.reportLevel)??"",reportRoom=one(p.reportRoom)??"",reportStudent=one(p.reportStudent)??"";
+  const admin=createSupabaseAdmin(); const [students,rooms,report,studentOptions]=await Promise.all([getAttendanceDay(date,room),getAttendanceRooms(),getAttendanceReport(reportStart,reportEnd,reportLevel,reportRoom,reportStudent),admin.from("milhano_students").select("id,full_name").eq("is_active",true).order("full_name")]);
+  const selected=rooms.find(r=>r.key===room); const dayTitle=`${pretty(date)}${selected?` · ${selected.label}`:" · Todos los salones"}`;
+- return <StudentModuleLayout eyebrow="Alumnos" title="Lista de asistencia" subtitle="Marca ✓, ✕ o deja en blanco. Guarda notas por alumno." statusLabel={`${date} · ${students.length} alumnos`}><AttendanceFilter date={date} room={room} rooms={rooms} today={today}/><div className={`attendance-day-banner ${date===today?"is-today":""}`}><span>{date===today?"HOY":"FECHA DEL REGISTRO"}</span><strong>{dayTitle}</strong></div><AttendanceBoard date={date} initialStudents={students}/><AttendanceReport start={reportStart} end={reportEnd} level={reportLevel} room={reportRoom} studentId={reportStudent} rooms={rooms} students={(studentOptions.data??[]).map(s=>({id:s.id,name:s.full_name}))} rows={report.rows} days={report.days}/></StudentModuleLayout>
++ return <StudentModuleLayout eyebrow="Alumnos" title="Lista de asistencia" subtitle="Marca ✓, ✕ o deja en blanco. Al terminar, presiona Guardar asistencia." statusLabel={`${date} · ${students.length} alumnos`}><AttendanceFilter date={date} room={room} rooms={rooms} today={today}/><div className={`attendance-day-banner ${date===today?"is-today":""}`}><span>{date===today?"HOY":"FECHA DEL REGISTRO"}</span><strong>{dayTitle}</strong></div><AttendanceBoard date={date} initialStudents={students}/><AttendanceReport start={reportStart} end={reportEnd} level={reportLevel} room={reportRoom} studentId={reportStudent} rooms={rooms} students={(studentOptions.data??[]).map(s=>({id:s.id,name:s.full_name}))} rows={report.rows} days={report.days}/></StudentModuleLayout>
+ }
+--- a/app/api/alumnos/asistencia/route.ts
++++ b/app/api/alumnos/asistencia/route.ts
+@@ -2,23 +2,82 @@
+ import { requireStudentModuleContext } from "@/lib/student-records";
+ import { createSupabaseAdmin } from "@/lib/supabase-admin";
+ 
++const cleanNote = (value: unknown) => String(value ?? "").trim().slice(0, 1000);
++const cleanStatus = (value: unknown): "present" | "absent" | null =>
++  value === "present" || value === "absent" ? value : null;
++
+ export async function POST(request: Request) {
+   const context = await requireStudentModuleContext();
+   const body = await request.json();
+   const date = String(body.date ?? "");
+-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
+-  const status = body.status === "present" || body.status === "absent" ? body.status : null;
+-  const note = String(body.note ?? "").slice(0, 1000);
+-  const ids = Array.isArray(body.studentIds) ? body.studentIds.map(String) : [String(body.studentId ?? "")].filter(Boolean);
+-  if (!ids.length) return NextResponse.json({ error: "Alumno requerido" }, { status: 400 });
++
++  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
++    return NextResponse.json({ error: "Fecha inválida" }, { status: 400 });
++  }
++
++  const incomingRows = Array.isArray(body.rows)
++    ? body.rows.slice(0, 500).map((row: Record<string, unknown>) => ({
++        studentId: String(row?.studentId ?? "").trim(),
++        status: cleanStatus(row?.status),
++        note: cleanNote(row?.note),
++      })).filter((row: { studentId: string }) => Boolean(row.studentId))
++    : [];
++
++  // Backward compatibility with the previous single/bulk-status request shape.
++  const legacyIds = Array.isArray(body.studentIds)
++    ? body.studentIds.map(String)
++    : [String(body.studentId ?? "")].filter(Boolean);
++  const rows = incomingRows.length
++    ? incomingRows
++    : legacyIds.map((studentId: string) => ({
++        studentId,
++        status: cleanStatus(body.status),
++        note: cleanNote(body.note),
++      }));
++
++  if (!rows.length) {
++    return NextResponse.json({ error: "Alumno requerido" }, { status: 400 });
++  }
++
++  const uniqueRows = [...new Map(rows.map((row) => [row.studentId, row])).values()];
++  const toDelete = uniqueRows.filter((row) => row.status === null && !row.note).map((row) => row.studentId);
++  const toSave = uniqueRows.filter((row) => row.status !== null || Boolean(row.note));
+   const admin = createSupabaseAdmin();
+-  if (status === null && !note) {
+-    const deleted = await admin.from("milhano_student_attendance").delete().eq("attendance_date", date).in("student_id", ids);
+-    if (deleted.error) return NextResponse.json({ error: deleted.error.message }, { status: 500 });
+-  } else {
+-    const rows = ids.map((studentId: string) => ({ student_id: studentId, attendance_date: date, status, notes: note, marked_by: context.user.id, marked_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
+-    const saved = await admin.from("milhano_student_attendance").upsert(rows, { onConflict: "student_id,attendance_date" });
+-    if (saved.error) return NextResponse.json({ error: saved.error.message }, { status: 500 });
++
++  if (toDelete.length) {
++    const deleted = await admin
++      .from("milhano_student_attendance")
++      .delete()
++      .eq("attendance_date", date)
++      .in("student_id", toDelete);
++    if (deleted.error) {
++      return NextResponse.json({ error: deleted.error.message }, { status: 500 });
++    }
+   }
+-  return NextResponse.json({ ok: true });
++
++  if (toSave.length) {
++    const now = new Date().toISOString();
++    const saved = await admin.from("milhano_student_attendance").upsert(
++      toSave.map((row) => ({
++        student_id: row.studentId,
++        attendance_date: date,
++        status: row.status,
++        notes: row.note || null,
++        marked_by: context.user.id,
++        marked_at: now,
++        updated_at: now,
++      })),
++      { onConflict: "student_id,attendance_date" },
++    );
++    if (saved.error) {
++      return NextResponse.json({ error: saved.error.message }, { status: 500 });
++    }
++  }
++
++  return NextResponse.json({
++    ok: true,
++    saved: uniqueRows.length,
++    upserted: toSave.length,
++    deleted: toDelete.length,
++  });
+ }
+--- a/components/attendance-board.tsx
++++ b/components/attendance-board.tsx
+@@ -1,10 +1,11 @@
+ "use client";
+ 
+-import { useMemo, useState } from "react";
+-import { Check, X } from "lucide-react";
++import { useEffect, useMemo, useState } from "react";
++import { Check, Save, X } from "lucide-react";
+ import type { AttendanceStatus, AttendanceStudent } from "@/lib/student-attendance";
+ 
+ type Props = { date: string; initialStudents: AttendanceStudent[] };
++type SaveState = "idle" | "saving" | "saved" | "error";
+ 
+ function nextStatus(status: AttendanceStatus): AttendanceStatus {
+   if (status === null) return "present";
+@@ -14,7 +15,10 @@
+ 
+ export function AttendanceBoard({ date, initialStudents }: Props) {
+   const [rows, setRows] = useState(initialStudents);
+-  const [saving, setSaving] = useState(false);
++  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
++  const [saveState, setSaveState] = useState<SaveState>("idle");
++  const [message, setMessage] = useState("");
++
+   const groups = useMemo(() => {
+     const map = new Map<string, AttendanceStudent[]>();
+     rows.forEach((row) => {
+@@ -24,48 +28,124 @@
+     return [...map.entries()];
+   }, [rows]);
+ 
+-  async function persist(studentId: string, status: AttendanceStatus, note?: string) {
+-    const response = await fetch("/api/alumnos/asistencia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ date, studentId, status, note }) });
+-    if (!response.ok) throw new Error("No se pudo guardar la asistencia.");
++  const dirtyCount = dirtyIds.size;
++
++  useEffect(() => {
++    if (!dirtyCount) return;
++    const warn = (event: BeforeUnloadEvent) => {
++      event.preventDefault();
++      event.returnValue = "";
++    };
++    window.addEventListener("beforeunload", warn);
++    return () => window.removeEventListener("beforeunload", warn);
++  }, [dirtyCount]);
++
++  function markDirty(studentIds: string[]) {
++    setDirtyIds((current) => {
++      const next = new Set(current);
++      studentIds.forEach((id) => next.add(id));
++      return next;
++    });
++    setSaveState("idle");
++    setMessage("");
++  }
++
++  function toggle(studentId: string) {
++    setRows((all) => all.map((row) => row.student_id === studentId
++      ? { ...row, status: nextStatus(row.status) }
++      : row));
++    markDirty([studentId]);
+   }
+ 
+-  async function toggle(studentId: string) {
+-    const current = rows.find((r) => r.student_id === studentId);
+-    if (!current) return;
+-    const status = nextStatus(current.status);
+-    setRows((all) => all.map((r) => r.student_id === studentId ? { ...r, status } : r));
+-    try { await persist(studentId, status, current.note); } catch { setRows((all) => all.map((r) => r.student_id === studentId ? current : r)); }
++  function markAllPresent(studentIds: string[]) {
++    setRows((all) => all.map((row) => studentIds.includes(row.student_id)
++      ? { ...row, status: "present" }
++      : row));
++    markDirty(studentIds);
+   }
+ 
+-  async function markAllPresent(studentIds: string[]) {
+-    setSaving(true);
+-    const before = rows;
+-    setRows((all) => all.map((r) => studentIds.includes(r.student_id) ? { ...r, status: "present" } : r));
+-    const response = await fetch("/api/alumnos/asistencia", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ date, studentIds, status: "present" }) });
+-    if (!response.ok) setRows(before);
+-    setSaving(false);
++  function updateNote(studentId: string, note: string) {
++    setRows((all) => all.map((row) => row.student_id === studentId
++      ? { ...row, note }
++      : row));
++    markDirty([studentId]);
+   }
+ 
+-  async function saveNote(studentId: string, note: string) {
+-    const row = rows.find((r) => r.student_id === studentId);
+-    if (!row) return;
+-    setRows((all) => all.map((r) => r.student_id === studentId ? { ...r, note } : r));
+-    await persist(studentId, row.status, note);
++  async function saveAll() {
++    if (!dirtyCount || saveState === "saving") return;
++
++    const changedRows = rows
++      .filter((row) => dirtyIds.has(row.student_id))
++      .map((row) => ({
++        studentId: row.student_id,
++        status: row.status,
++        note: row.note,
++      }));
++
++    setSaveState("saving");
++    setMessage("");
++
++    try {
++      const response = await fetch("/api/alumnos/asistencia", {
++        method: "POST",
++        headers: { "content-type": "application/json" },
++        body: JSON.stringify({ date, rows: changedRows }),
++      });
++      const result = await response.json().catch(() => ({}));
++      if (!response.ok) {
++        throw new Error(result?.error || "No se pudo guardar la asistencia.");
++      }
++
++      setDirtyIds(new Set());
++      setSaveState("saved");
++      setMessage(`${result.saved ?? changedRows.length} cambio(s) guardado(s).`);
++    } catch (error) {
++      setSaveState("error");
++      setMessage(error instanceof Error ? error.message : "No se pudo guardar la asistencia.");
++    }
+   }
+ 
+-  return <div className="attendance-groups">
+-    {groups.map(([group, students]) => <section className="panel attendance-room" key={group}>
+-      <div className="panel-heading compact-panel-heading attendance-room-heading">
+-        <div><p className="eyebrow">SALÓN</p><h2>{group}</h2></div>
+-        <button className="primary-button" disabled={saving} onClick={() => markAllPresent(students.map((s) => s.student_id))} type="button">Todos vinieron</button>
++  return <>
++    <div className={`attendance-savebar ${dirtyCount ? "has-changes" : ""}`}>
++      <div>
++        <strong>{dirtyCount ? `${dirtyCount} cambio(s) sin guardar` : "Asistencia al día"}</strong>
++        <span>{message || (dirtyCount ? "Revisa las marcas y guarda cuando termines." : "No hay cambios pendientes.")}</span>
+       </div>
+-      <div className="table-scroll"><table className="attendance-table"><thead><tr><th>Alumno</th><th>Asistencia</th><th>Notas del día</th></tr></thead><tbody>
+-        {students.map((student) => <tr key={student.student_id}>
+-          <td><strong>{student.full_name}</strong></td>
+-          <td><button aria-label={`Cambiar asistencia de ${student.full_name}`} className={`attendance-mark attendance-mark-${student.status ?? "blank"}`} onClick={() => toggle(student.student_id)} type="button">{student.status === "present" ? <Check size={20}/> : student.status === "absent" ? <X size={20}/> : <span />}</button></td>
+-          <td><input className="attendance-note" defaultValue={student.note} onBlur={(event) => saveNote(student.student_id, event.currentTarget.value)} placeholder="Llegó tarde, salió temprano, faltó a una clase…" /></td>
+-        </tr>)}
+-      </tbody></table></div>
+-    </section>)}
+-  </div>;
++      <button
++        className="primary-button attendance-save-button"
++        disabled={!dirtyCount || saveState === "saving"}
++        onClick={saveAll}
++        type="button"
++      >
++        <Save size={17} />
++        {saveState === "saving" ? "Guardando…" : "Guardar asistencia"}
++      </button>
++    </div>
++
++    {saveState === "error" ? <p className="attendance-save-error" role="alert">{message}</p> : null}
++    {saveState === "saved" ? <p className="attendance-save-success" role="status">{message}</p> : null}
++
++    <div className="attendance-groups">
++      {groups.map(([group, students]) => <section className="panel attendance-room" key={group}>
++        <div className="panel-heading compact-panel-heading attendance-room-heading">
++          <div><p className="eyebrow">SALÓN</p><h2>{group}</h2></div>
++          <button
++            className="primary-button"
++            disabled={saveState === "saving"}
++            onClick={() => markAllPresent(students.map((student) => student.student_id))}
++            type="button"
++          >
++            Todos vinieron
++          </button>
++        </div>
++        <div className="table-scroll"><table className="attendance-table"><thead><tr><th>Alumno</th><th>Asistencia</th><th>Notas del día</th></tr></thead><tbody>
++          {students.map((student) => <tr className={dirtyIds.has(student.student_id) ? "attendance-row-dirty" : ""} key={student.student_id}>
++            <td><strong>{student.full_name}</strong></td>
++            <td><button aria-label={`Cambiar asistencia de ${student.full_name}`} className={`attendance-mark attendance-mark-${student.status ?? "blank"}`} onClick={() => toggle(student.student_id)} type="button">{student.status === "present" ? <Check size={20}/> : student.status === "absent" ? <X size={20}/> : <span />}</button></td>
++            <td><input className="attendance-note" value={student.note} onChange={(event) => updateNote(student.student_id, event.currentTarget.value)} placeholder="Llegó tarde, salió temprano, faltó a una clase…" /></td>
++          </tr>)}
++        </tbody></table></div>
++      </section>)}
++    </div>
++  </>;
+ }
+--- /dev/null
++++ b/components/agent-productivity.tsx
+@@ -0,0 +1,101 @@
++import Link from "next/link";
++import { Activity, MessageCircle, PhoneCall, Route, UserCheck, UsersRound } from "lucide-react";
++
++import { KpiCard } from "@/components/kpi-card";
++import type { AgentProductivityData } from "@/lib/agent-productivity";
++import { dateRangeParams, type DateRange } from "@/lib/date-range";
++import { number } from "@/lib/format";
++import type { Locale } from "@/lib/locale";
++import { tr } from "@/lib/locale";
++
++function hrefFor(range: DateRange, agent = "") {
++  const params = new URLSearchParams(dateRangeParams(range));
++  if (agent) params.set("agent", agent);
++  return `/?${params.toString()}`;
++}
++
++export function AgentProductivity({
++  data,
++  range,
++  selectedAgentId,
++  locale,
++}: {
++  data: AgentProductivityData;
++  range: DateRange;
++  selectedAgentId: string;
++  locale: Locale;
++}) {
++  const selected = data.selected;
++
++  return (
++    <section className="panel agent-productivity-panel">
++      <div className="panel-heading compact-panel-heading agent-productivity-heading">
++        <div>
++          <p className="eyebrow">OWNER · GHL USER ID</p>
++          <h2>{tr(locale, "Agent productivity", "Productividad por agente")}</h2>
++          <p className="panel-note">
++            {tr(
++              locale,
++              "Current assignment is a live snapshot. Activity uses the GHL user attributed to stage changes and non-automated communications during the selected period.",
++              "La asignación actual es una foto en vivo. La actividad usa el usuario GHL atribuido a cambios de stage y comunicaciones no automatizadas dentro del periodo.",
++            )}
++          </p>
++        </div>
++        <form className="agent-productivity-filter" method="get">
++          {Object.entries(dateRangeParams(range)).map(([key, value]) => <input key={key} type="hidden" name={key} value={value} />)}
++          <label>
++            <span>{tr(locale, "Agent", "Agente")}</span>
++            <select name="agent" defaultValue={selectedAgentId}>
++              <option value="">{tr(locale, "All agents", "Todos los agentes")}</option>
++              {data.rows.map((row) => <option key={row.ghl_user_id} value={row.ghl_user_id}>{row.display_name}</option>)}
++            </select>
++          </label>
++          <button className="primary-button" type="submit">{tr(locale, "Apply", "Aplicar")}</button>
++          {selectedAgentId ? <Link className="secondary-button" href={hrefFor(range)}>{tr(locale, "Clear", "Limpiar")}</Link> : null}
++        </form>
++      </div>
++
++      <div className="agent-unassigned-note">
++        <strong>{number(data.unassignedOpen)}</strong>
++        <span>{tr(locale, "open admissions opportunities currently have no owner", "opportunities abiertas de admisiones siguen sin owner")}</span>
++      </div>
++
++      {selected ? (
++        <>
++          <div className="kpi-grid agent-productivity-kpis">
++            <KpiCard icon={UserCheck} label={tr(locale, "Assigned now", "Asignadas ahora")} value={number(selected.current_assigned)} helper={`${number(selected.current_open)} abiertas`} locale={locale} />
++            <KpiCard icon={UsersRound} label={tr(locale, "Opportunities worked", "Opps trabajadas")} value={number(selected.opportunities_worked)} helper={`${number(selected.stage_moves)} movimientos de stage`} locale={locale} />
++            <KpiCard icon={PhoneCall} label={tr(locale, "Call attempts", "Intentos de llamada")} value={number(selected.call_attempts)} helper={`${number(selected.connected_calls)} conectadas · sólo GHL`} locale={locale} />
++            <KpiCard icon={MessageCircle} label="WhatsApp manual" value={number(selected.manual_whatsapp)} helper={`${number(selected.meaningful_conversations)} conversaciones significativas`} locale={locale} />
++            <KpiCard icon={Route} label={tr(locale, "Qualified / Tour", "Qualified / Tour")} value={`${number(selected.qualified_moves)} / ${number(selected.tour_booked_moves)}`} helper={tr(locale, "Attributed stage moves", "Movimientos de stage atribuidos")} locale={locale} />
++            <KpiCard icon={Activity} label={tr(locale, "Closed", "Closed")} value={number(selected.closed_moves)} helper={`${number(selected.unique_contacts_worked)} contactos únicos trabajados`} locale={locale} />
++          </div>
++          <div className="agent-stage-strip">
++            <span>New Lead <strong>{number(selected.current_new_lead)}</strong></span>
++            <span>No Answer <strong>{number(selected.current_no_answer)}</strong></span>
++            <span>Callback <strong>{number(selected.current_callback)}</strong></span>
++            <span>Tour Attended <strong>{number(selected.tour_attended_moves)}</strong></span>
++            <span>Pasadía Booked <strong>{number(selected.trial_booked_moves)}</strong></span>
++            <span>Pasadía Attended <strong>{number(selected.trial_attended_moves)}</strong></span>
++          </div>
++        </>
++      ) : (
++        <div className="table-scroll agent-productivity-table-wrap">
++          <table className="agent-productivity-table">
++            <thead><tr><th>Agente</th><th>Asignadas</th><th>Abiertas</th><th>Opps trabajadas</th><th>Mov. stage</th><th>Llamadas</th><th>Conectadas</th><th>WhatsApp</th><th>Qualified</th><th>Tour booked</th><th>Closed</th></tr></thead>
++            <tbody>{data.rows.map((row) => <tr key={row.ghl_user_id}>
++              <td><Link className="lead-name-link" href={hrefFor(range, row.ghl_user_id)}>{row.display_name}</Link></td>
++              <td>{number(row.current_assigned)}</td><td>{number(row.current_open)}</td><td>{number(row.opportunities_worked)}</td><td>{number(row.stage_moves)}</td><td>{number(row.call_attempts)}</td><td>{number(row.connected_calls)}</td><td>{number(row.manual_whatsapp)}</td><td>{number(row.qualified_moves)}</td><td>{number(row.tour_booked_moves)}</td><td>{number(row.closed_moves)}</td>
++            </tr>)}</tbody>
++          </table>
++        </div>
++      )}
++
++      <p className="agent-attribution-note">
++        {tr(locale,
++          "Stage-change attribution currently means owner-at-event: it is a strong operational proxy when staff assign themselves before working the lead, but it is not a click-level audit log. Shared-channel WhatsApp and calls without a GHL user are intentionally not assigned to an agent.",
++          "La atribución de cambios de stage actualmente significa owner al momento del evento: es un proxy operativo sólido si el equipo se asigna antes de trabajar el lead, pero no es un log de auditoría del clic exacto. WhatsApp del canal compartido y llamadas sin usuario GHL no se asignan artificialmente a ningún agente.")}
++      </p>
++    </section>
++  );
++}
+--- /dev/null
++++ b/lib/agent-productivity.ts
+@@ -0,0 +1,88 @@
++import "server-only";
++
++import { createSupabaseAdmin } from "@/lib/supabase-admin";
++import type { DateRange } from "@/lib/date-range";
++
++export type AgentProductivityRow = {
++  ghl_user_id: string;
++  display_name: string;
++  current_assigned: number;
++  current_open: number;
++  current_new_lead: number;
++  current_no_answer: number;
++  current_callback: number;
++  stage_moves: number;
++  opportunities_worked: number;
++  qualified_moves: number;
++  tour_booked_moves: number;
++  tour_attended_moves: number;
++  trial_booked_moves: number;
++  trial_attended_moves: number;
++  closed_moves: number;
++  call_attempts: number;
++  connected_calls: number;
++  manual_whatsapp: number;
++  meaningful_conversations: number;
++  unique_contacts_worked: number;
++};
++
++export type AgentProductivityData = {
++  rows: AgentProductivityRow[];
++  selected: AgentProductivityRow | null;
++  unassignedOpen: number;
++};
++
++function numbers(row: Record<string, unknown>): AgentProductivityRow {
++  const numericKeys = [
++    "current_assigned",
++    "current_open",
++    "current_new_lead",
++    "current_no_answer",
++    "current_callback",
++    "stage_moves",
++    "opportunities_worked",
++    "qualified_moves",
++    "tour_booked_moves",
++    "tour_attended_moves",
++    "trial_booked_moves",
++    "trial_attended_moves",
++    "closed_moves",
++    "call_attempts",
++    "connected_calls",
++    "manual_whatsapp",
++    "meaningful_conversations",
++    "unique_contacts_worked",
++  ] as const;
++
++  const result = { ...row } as Record<string, unknown>;
++  numericKeys.forEach((key) => { result[key] = Number(result[key] ?? 0); });
++  return result as AgentProductivityRow;
++}
++
++export async function getAgentProductivity(
++  range: DateRange,
++  selectedAgentId = "",
++): Promise<AgentProductivityData> {
++  const admin = createSupabaseAdmin();
++  const [productivity, unassigned] = await Promise.all([
++    admin.rpc("milhano_get_agent_productivity", {
++      p_start: range.start,
++      p_end: range.end,
++    }),
++    admin.rpc("milhano_get_unassigned_admissions_count"),
++  ]);
++
++  if (productivity.error) {
++    throw new Error(`No se pudo cargar productividad por owner: ${productivity.error.message}`);
++  }
++  if (unassigned.error) {
++    throw new Error(`No se pudo cargar la cola sin owner: ${unassigned.error.message}`);
++  }
++
++  const rows = ((productivity.data ?? []) as Record<string, unknown>[]).map(numbers);
++  return {
++    rows,
++    selected: rows.find((row) => row.ghl_user_id === selectedAgentId) ?? null,
++    unassignedOpen: Number(unassigned.data ?? 0),
++  };
++}
+--- a/lib/identity.ts
++++ b/lib/identity.ts
+@@ -1,6 +1,9 @@
+ const ADVISOR_ALIASES: Record<string, string> = {
+   cinthia: "Cinthia Esquivel",
+   "cinthia esquivel": "Cinthia Esquivel",
++  "77kxc0w2hmphbcnyl9fe": "Cinthia Esquivel",
++  "cvhk8cdzzt6a7zlxr5sg": "Miguel Campos",
++  "ltjepadclnxpxud2mrxp": "Pathi Carrillo",
+ };
+ 
+ function normalize(value: string): string {
+--- a/lib/cascade.ts
++++ b/lib/cascade.ts
+@@ -256,8 +256,23 @@
+   if (!result.data) return null;
+ 
+   const payload = result.data as Record<string, unknown>;
++  const opportunity = payload.opportunity as LeadDetail["opportunity"];
++
++  if (opportunity?.assigned_user_id) {
++    const owner = await supabase
++      .from("milhano_app_users")
++      .select("display_name")
++      .eq("ghl_user_id", opportunity.assigned_user_id)
++      .eq("is_active", true)
++      .maybeSingle();
++
++    if (!owner.error && owner.data?.display_name) {
++      opportunity.assigned_user = owner.data.display_name;
++    }
++  }
++
+   return {
+-    opportunity: payload.opportunity as LeadDetail["opportunity"],
++    opportunity,
+     appointments: (payload.appointments ?? []) as LeadDetail["appointments"],
+     stageEvents: (payload.stage_events ?? []) as LeadDetail["stageEvents"],
+     recentActivity: (payload.recent_activity ?? []) as LeadDetail["recentActivity"],
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -6216,3 +6216,23 @@
+ 
+ /* V23.1 · asistencia diaria + reportes */
+ .attendance-filter-simple{display:flex;align-items:end;gap:14px;flex-wrap:wrap}.attendance-room-select{min-width:250px}.attendance-today-active{background:#dff4e7!important;border-color:#74bf91!important;color:#11663d!important}.attendance-day-banner{margin-top:14px;padding:14px 18px;border:1px solid var(--border);border-radius:14px;background:var(--surface-soft);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.attendance-day-banner span{font-size:.65rem;font-weight:900;letter-spacing:.08em;color:var(--muted)}.attendance-day-banner strong{text-transform:capitalize}.attendance-day-banner.is-today{background:#e7f7ed;border-color:#8bcba3;color:#145f3d}.attendance-report{margin-top:26px}.attendance-report-filters{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr)) auto;gap:10px;align-items:end;margin:14px 0 18px}.attendance-report-filters label{display:grid;gap:5px}.attendance-report-filters label>span{font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.attendance-report-filters input,.attendance-report-filters select{min-height:42px;border:1px solid var(--border);border-radius:11px;background:var(--surface-soft);color:var(--text);padding:8px 10px}.attendance-report-table th:nth-child(n+4),.attendance-report-table td:nth-child(n+4){text-align:center}@media(max-width:1000px){.attendance-report-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.attendance-report-filters .primary-button{width:100%}}@media(max-width:600px){.attendance-report-filters{grid-template-columns:1fr}.attendance-filter-simple,.attendance-filter-main{align-items:stretch}.attendance-room-select{min-width:100%}}
++
++/* V23 · Attendance explicit save flow */
++.attendance-savebar{position:sticky;top:10px;z-index:35;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:12px 14px;box-shadow:0 8px 24px rgba(22,55,43,.08)}
++.attendance-savebar.has-changes{border-color:#d2ad52;background:#fffaf0}
++.attendance-savebar>div{display:grid;gap:2px}.attendance-savebar strong{font-size:.78rem}.attendance-savebar span{color:var(--muted);font-size:.65rem}
++.attendance-save-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
++.attendance-save-button:disabled{cursor:not-allowed;opacity:.55}
++.attendance-save-error,.attendance-save-success{margin:8px 0 0;border-radius:10px;padding:9px 12px;font-size:.68rem;font-weight:700}
++.attendance-save-error{background:#fff0f0;color:#9f1c13}.attendance-save-success{background:#e8f8ef;color:#157347}
++.attendance-row-dirty td:first-child strong::after{content:" •";color:#b47c00}
++@media(max-width:600px){.attendance-savebar{top:6px;align-items:stretch;flex-direction:column}.attendance-save-button{width:100%}}
++
++/* V23 · Opportunity owner / agent productivity */
++.agent-productivity-panel{display:grid;gap:16px}.agent-productivity-heading{align-items:flex-end;gap:18px}.agent-productivity-heading .panel-note{max-width:780px;margin-top:5px}
++.agent-productivity-filter{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.agent-productivity-filter label{display:grid;gap:5px;min-width:220px}.agent-productivity-filter label>span{font-size:.62rem;font-weight:850;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.agent-productivity-filter select{min-height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft);color:var(--text);padding:7px 10px}
++.agent-unassigned-note{display:flex;align-items:baseline;gap:7px;border:1px solid #e5c66f;border-radius:11px;background:#fff9e9;padding:9px 12px}.agent-unassigned-note strong{font-size:1.05rem;color:#916300}.agent-unassigned-note span{font-size:.68rem;color:var(--muted)}
++.agent-productivity-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.agent-stage-strip{display:flex;gap:8px;flex-wrap:wrap}.agent-stage-strip span{border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);padding:7px 10px;font-size:.64rem}.agent-stage-strip strong{margin-left:4px;color:var(--green-dark)}
++.agent-productivity-table th:not(:first-child),.agent-productivity-table td:not(:first-child){text-align:center}.agent-productivity-table td:first-child{white-space:nowrap}.agent-attribution-note{margin:0;color:var(--muted);font-size:.62rem;line-height:1.5}
++@media(max-width:980px){.agent-productivity-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.agent-productivity-heading{align-items:stretch;flex-direction:column}.agent-productivity-filter{width:100%}}
++@media(max-width:600px){.agent-productivity-kpis{grid-template-columns:1fr}.agent-productivity-filter{align-items:stretch;flex-direction:column}.agent-productivity-filter label{min-width:0}.agent-productivity-filter .primary-button,.agent-productivity-filter .secondary-button{width:100%;text-align:center}}
+--- /dev/null
++++ b/database/MILHANO_V23_OWNER_PRODUCTIVITY.sql
+@@ -0,0 +1,352 @@
++-- MILHANO V23 · Opportunity owner resolution + agent productivity
++-- 2026-10-01
++
++-- 1) Register Miguel as a GHL operator mapping. This does not create an Auth login.
++insert into public.milhano_app_users (
++  ghl_user_id,
++  display_name,
++  email,
++  role,
++  is_active
++)
++values (
++  'CVHK8CdZzT6A7zLxr5Sg',
++  'Miguel Campos',
++  'primaria@coldem.edu.mx',
++  'advisor',
++  true
++)
++on conflict (ghl_user_id) do update
++set display_name = excluded.display_name,
++    email = excluded.email,
++    is_active = true,
++    updated_at = now();
++
++-- Normalize existing opportunity display values without changing the stable GHL owner id.
++update public.milhano_opportunities
++set assigned_user = 'Miguel Campos'
++where assigned_user_id = 'CVHK8CdZzT6A7zLxr5Sg'
++  and assigned_user is distinct from 'Miguel Campos';
++
++-- Backfill app-user attribution for already captured events/messages.
++update public.milhano_stage_events se
++set attributed_app_user_id = u.id
++from public.milhano_app_users u
++where se.attributed_app_user_id is null
++  and se.attributed_ghl_user_id = u.ghl_user_id
++  and u.is_active = true;
++
++update public.milhano_communication_events ce
++set attributed_app_user_id = u.id
++from public.milhano_app_users u
++where ce.attributed_app_user_id is null
++  and ce.ghl_user_id = u.ghl_user_id
++  and u.is_active = true;
++
++-- 2) Resolve pipeline owner by GHL id first, then fall back to stored/historical labels.
++create or replace view public.vw_milhano_pipeline_current
++with (security_invoker = true)
++as
++select
++  o.ghl_opportunity_id,
++  o.ghl_contact_id,
++  o.legacy_lead_id,
++  o.pipeline_name,
++  o.pipeline_stage_id,
++  o.current_stage,
++  o.status,
++  o.opportunity_name,
++  o.contact_name,
++  o.phone,
++  o.email,
++  o.source,
++  o.assigned_user,
++  o.created_at,
++  o.updated_at,
++  o.original_lead_date,
++  o.student_name,
++  o.school_cycle,
++  o.level,
++  o.grade_interest,
++  o.priority,
++  o.historical_advisor,
++  o.admission_route,
++  o.direct_admission_reason,
++  o.no_fit_reason,
++  o.lost_reason,
++  o.historical_call_count,
++  o.historical_comments,
++  o.history_scope,
++  o.record_source,
++  o.synced_at,
++  sc.display_order as stage_display_order,
++  sc.stage_group,
++  o.status = 'open'::text as is_active,
++  o.status = 'won'::text or o.current_stage = 'Inscrito'::text as is_won,
++  o.status = 'lost'::text or o.current_stage = any(array['No fit'::text, 'Lost / Sin continuidad'::text]) as is_exit,
++  o.history_scope = 'reconstructed_from_excel'::text as has_reconstructed_history,
++  case
++    when o.updated_at is null then null::integer
++    else current_date - (o.updated_at at time zone 'America/Merida')::date
++  end as days_since_update,
++  case
++    when o.updated_at is null then 'Sin fecha'::text
++    when (current_date - (o.updated_at at time zone 'America/Merida')::date) <= 2 then '0–2 días'::text
++    when (current_date - (o.updated_at at time zone 'America/Merida')::date) <= 7 then '3–7 días'::text
++    when (current_date - (o.updated_at at time zone 'America/Merida')::date) <= 14 then '8–14 días'::text
++    else '15+ días'::text
++  end as inactivity_bucket,
++  coalesce(
++    nullif(u.display_name, ''::text),
++    nullif(o.assigned_user, ''::text),
++    nullif(o.historical_advisor, ''::text),
++    'Sin asignar'::text
++  ) as operational_owner
++from public.vw_milhano_opportunities_current o
++left join public.vw_milhano_stage_catalog sc on sc.stage_name = o.current_stage
++left join public.milhano_app_users u
++  on u.ghl_user_id = o.assigned_user_id
++ and u.is_active = true;
++
++-- 3) Fast, aggregated owner/productivity payload for the dashboard.
++create or replace function public.milhano_get_agent_productivity(
++  p_start date,
++  p_end date
++)
++returns table (
++  ghl_user_id text,
++  display_name text,
++  current_assigned bigint,
++  current_open bigint,
++  current_new_lead bigint,
++  current_no_answer bigint,
++  current_callback bigint,
++  stage_moves bigint,
++  opportunities_worked bigint,
++  qualified_moves bigint,
++  tour_booked_moves bigint,
++  tour_attended_moves bigint,
++  trial_booked_moves bigint,
++  trial_attended_moves bigint,
++  closed_moves bigint,
++  call_attempts bigint,
++  connected_calls bigint,
++  manual_whatsapp bigint,
++  meaningful_conversations bigint,
++  unique_contacts_worked bigint
++)
++language sql
++stable
++set search_path = public
++as $$
++with admissions_opps as (
++  select *
++  from public.milhano_opportunities
++  where pipeline_id in (
++    'L9nSVkwjFsHN5WFDs3Aa',
++    'GYqHbZyWUxxc3K03efVT',
++    'z1FEJfbtOHusjdwe40Ko'
++  )
++),
++v2_current_opps as (
++  select *
++  from public.milhano_opportunities
++  where pipeline_id in (
++    'GYqHbZyWUxxc3K03efVT',
++    'z1FEJfbtOHusjdwe40Ko'
++  )
++),
++period_stage as (
++  select se.*
++  from public.milhano_stage_events se
++  join admissions_opps o on o.ghl_opportunity_id = se.ghl_opportunity_id
++  where se.is_valid = true
++    and se.attributed_ghl_user_id is not null
++    and (se.event_timestamp at time zone 'America/Merida')::date between p_start and p_end
++),
++period_comm as (
++  select ce.*
++  from public.milhano_communication_events ce
++  where ce.ghl_user_id is not null
++    and coalesce(ce.is_automated, false) = false
++    and (ce.event_timestamp at time zone 'America/Merida')::date between p_start and p_end
++    and exists (
++      select 1
++      from admissions_opps o
++      where o.ghl_contact_id = ce.ghl_contact_id
++         or (ce.ghl_opportunity_id is not null and o.ghl_opportunity_id = ce.ghl_opportunity_id)
++    )
++),
++agent_ids as (
++  select ghl_user_id from public.milhano_app_users where is_active = true and ghl_user_id is not null
++  union
++  select assigned_user_id from v2_current_opps where assigned_user_id is not null
++  union
++  select attributed_ghl_user_id from period_stage where attributed_ghl_user_id is not null
++  union
++  select ghl_user_id from period_comm where ghl_user_id is not null
++),
++agent_names as (
++  select
++    a.ghl_user_id,
++    coalesce(
++      max(u.display_name) filter (where u.display_name is not null and u.display_name <> ''),
++      max(o.assigned_user) filter (
++        where o.assigned_user is not null
++          and o.assigned_user <> ''
++          and o.assigned_user <> a.ghl_user_id
++      ),
++      'GHL · ' || right(a.ghl_user_id, 6)
++    ) as display_name
++  from agent_ids a
++  left join public.milhano_app_users u
++    on u.ghl_user_id = a.ghl_user_id
++   and u.is_active = true
++  left join v2_current_opps o on o.assigned_user_id = a.ghl_user_id
++  group by a.ghl_user_id
++),
++current_agg as (
++  select
++    assigned_user_id as ghl_user_id,
++    count(*) as current_assigned,
++    count(*) filter (where lower(coalesce(status,'')) = 'open') as current_open,
++    count(*) filter (where lower(coalesce(current_stage,'')) = 'new lead') as current_new_lead,
++    count(*) filter (where lower(coalesce(current_stage,'')) like 'no answer%') as current_no_answer,
++    count(*) filter (where lower(coalesce(current_stage,'')) = 'callback') as current_callback
++  from v2_current_opps
++  where assigned_user_id is not null
++  group by assigned_user_id
++),
++stage_agg as (
++  select
++    attributed_ghl_user_id as ghl_user_id,
++    count(*) as stage_moves,
++    count(distinct ghl_opportunity_id) as opportunities_worked,
++    count(*) filter (where lower(coalesce(to_stage,'')) in ('fit','qualified')) as qualified_moves,
++    count(*) filter (where lower(coalesce(to_stage,'')) in ('school tour agendado','tour booked')) as tour_booked_moves,
++    count(*) filter (where lower(coalesce(to_stage,'')) in ('school tour atendido','tour attended')) as tour_attended_moves,
++    count(*) filter (where lower(coalesce(to_stage,'')) in ('pasadía agendada','pasadia booked','pasadía booked')) as trial_booked_moves,
++    count(*) filter (where lower(coalesce(to_stage,'')) in ('pasadía asistida','pasadia attended','pasadía attended')) as trial_attended_moves,
++    count(*) filter (where lower(coalesce(to_stage,'')) in ('inscrito','closed / enrolled')) as closed_moves
++  from period_stage
++  group by attributed_ghl_user_id
++),
++comm_agg as (
++  select
++    ghl_user_id,
++    count(*) filter (where coalesce(is_call_attempt,false) = true) as call_attempts,
++    count(*) filter (where coalesce(is_connected_raw,false) = true) as connected_calls,
++    count(*) filter (where lower(coalesce(channel,'')) = 'whatsapp' and lower(coalesce(direction,'')) = 'outbound') as manual_whatsapp,
++    count(*) filter (where coalesce(is_meaningful_conversation,false) = true or coalesce(is_meaningful_whatsapp,false) = true) as meaningful_conversations
++  from period_comm
++  group by ghl_user_id
++),
++worked_contacts as (
++  select attributed_ghl_user_id as ghl_user_id, ghl_contact_id
++  from period_stage
++  where ghl_contact_id is not null
++  union
++  select ghl_user_id, ghl_contact_id
++  from period_comm
++  where ghl_contact_id is not null
++),
++contact_agg as (
++  select ghl_user_id, count(distinct ghl_contact_id) as unique_contacts_worked
++  from worked_contacts
++  group by ghl_user_id
++)
++select
++  n.ghl_user_id,
++  n.display_name,
++  coalesce(c.current_assigned,0),
++  coalesce(c.current_open,0),
++  coalesce(c.current_new_lead,0),
++  coalesce(c.current_no_answer,0),
++  coalesce(c.current_callback,0),
++  coalesce(s.stage_moves,0),
++  coalesce(s.opportunities_worked,0),
++  coalesce(s.qualified_moves,0),
++  coalesce(s.tour_booked_moves,0),
++  coalesce(s.tour_attended_moves,0),
++  coalesce(s.trial_booked_moves,0),
++  coalesce(s.trial_attended_moves,0),
++  coalesce(s.closed_moves,0),
++  coalesce(cm.call_attempts,0),
++  coalesce(cm.connected_calls,0),
++  coalesce(cm.manual_whatsapp,0),
++  coalesce(cm.meaningful_conversations,0),
++  coalesce(ca.unique_contacts_worked,0)
++from agent_names n
++left join current_agg c using (ghl_user_id)
++left join stage_agg s using (ghl_user_id)
++left join comm_agg cm using (ghl_user_id)
++left join contact_agg ca using (ghl_user_id)
++order by n.display_name;
++$$;
++
++revoke all on function public.milhano_get_agent_productivity(date,date) from public, anon, authenticated;
++grant execute on function public.milhano_get_agent_productivity(date,date) to service_role;
++
++-- 4) Current unassigned queue helper.
++create or replace function public.milhano_get_unassigned_admissions_count()
++returns bigint
++language sql
++stable
++set search_path = public
++as $$
++  select count(*)
++  from public.milhano_opportunities
++  where pipeline_id in (
++    'GYqHbZyWUxxc3K03efVT',
++    'z1FEJfbtOHusjdwe40Ko'
++  )
++    and assigned_user_id is null
++    and lower(coalesce(status,'')) = 'open';
++$$;
++
++revoke all on function public.milhano_get_unassigned_admissions_count() from public, anon, authenticated;
++grant execute on function public.milhano_get_unassigned_admissions_count() to service_role;
++
++-- 5) Live sync edge case: GHL sends assignedTo:null when an opportunity is unassigned.
++-- The previous RPC kept the old owner via COALESCE. Patch only those two assignments
++-- while preserving the rest of the production function exactly as deployed.
++do $$
++declare
++  v_oid oid;
++  v_ddl text;
++  v_new text;
++begin
++  select oid into v_oid
++  from pg_proc
++  where pronamespace = 'public'::regnamespace
++    and proname = 'milhano_process_opportunity_live_event'
++  limit 1;
++
++  if v_oid is null then
++    raise exception 'milhano_process_opportunity_live_event no existe';
++  end if;
++
++  select pg_get_functiondef(v_oid) into v_ddl;
++
++  v_new := replace(
++    v_ddl,
++    E'assigned_user = coalesce(\r\n                nullif(trim(v_actor_name), ''''),\r\n                nullif(trim(p_assigned_user_id), ''''),\r\n                assigned_user\r\n            ),',
++    E'assigned_user = case\r\n                when nullif(trim(p_assigned_user_id), '''') is null then null\r\n                else coalesce(\r\n                    nullif(trim(v_actor_name), ''''),\r\n                    nullif(trim(p_assigned_user_id), '''')\r\n                )\r\n            end,'
++  );
++
++  v_new := replace(
++    v_new,
++    E'assigned_user_id = coalesce(\r\n                nullif(trim(p_assigned_user_id), ''''),\r\n                assigned_user_id\r\n            ),',
++    E'assigned_user_id = nullif(trim(p_assigned_user_id), ''''),'
++  );
++
++  -- If production is already patched, leave it untouched and succeed idempotently.
++  if v_new = v_ddl then
++    if strpos(v_ddl, 'assigned_user_id = nullif(trim(p_assigned_user_id)') > 0 then
++      return;
++    end if;
++    raise exception 'No se encontró el bloque esperado del owner en el RPC live';
++  end if;
++
++  execute v_new;
++end $$;
