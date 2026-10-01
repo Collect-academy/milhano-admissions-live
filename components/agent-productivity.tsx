@@ -11,7 +11,7 @@ import { tr } from "@/lib/locale";
 function hrefFor(range: DateRange, agent = "") {
   const params = new URLSearchParams(dateRangeParams(range));
   if (agent) params.set("agent", agent);
-  return `/?${params.toString()}`;
+  return `/agentes?${params.toString()}`;
 }
 
 export function AgentProductivity({
@@ -36,8 +36,8 @@ export function AgentProductivity({
           <p className="panel-note">
             {tr(
               locale,
-              "Current assignment is a live snapshot. Activity uses the GHL user attributed to stage changes and non-automated communications during the selected period.",
-              "La asignación actual es una foto en vivo. La actividad usa el usuario GHL atribuido a cambios de stage y comunicaciones no automatizadas dentro del periodo.",
+              "Current assignment is a live snapshot. Period activity is attributed from GHL owner-at-event and non-automated communications.",
+              "La asignación actual es una foto en vivo. La actividad del periodo se atribuye con owner-at-event de GHL y comunicaciones no automatizadas.",
             )}
           </p>
         </div>
@@ -46,12 +46,12 @@ export function AgentProductivity({
           <label>
             <span>{tr(locale, "Agent", "Agente")}</span>
             <select name="agent" defaultValue={selectedAgentId}>
-              <option value="">{tr(locale, "All agents", "Todos los agentes")}</option>
+              <option value="all">{tr(locale, "All agents", "Todos los agentes")}</option>
               {data.rows.map((row) => <option key={row.ghl_user_id} value={row.ghl_user_id}>{row.display_name}</option>)}
             </select>
           </label>
           <button className="primary-button" type="submit">{tr(locale, "Apply", "Aplicar")}</button>
-          {selectedAgentId ? <Link className="secondary-button" href={hrefFor(range)}>{tr(locale, "Clear", "Limpiar")}</Link> : null}
+          {selectedAgentId ? <Link className="secondary-button" href={hrefFor(range, "all")}>{tr(locale, "Clear", "Limpiar")}</Link> : null}
         </form>
       </div>
 

@@ -1,0 +1,839 @@
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -10,7 +10,6 @@
+ } from "lucide-react";
+ 
+ import { AdmissionsV2Cascade } from "@/components/admissions-v2-cascade";
+-import { AgentProductivity } from "@/components/agent-productivity";
+ import { AdmissionsVersionSwitcher } from "@/components/admissions-version-switcher";
+ import { DashboardLayout } from "@/components/dashboard-layout";
+ import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
+@@ -25,7 +24,6 @@
+   type V2CascadeMetric,
+ } from "@/lib/admissions-v2";
+ import { resolveDateRange, type DateRange } from "@/lib/date-range";
+-import { getAgentProductivity } from "@/lib/agent-productivity";
+ import { dateLabel, number } from "@/lib/format";
+ import { getDashboardLocale } from "@/lib/i18n";
+ import { tr } from "@/lib/locale";
+@@ -56,11 +54,7 @@
+       ? savedSource
+       : "ghl";
+ 
+-  const selectedAgentId = Array.isArray(params.agent) ? params.agent[0] ?? "" : params.agent ?? "";
+-  const [payload, agentProductivity] = await Promise.all([
+-    getAdmissionsV2Payload(range.start, range.end),
+-    getAgentProductivity(range, selectedAgentId),
+-  ]);
++  const payload = await getAdmissionsV2Payload(range.start, range.end);
+   const stageMapReady = payload.stage_map.resolved_stage_ids >= payload.stage_map.expected_stage_rows;
+ 
+   const manualGeneral: V2CascadeMetric[] = [
+@@ -206,14 +200,7 @@
+         <span>{tr(locale, "Setter/New Lead cohorts use the opportunity creation timestamp in Mérida with a 2:30 PM cutoff. Friday after 2:30 PM, Saturday, Sunday and Monday before 2:30 PM report as Monday. Appointments and Closer events keep their real calendar date.", "Las cohortes Setter/New Lead usan el timestamp de creación en Mérida con corte a las 2:30 p. m. Viernes después de 2:30 p. m., sábado, domingo y lunes antes de 2:30 p. m. reportan como lunes. Las citas y eventos de Closer conservan su fecha calendario real.")}</span>
+       </div>
+ 
+-      <DateRangeFilter basePath="/" range={range} locale={locale} preserve={{ agent: selectedAgentId || undefined }} />
+-
+-      <AgentProductivity
+-        data={agentProductivity}
+-        range={range}
+-        selectedAgentId={selectedAgentId}
+-        locale={locale}
+-      />
++      <DateRangeFilter basePath="/" range={range} locale={locale} />
+ 
+       <section className="panel v2-inventory-panel">
+         <div className="panel-heading compact-panel-heading">
+--- a/app/globals.css
++++ b/app/globals.css
+@@ -6236,3 +6236,13 @@
+ .agent-productivity-table th:not(:first-child),.agent-productivity-table td:not(:first-child){text-align:center}.agent-productivity-table td:first-child{white-space:nowrap}.agent-attribution-note{margin:0;color:var(--muted);font-size:.62rem;line-height:1.5}
+ @media(max-width:980px){.agent-productivity-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.agent-productivity-heading{align-items:stretch;flex-direction:column}.agent-productivity-filter{width:100%}}
+ @media(max-width:600px){.agent-productivity-kpis{grid-template-columns:1fr}.agent-productivity-filter{align-items:stretch;flex-direction:column}.agent-productivity-filter label{min-width:0}.agent-productivity-filter .primary-button,.agent-productivity-filter .secondary-button{width:100%;text-align:center}}
++
++/* V24 · Agent analytics view */
++.agent-view-badge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);padding:8px 11px;color:var(--green-dark);font-size:.68rem;font-weight:850;letter-spacing:.04em}
++.agent-focus-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
++.agent-activity-panel,.agent-conversion-panel{display:grid;gap:16px}.agent-activity-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.agent-activity-stats>div{display:grid;gap:4px;border:1px solid var(--border);border-radius:11px;background:var(--surface-soft);padding:10px 12px}.agent-activity-stats span{font-size:.61rem;color:var(--muted);font-weight:750}.agent-activity-stats strong{font-size:1rem;color:var(--green-dark)}
++.agent-scatter-chart{height:340px;border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:10px 8px 4px}.agent-chart-empty{height:100%;display:grid;place-items:center;color:var(--muted);font-size:.75rem}.agent-activity-source-note{display:flex;gap:8px;flex-wrap:wrap}.agent-activity-source-note span{border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);padding:6px 9px;font-size:.61rem;color:var(--muted)}.agent-activity-source-note strong{margin-left:3px;color:var(--text)}
++.agent-conversion-flow{display:flex;align-items:center;gap:6px;overflow-x:auto;padding-bottom:4px}.agent-conversion-node-wrap{display:flex;align-items:center;gap:6px;min-width:max-content}.agent-conversion-arrow{display:grid;place-items:center;gap:2px;color:var(--muted);font-size:.58rem}.agent-conversion-arrow strong{color:var(--green-dark)}.agent-conversion-node{display:grid;gap:4px;min-width:120px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft);padding:11px 12px;text-align:center}.agent-conversion-node span{font-size:.62rem;color:var(--muted);font-weight:800}.agent-conversion-node strong{font-size:1.2rem;color:var(--green-dark)}.agent-tour-conversion{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.agent-tour-conversion>div{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(23,107,82,.22);border-radius:12px;background:var(--green-soft);padding:12px 14px}.agent-tour-conversion span{font-size:.68rem;color:var(--muted);font-weight:800}.agent-tour-conversion strong{font-size:1.05rem;color:var(--green-dark)}.agent-funnel-empty{border:1px dashed var(--border);border-radius:12px;padding:18px;color:var(--muted);font-size:.7rem;line-height:1.5}.agent-analysis-footnote{margin:0;color:var(--muted);font-size:.62rem;line-height:1.5}
++@media(max-width:1050px){.agent-activity-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.agent-focus-kpis{grid-template-columns:1fr}.agent-conversion-flow{align-items:stretch}}
++@media(max-width:700px){.agent-activity-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.agent-tour-conversion{grid-template-columns:1fr}.agent-scatter-chart{height:300px}}
++@media(max-width:480px){.agent-activity-stats{grid-template-columns:1fr}}
+--- a/components/app-nav.tsx
++++ b/components/app-nav.tsx
+@@ -10,6 +10,7 @@
+   { href: "/pipeline", en: "Pipeline", es: "Pipeline" },
+   { href: "/whatsapp", en: "WhatsApp", es: "WhatsApp" },
+   { href: "/llamadas", en: "Calls", es: "Llamadas" },
++  { href: "/agentes", en: "Agents", es: "Agentes" },
+   { href: "/eod", en: "EOD", es: "EOD" },
+   { href: "/legacy", en: "V1 Legacy", es: "V1 Legacy" },
+   { href: "/reconciliation", en: "Reconciliation", es: "Reconciliación" },
+--- a/components/agent-productivity.tsx
++++ b/components/agent-productivity.tsx
+@@ -11,7 +11,7 @@
+ function hrefFor(range: DateRange, agent = "") {
+   const params = new URLSearchParams(dateRangeParams(range));
+   if (agent) params.set("agent", agent);
+-  return `/?${params.toString()}`;
++  return `/agentes?${params.toString()}`;
+ }
+ 
+ export function AgentProductivity({
+@@ -36,8 +36,8 @@
+           <p className="panel-note">
+             {tr(
+               locale,
+-              "Current assignment is a live snapshot. Activity uses the GHL user attributed to stage changes and non-automated communications during the selected period.",
+-              "La asignación actual es una foto en vivo. La actividad usa el usuario GHL atribuido a cambios de stage y comunicaciones no automatizadas dentro del periodo.",
++              "Current assignment is a live snapshot. Period activity is attributed from GHL owner-at-event and non-automated communications.",
++              "La asignación actual es una foto en vivo. La actividad del periodo se atribuye con owner-at-event de GHL y comunicaciones no automatizadas.",
+             )}
+           </p>
+         </div>
+@@ -46,12 +46,12 @@
+           <label>
+             <span>{tr(locale, "Agent", "Agente")}</span>
+             <select name="agent" defaultValue={selectedAgentId}>
+-              <option value="">{tr(locale, "All agents", "Todos los agentes")}</option>
++              <option value="all">{tr(locale, "All agents", "Todos los agentes")}</option>
+               {data.rows.map((row) => <option key={row.ghl_user_id} value={row.ghl_user_id}>{row.display_name}</option>)}
+             </select>
+           </label>
+           <button className="primary-button" type="submit">{tr(locale, "Apply", "Aplicar")}</button>
+-          {selectedAgentId ? <Link className="secondary-button" href={hrefFor(range)}>{tr(locale, "Clear", "Limpiar")}</Link> : null}
++          {selectedAgentId ? <Link className="secondary-button" href={hrefFor(range, "all")}>{tr(locale, "Clear", "Limpiar")}</Link> : null}
+         </form>
+       </div>
+ 
+--- /dev/null
++++ b/app/agentes/page.tsx
+@@ -0,0 +1,117 @@
++import { Activity, Gauge, UserRoundCog } from "lucide-react";
++
++import { AgentActivityScatter } from "@/components/agent-activity-scatter";
++import { AgentConversionFunnel } from "@/components/agent-conversion-funnel";
++import { AgentProductivity } from "@/components/agent-productivity";
++import { DashboardLayout } from "@/components/dashboard-layout";
++import { DashboardRefreshButton } from "@/components/dashboard-refresh-button";
++import { DateRangeFilter } from "@/components/date-range-filter";
++import { KpiCard } from "@/components/kpi-card";
++import { ADMISSIONS_V2_CUTOVER, clampV2Range } from "@/lib/admissions-v2";
++import { getAgentActivityAnalysis, getAgentSetterFunnel } from "@/lib/agent-analytics";
++import { getAgentProductivity } from "@/lib/agent-productivity";
++import { resolveDateRange, type DateRange } from "@/lib/date-range";
++import { dateLabel, number } from "@/lib/format";
++import { getDashboardLocale } from "@/lib/i18n";
++import { tr } from "@/lib/locale";
++
++export const dynamic = "force-dynamic";
++
++type SearchParams = Record<string, string | string[] | undefined>;
++
++export default async function AgentsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
++  const params = await searchParams;
++  const requestedRange = resolveDateRange(params);
++  const effective = clampV2Range(requestedRange.start, requestedRange.end);
++  const range: DateRange = {
++    ...requestedRange,
++    start: effective.start,
++    end: effective.end,
++    label: requestedRange.start < ADMISSIONS_V2_CUTOVER
++      ? `${dateLabel(effective.start)} – ${dateLabel(effective.end)}`
++      : requestedRange.label,
++  };
++  const locale = await getDashboardLocale();
++  const requestedAgentId = Array.isArray(params.agent) ? params.agent[0] ?? "" : params.agent ?? "";
++
++  const productivityBase = await getAgentProductivity(range, "");
++  const fallbackAgent = [...productivityBase.rows]
++    .sort((a, b) => (b.opportunities_worked + b.stage_moves) - (a.opportunities_worked + a.stage_moves))[0];
++  const selectedAgentId = requestedAgentId === "all"
++    ? "all"
++    : productivityBase.rows.some((row) => row.ghl_user_id === requestedAgentId)
++      ? requestedAgentId
++      : fallbackAgent?.ghl_user_id ?? "all";
++  const detailAgentId = selectedAgentId === "all" ? "" : selectedAgentId;
++  const selected = productivityBase.rows.find((row) => row.ghl_user_id === detailAgentId) ?? null;
++  const productivity = { ...productivityBase, selected };
++
++  const [activity, funnel] = await Promise.all([
++    getAgentActivityAnalysis(range, detailAgentId),
++    getAgentSetterFunnel(range, detailAgentId),
++  ]);
++
++  return (
++    <DashboardLayout
++      eyebrow="Milhano · Setter Operations"
++      statusLabel={`${tr(locale, "Period", "Periodo")} ${dateLabel(range.start)} – ${dateLabel(range.end)}`}
++      subtitle={tr(
++        locale,
++        "Agent-level CRM cadence and Setter conversion analysis without treating first-to-last activity as worked hours.",
++        "Cadencia de CRM y conversión Setter por agente, sin interpretar el intervalo primera–última actividad como horas trabajadas.",
++      )}
++      title={tr(locale, "Agent Performance", "Productividad de agentes")}
++    >
++      <div className="v2-toolbar">
++        <div className="agent-view-badge"><UserRoundCog size={16} /> SETTER</div>
++        <DashboardRefreshButton />
++      </div>
++
++      <DateRangeFilter basePath="/agentes" range={range} locale={locale} preserve={{ agent: selectedAgentId || undefined }} />
++
++      <AgentProductivity
++        data={productivity}
++        range={range}
++        selectedAgentId={selectedAgentId}
++        locale={locale}
++      />
++
++      {selected ? (
++        <div className="agent-focus-kpis kpi-grid">
++          <KpiCard
++            icon={Activity}
++            label={tr(locale, "Attributable events", "Eventos atribuibles")}
++            value={number(activity.totalEvents)}
++            helper={`${number(activity.workWindowEvents)} entre 07:00–15:00`}
++            locale={locale}
++          />
++          <KpiCard
++            icon={Gauge}
++            label={tr(locale, "Active cadence blocks", "Bloques activos de cadencia")}
++            value={number(activity.activeThirtyMinuteBlocks)}
++            helper={tr(locale, "30-minute blocks with at least one event", "Bloques de 30 min con al menos un evento")}
++            locale={locale}
++          />
++          <KpiCard
++            icon={UserRoundCog}
++            label={tr(locale, "Selected agent", "Agente seleccionado")}
++            value={selected.display_name}
++            helper={`${number(selected.current_assigned)} opps asignadas actualmente`}
++            locale={locale}
++          />
++        </div>
++      ) : null}
++
++      <AgentActivityScatter data={activity} locale={locale} />
++      <AgentConversionFunnel data={funnel} locale={locale} />
++
++      <p className="agent-analysis-footnote">
++        {tr(
++          locale,
++          "CRM stage activity is attributed by owner-at-event; assignments come from Opportunity webhooks; calls and WhatsApp only count when GHL provides an attributable user and the message is not automated. These are operational signals, not payroll timekeeping.",
++          "La actividad de stages se atribuye por owner-at-event; las asignaciones vienen de webhooks de Opportunity; llamadas y WhatsApp sólo cuentan cuando GHL entrega un usuario atribuible y el mensaje no es automatizado. Son señales operativas, no control de nómina.",
++        )}
++      </p>
++    </DashboardLayout>
++  );
++}
+--- /dev/null
++++ b/components/agent-activity-scatter.tsx
+@@ -0,0 +1,107 @@
++"use client";
++
++import {
++  CartesianGrid,
++  Legend,
++  ResponsiveContainer,
++  Scatter,
++  ScatterChart,
++  Tooltip,
++  XAxis,
++  YAxis,
++} from "recharts";
++
++import type { AgentActivityAnalysis, AgentScatterPoint } from "@/lib/agent-analytics";
++import type { Locale } from "@/lib/locale";
++import { tr } from "@/lib/locale";
++
++const labels: Record<AgentScatterPoint["kind"], { en: string; es: string }> = {
++  assignment: { en: "Owner assignment", es: "Asignación owner" },
++  crm_stage: { en: "CRM stage", es: "Movimiento CRM" },
++  call: { en: "Call", es: "Llamada" },
++  whatsapp: { en: "WhatsApp", es: "WhatsApp" },
++  communication: { en: "Communication", es: "Comunicación" },
++};
++
++function hourLabel(value: number) {
++  const hour = Math.floor(value);
++  const minute = Math.round((value - hour) * 60);
++  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
++}
++
++function tooltipLabel(point: AgentScatterPoint, locale: Locale) {
++  return `${point.date} · ${point.time} · ${locale === "es" ? labels[point.kind].es : labels[point.kind].en}`;
++}
++
++export function AgentActivityScatter({ data, locale }: { data: AgentActivityAnalysis; locale: Locale }) {
++  const series = (kind: AgentScatterPoint["kind"]) => data.scatter.filter((point) => point.kind === kind);
++
++  return (
++    <section className="panel agent-activity-panel">
++      <div className="panel-heading compact-panel-heading">
++        <div>
++          <p className="eyebrow">07:00–15:00 · MÉRIDA</p>
++          <h2>{tr(locale, "Activity cadence", "Cadencia de actividad")}</h2>
++          <p className="panel-note">
++            {tr(
++              locale,
++              "Each point is a 15-minute block. Y is the number of attributable events in that block; this does not treat the span between the first and last event as worked time.",
++              "Cada punto es un bloque de 15 minutos. Y es la cantidad de eventos atribuibles en ese bloque; no se interpreta el intervalo entre la primera y última acción como tiempo trabajado.",
++            )}
++          </p>
++        </div>
++      </div>
++
++      <div className="agent-activity-stats">
++        <div><span>{tr(locale, "Events in window", "Eventos en ventana")}</span><strong>{data.workWindowEvents}</strong></div>
++        <div><span>{tr(locale, "Active 30-min blocks", "Bloques activos de 30 min")}</span><strong>{data.activeThirtyMinuteBlocks}</strong></div>
++        <div><span>{tr(locale, "Median gap", "Pausa mediana")}</span><strong>{data.medianGapMinutes === null ? "—" : `${data.medianGapMinutes.toFixed(0)} min`}</strong></div>
++        <div><span>{tr(locale, "Largest gap", "Pausa mayor")}</span><strong>{data.maxGapMinutes === null ? "—" : `${data.maxGapMinutes.toFixed(0)} min`}</strong></div>
++        <div><span>{tr(locale, "Actions / active block", "Acciones / bloque activo")}</span><strong>{data.actionsPerActiveBlock.toFixed(1)}</strong></div>
++      </div>
++
++      <div className="agent-scatter-chart">
++        {data.scatter.length ? (
++          <ResponsiveContainer width="100%" height="100%">
++            <ScatterChart margin={{ top: 10, right: 18, left: -8, bottom: 4 }}>
++              <CartesianGrid strokeDasharray="3 3" />
++              <XAxis
++                type="number"
++                dataKey="x"
++                domain={[7, 15]}
++                ticks={[7, 8, 9, 10, 11, 12, 13, 14, 15]}
++                tickFormatter={hourLabel}
++                tick={{ fontSize: 11 }}
++                name={tr(locale, "Time", "Horario")}
++              />
++              <YAxis type="number" dataKey="y" allowDecimals={false} tick={{ fontSize: 11 }} name={tr(locale, "Interactions", "Interacciones")} />
++              <Tooltip
++                cursor={{ strokeDasharray: "3 3" }}
++                formatter={(value) => [Number(value), tr(locale, "Interactions", "Interacciones")]}
++                labelFormatter={(_, payload) => {
++                  const point = payload?.[0]?.payload as AgentScatterPoint | undefined;
++                  return point ? tooltipLabel(point, locale) : "";
++                }}
++              />
++              <Legend />
++              <Scatter data={series("crm_stage")} name={tr(locale, "CRM stages", "Movimientos CRM")} fill="var(--green)" />
++              <Scatter data={series("assignment")} name={tr(locale, "Assignments", "Asignaciones")} fill="var(--gold)" />
++              <Scatter data={series("call")} name={tr(locale, "Calls", "Llamadas")} fill="var(--blue)" />
++              <Scatter data={series("whatsapp")} name="WhatsApp" fill="var(--red)" />
++            </ScatterChart>
++          </ResponsiveContainer>
++        ) : (
++          <div className="agent-chart-empty">{tr(locale, "No attributable activity in this period.", "No hay actividad atribuible en este periodo.")}</div>
++        )}
++      </div>
++
++      <div className="agent-activity-source-note">
++        <span>CRM <strong>{data.byKind.crm_stage}</strong></span>
++        <span>{tr(locale, "Assignments", "Asignaciones")} <strong>{data.byKind.assignment}</strong></span>
++        <span>{tr(locale, "Calls", "Llamadas")} <strong>{data.byKind.call}</strong></span>
++        <span>WhatsApp <strong>{data.byKind.whatsapp}</strong></span>
++        {data.outsideWorkWindow ? <span>{tr(locale, "Outside 07–15", "Fuera de 07–15")} <strong>{data.outsideWorkWindow}</strong></span> : null}
++      </div>
++    </section>
++  );
++}
+--- /dev/null
++++ b/components/agent-conversion-funnel.tsx
+@@ -0,0 +1,71 @@
++import { ArrowRight } from "lucide-react";
++
++import type { AgentSetterFunnel } from "@/lib/agent-analytics";
++import type { Locale } from "@/lib/locale";
++import { tr } from "@/lib/locale";
++
++function pct(value: number | null) {
++  return value === null ? "—" : `${value.toFixed(1)}%`;
++}
++
++export function AgentConversionFunnel({ data, locale }: { data: AgentSetterFunnel; locale: Locale }) {
++  const steps = [
++    { label: "New Leads", value: data.new_leads, rate: null },
++    { label: "Contacted", value: data.contacted, rate: data.new_to_contacted_pct },
++    { label: "Responded", value: data.responded, rate: data.contacted_to_responded_pct },
++    { label: "Meaningful", value: data.meaningful, rate: data.responded_to_meaningful_pct },
++    { label: "Qualified", value: data.qualified, rate: data.meaningful_to_qualified_pct },
++  ];
++
++  return (
++    <section className="panel agent-conversion-panel">
++      <div className="panel-heading compact-panel-heading">
++        <div>
++          <p className="eyebrow">SETTER · COHORTE ATRIBUIDA</p>
++          <h2>{tr(locale, "Stage transformation", "Transformación entre stages")}</h2>
++          <p className="panel-note">
++            {tr(
++              locale,
++              "Leads are attributed to the first Setter owner observed in GHL. Contacted / Responded / Meaningful / Qualified use the same cascade definitions as Admissions V2.",
++              "Los leads se atribuyen al primer owner Setter observado en GHL. Contacted / Responded / Meaningful / Qualified usan las mismas definiciones de la cascada de Admisiones V2.",
++            )}
++          </p>
++        </div>
++      </div>
++
++      {data.new_leads ? (
++        <>
++          <div className="agent-conversion-flow">
++            {steps.map((step, index) => (
++              <div className="agent-conversion-node-wrap" key={step.label}>
++                {index ? <div className="agent-conversion-arrow"><ArrowRight size={15} /><strong>{pct(step.rate)}</strong></div> : null}
++                <div className="agent-conversion-node">
++                  <span>{step.label}</span>
++                  <strong>{step.value}</strong>
++                </div>
++              </div>
++            ))}
++          </div>
++          <div className="agent-tour-conversion">
++            <div>
++              <span>{tr(locale, "School Tours booked", "School Tours agendados")}</span>
++              <strong>{data.tour_booked}</strong>
++            </div>
++            <div>
++              <span>{tr(locale, "Contacted → ST booked", "Contacted → ST booked")}</span>
++              <strong>{pct(data.contacted_to_tour_pct)}</strong>
++            </div>
++          </div>
++        </>
++      ) : (
++        <div className="agent-funnel-empty">
++          {tr(
++            locale,
++            "No newly created lead cohort is attributed to this agent in the selected period. Their backlog activity can still appear in the cadence chart above.",
++            "No hay una cohorte de leads nuevos atribuida a este agente en el periodo seleccionado. Su trabajo sobre backlog sí puede aparecer en la gráfica de cadencia de arriba.",
++          )}
++        </div>
++      )}
++    </section>
++  );
++}
+--- /dev/null
++++ b/lib/agent-analytics.ts
+@@ -0,0 +1,244 @@
++import "server-only";
++
++import type { DateRange } from "@/lib/date-range";
++import { createSupabaseAdmin } from "@/lib/supabase-admin";
++
++export type AgentActivityEvent = {
++  event_timestamp: string;
++  event_kind: "assignment" | "crm_stage" | "call" | "whatsapp" | "communication";
++  ghl_opportunity_id: string | null;
++  ghl_contact_id: string | null;
++  event_label: string | null;
++};
++
++export type AgentScatterPoint = {
++  id: string;
++  x: number;
++  y: number;
++  date: string;
++  time: string;
++  kind: AgentActivityEvent["event_kind"];
++  label: string;
++};
++
++export type AgentActivityAnalysis = {
++  events: AgentActivityEvent[];
++  scatter: AgentScatterPoint[];
++  totalEvents: number;
++  workWindowEvents: number;
++  activeThirtyMinuteBlocks: number;
++  medianGapMinutes: number | null;
++  maxGapMinutes: number | null;
++  actionsPerActiveBlock: number;
++  outsideWorkWindow: number;
++  byKind: Record<AgentActivityEvent["event_kind"], number>;
++};
++
++export type AgentSetterFunnel = {
++  new_leads: number;
++  contacted: number;
++  responded: number;
++  meaningful: number;
++  qualified: number;
++  tour_booked: number;
++  new_to_contacted_pct: number | null;
++  contacted_to_responded_pct: number | null;
++  responded_to_meaningful_pct: number | null;
++  meaningful_to_qualified_pct: number | null;
++  contacted_to_tour_pct: number | null;
++};
++
++type LocalParts = {
++  date: string;
++  hour: number;
++  minute: number;
++};
++
++const meridaFormatter = new Intl.DateTimeFormat("en-CA", {
++  timeZone: "America/Merida",
++  year: "numeric",
++  month: "2-digit",
++  day: "2-digit",
++  hour: "2-digit",
++  minute: "2-digit",
++  hourCycle: "h23",
++});
++
++function localParts(timestamp: string): LocalParts {
++  const parts = Object.fromEntries(
++    meridaFormatter
++      .formatToParts(new Date(timestamp))
++      .filter((part) => part.type !== "literal")
++      .map((part) => [part.type, part.value]),
++  );
++  return {
++    date: `${parts.year}-${parts.month}-${parts.day}`,
++    hour: Number(parts.hour),
++    minute: Number(parts.minute),
++  };
++}
++
++function median(values: number[]): number | null {
++  if (!values.length) return null;
++  const ordered = [...values].sort((a, b) => a - b);
++  const middle = Math.floor(ordered.length / 2);
++  return ordered.length % 2
++    ? ordered[middle]
++    : (ordered[middle - 1] + ordered[middle]) / 2;
++}
++
++function numeric(value: unknown): number {
++  return Number(value ?? 0);
++}
++
++function nullableNumeric(value: unknown): number | null {
++  if (value === null || value === undefined || value === "") return null;
++  const parsed = Number(value);
++  return Number.isFinite(parsed) ? parsed : null;
++}
++
++export async function getAgentActivityAnalysis(
++  range: DateRange,
++  agentId: string,
++): Promise<AgentActivityAnalysis> {
++  if (!agentId) {
++    return {
++      events: [],
++      scatter: [],
++      totalEvents: 0,
++      workWindowEvents: 0,
++      activeThirtyMinuteBlocks: 0,
++      medianGapMinutes: null,
++      maxGapMinutes: null,
++      actionsPerActiveBlock: 0,
++      outsideWorkWindow: 0,
++      byKind: { assignment: 0, crm_stage: 0, call: 0, whatsapp: 0, communication: 0 },
++    };
++  }
++
++  const admin = createSupabaseAdmin();
++  const result = await admin.rpc("milhano_get_agent_activity", {
++    p_start: range.start,
++    p_end: range.end,
++    p_agent_id: agentId,
++  });
++  if (result.error) {
++    throw new Error(`No se pudo cargar la actividad del agente: ${result.error.message}`);
++  }
++
++  const events = ((result.data ?? []) as AgentActivityEvent[]).filter((event) => Boolean(event.event_timestamp));
++  const byKind: AgentActivityAnalysis["byKind"] = {
++    assignment: 0,
++    crm_stage: 0,
++    call: 0,
++    whatsapp: 0,
++    communication: 0,
++  };
++
++  const bucketMap = new Map<string, AgentScatterPoint>();
++  const blockKeys = new Set<string>();
++  const perDayMinutes = new Map<string, number[]>();
++  let workWindowEvents = 0;
++  let outsideWorkWindow = 0;
++
++  events.forEach((event) => {
++    const kind = event.event_kind in byKind ? event.event_kind : "communication";
++    byKind[kind] += 1;
++    const local = localParts(event.event_timestamp);
++    const minutes = local.hour * 60 + local.minute;
++    if (minutes < 7 * 60 || minutes >= 15 * 60) {
++      outsideWorkWindow += 1;
++      return;
++    }
++
++    workWindowEvents += 1;
++    const quarter = Math.floor(local.minute / 15) * 15;
++    const halfHour = Math.floor(local.minute / 30) * 30;
++    blockKeys.add(`${local.date}|${local.hour}:${String(halfHour).padStart(2, "0")}`);
++
++    const dayMinutes = perDayMinutes.get(local.date) ?? [];
++    dayMinutes.push(minutes);
++    perDayMinutes.set(local.date, dayMinutes);
++
++    const key = `${local.date}|${local.hour}:${String(quarter).padStart(2, "0")}|${kind}`;
++    const existing = bucketMap.get(key);
++    if (existing) {
++      existing.y += 1;
++      return;
++    }
++
++    bucketMap.set(key, {
++      id: key,
++      x: local.hour + quarter / 60,
++      y: 1,
++      date: local.date,
++      time: `${String(local.hour).padStart(2, "0")}:${String(quarter).padStart(2, "0")}`,
++      kind,
++      label: event.event_label ?? "Actividad",
++    });
++  });
++
++  const gaps: number[] = [];
++  perDayMinutes.forEach((minutes) => {
++    const ordered = [...minutes].sort((a, b) => a - b);
++    for (let i = 1; i < ordered.length; i += 1) gaps.push(ordered[i] - ordered[i - 1]);
++  });
++
++  return {
++    events,
++    scatter: [...bucketMap.values()].sort((a, b) => a.date.localeCompare(b.date) || a.x - b.x || a.kind.localeCompare(b.kind)),
++    totalEvents: events.length,
++    workWindowEvents,
++    activeThirtyMinuteBlocks: blockKeys.size,
++    medianGapMinutes: median(gaps),
++    maxGapMinutes: gaps.length ? Math.max(...gaps) : null,
++    actionsPerActiveBlock: blockKeys.size ? workWindowEvents / blockKeys.size : 0,
++    outsideWorkWindow,
++    byKind,
++  };
++}
++
++export async function getAgentSetterFunnel(
++  range: DateRange,
++  agentId: string,
++): Promise<AgentSetterFunnel> {
++  const empty: AgentSetterFunnel = {
++    new_leads: 0,
++    contacted: 0,
++    responded: 0,
++    meaningful: 0,
++    qualified: 0,
++    tour_booked: 0,
++    new_to_contacted_pct: null,
++    contacted_to_responded_pct: null,
++    responded_to_meaningful_pct: null,
++    meaningful_to_qualified_pct: null,
++    contacted_to_tour_pct: null,
++  };
++  if (!agentId) return empty;
++
++  const admin = createSupabaseAdmin();
++  const result = await admin.rpc("milhano_get_agent_setter_funnel", {
++    p_start: range.start,
++    p_end: range.end,
++    p_agent_id: agentId,
++  });
++  if (result.error) {
++    throw new Error(`No se pudo cargar la conversión Setter del agente: ${result.error.message}`);
++  }
++
++  const row = ((result.data ?? [])[0] ?? {}) as Record<string, unknown>;
++  return {
++    new_leads: numeric(row.new_leads),
++    contacted: numeric(row.contacted),
++    responded: numeric(row.responded),
++    meaningful: numeric(row.meaningful),
++    qualified: numeric(row.qualified),
++    tour_booked: numeric(row.tour_booked),
++    new_to_contacted_pct: nullableNumeric(row.new_to_contacted_pct),
++    contacted_to_responded_pct: nullableNumeric(row.contacted_to_responded_pct),
++    responded_to_meaningful_pct: nullableNumeric(row.responded_to_meaningful_pct),
++    meaningful_to_qualified_pct: nullableNumeric(row.meaningful_to_qualified_pct),
++    contacted_to_tour_pct: nullableNumeric(row.contacted_to_tour_pct),
++  };
++}
+--- /dev/null
++++ b/database/MILHANO_V24_AGENT_ANALYTICS.sql
+@@ -0,0 +1,175 @@
++-- V24 · Agent analytics
++-- Applied directly to Supabase on 2026-10-01.
++-- Adds two service-role-only RPCs used by /agentes.
++
++create or replace function public.milhano_get_agent_activity(
++  p_start date,
++  p_end date,
++  p_agent_id text
++)
++returns table (
++  event_timestamp timestamptz,
++  event_kind text,
++  ghl_opportunity_id text,
++  ghl_contact_id text,
++  event_label text
++)
++language sql
++stable
++set search_path = public
++as $$
++with webhook_states as (
++  select
++    w.id,
++    w.opportunity_id,
++    w.contact_id,
++    w.received_at,
++    nullif(w.payload #>> '{opportunity,assignedTo}','') as assigned_to,
++    nullif(w.payload #>> '{opportunity,pipelineId}','') as pipeline_id,
++    lag(nullif(w.payload #>> '{opportunity,assignedTo}',''))
++      over (partition by w.opportunity_id order by w.received_at, w.id) as previous_assigned_to
++  from public.milhano_webhook_inbox w
++  where nullif(w.payload #>> '{opportunity,pipelineId}','') = 'GYqHbZyWUxxc3K03efVT'
++),
++assignment_events as (
++  select received_at, 'assignment'::text, opportunity_id, contact_id, 'Owner asignado'::text
++  from webhook_states
++  where assigned_to = p_agent_id
++    and assigned_to is distinct from previous_assigned_to
++    and (received_at at time zone 'America/Merida')::date between p_start and p_end
++),
++stage_events as (
++  select
++    e.event_timestamp,
++    'crm_stage'::text,
++    e.ghl_opportunity_id,
++    e.ghl_contact_id,
++    concat_ws(' → ', nullif(e.from_stage,''), nullif(e.to_stage,''))
++  from public.milhano_stage_events e
++  where e.pipeline_id = 'GYqHbZyWUxxc3K03efVT'
++    and e.is_valid = true
++    and coalesce(e.is_inferred,false) = false
++    and e.attributed_ghl_user_id = p_agent_id
++    and e.attribution_method = 'owner_at_event'
++    and (e.event_timestamp at time zone 'America/Merida')::date between p_start and p_end
++),
++communication_events as (
++  select
++    c.event_timestamp,
++    case
++      when lower(coalesce(c.channel,'')) = 'call' or coalesce(c.is_call_attempt,false) then 'call'
++      when lower(coalesce(c.channel,'')) = 'whatsapp' then 'whatsapp'
++      else 'communication'
++    end,
++    coalesce(
++      c.ghl_opportunity_id,
++      (
++        select o.ghl_opportunity_id
++        from public.milhano_opportunities o
++        where o.ghl_contact_id = c.ghl_contact_id
++          and o.pipeline_id in ('GYqHbZyWUxxc3K03efVT','z1FEJfbtOHusjdwe40Ko')
++        order by o.updated_at desc nulls last
++        limit 1
++      )
++    ),
++    c.ghl_contact_id,
++    case
++      when lower(coalesce(c.channel,'')) = 'call' or coalesce(c.is_call_attempt,false)
++        then coalesce(nullif(c.call_disposition,''), nullif(c.call_status,''), 'Llamada')
++      when lower(coalesce(c.channel,'')) = 'whatsapp' then 'WhatsApp manual'
++      else coalesce(nullif(c.message_type,''), 'Comunicación')
++    end
++  from public.milhano_communication_events c
++  where c.ghl_user_id = p_agent_id
++    and coalesce(c.is_automated,false) = false
++    and (c.event_timestamp at time zone 'America/Merida')::date between p_start and p_end
++    and (coalesce(c.is_call_attempt,false) or lower(coalesce(c.channel,'')) in ('call','whatsapp'))
++    and exists (
++      select 1
++      from public.milhano_opportunities o
++      where o.ghl_contact_id = c.ghl_contact_id
++        and o.pipeline_id in ('GYqHbZyWUxxc3K03efVT','z1FEJfbtOHusjdwe40Ko')
++    )
++)
++select * from assignment_events
++union all select * from stage_events
++union all select * from communication_events
++order by event_timestamp;
++$$;
++
++revoke all on function public.milhano_get_agent_activity(date,date,text) from public, anon, authenticated;
++grant execute on function public.milhano_get_agent_activity(date,date,text) to service_role;
++
++create or replace function public.milhano_get_agent_setter_funnel(
++  p_start date,
++  p_end date,
++  p_agent_id text
++)
++returns table (
++  new_leads bigint,
++  contacted bigint,
++  responded bigint,
++  meaningful bigint,
++  qualified bigint,
++  tour_booked bigint,
++  new_to_contacted_pct numeric,
++  contacted_to_responded_pct numeric,
++  responded_to_meaningful_pct numeric,
++  meaningful_to_qualified_pct numeric,
++  contacted_to_tour_pct numeric
++)
++language sql
++stable
++set search_path = public
++as $$
++with webhook_states as (
++  select w.id, w.opportunity_id, w.received_at,
++    nullif(w.payload #>> '{opportunity,assignedTo}','') as assigned_to
++  from public.milhano_webhook_inbox w
++  where nullif(w.payload #>> '{opportunity,pipelineId}','') = 'GYqHbZyWUxxc3K03efVT'
++),
++first_assignment as (
++  select distinct on (opportunity_id) opportunity_id, assigned_to, received_at
++  from webhook_states
++  where assigned_to is not null
++  order by opportunity_id, received_at, id
++),
++cohort as materialized (
++  select * from public.milhano_get_stage_cascade_cohort(p_start,p_end)
++),
++attributed as (
++  select c.*, coalesce(fa.assigned_to, o.assigned_user_id) as agent_id
++  from cohort c
++  join public.milhano_opportunities o on o.ghl_opportunity_id = c.ghl_opportunity_id
++  left join first_assignment fa on fa.opportunity_id = c.ghl_opportunity_id
++  where o.pipeline_id in ('GYqHbZyWUxxc3K03efVT','z1FEJfbtOHusjdwe40Ko')
++),
++agent_cohort as (
++  select * from attributed where agent_id = p_agent_id
++),
++counts as (
++  select
++    count(*)::bigint as new_leads,
++    count(*) filter (where reached_contacted)::bigint as contacted,
++    count(*) filter (where reached_responded)::bigint as responded,
++    count(*) filter (where reached_meaningful)::bigint as meaningful,
++    count(*) filter (where reached_qualified)::bigint as qualified,
++    count(*) filter (where exists (
++      select 1 from public.vw_milhano_appointment_events_v22 a
++      where a.metric_opportunity_id = agent_cohort.ghl_opportunity_id
++        and a.canonical_type = 'school_tour'
++    ))::bigint as tour_booked
++  from agent_cohort
++)
++select
++  new_leads, contacted, responded, meaningful, qualified, tour_booked,
++  round(100.0 * contacted / nullif(new_leads,0),1),
++  round(100.0 * responded / nullif(contacted,0),1),
++  round(100.0 * meaningful / nullif(responded,0),1),
++  round(100.0 * qualified / nullif(meaningful,0),1),
++  round(100.0 * tour_booked / nullif(contacted,0),1)
++from counts;
++$$;
++
++revoke all on function public.milhano_get_agent_setter_funnel(date,date,text) from public, anon, authenticated;
++grant execute on function public.milhano_get_agent_setter_funnel(date,date,text) to service_role;

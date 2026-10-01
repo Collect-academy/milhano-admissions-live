@@ -10,6 +10,7 @@ const primaryLinks = [
   { href: "/pipeline", en: "Pipeline", es: "Pipeline" },
   { href: "/whatsapp", en: "WhatsApp", es: "WhatsApp" },
   { href: "/llamadas", en: "Calls", es: "Llamadas" },
+  { href: "/agentes", en: "Agents", es: "Agentes" },
   { href: "/eod", en: "EOD", es: "EOD" },
   { href: "/legacy", en: "V1 Legacy", es: "V1 Legacy" },
   { href: "/reconciliation", en: "Reconciliation", es: "Reconciliación" },
