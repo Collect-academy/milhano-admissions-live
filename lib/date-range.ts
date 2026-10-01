@@ -1,5 +1,6 @@
 export const DATE_RANGE_KEYS = [
   "today",
+  "yesterday",
   "last_7_days",
   "last_30_days",
   "this_month",
@@ -115,7 +116,11 @@ export function resolveDateRange(
   let end = today;
   let label = "Today";
 
-  if (key === "last_7_days") {
+  if (key === "yesterday") {
+    start = addDays(today, -1);
+    end = start;
+    label = "Yesterday";
+  } else if (key === "last_7_days") {
     start = addDays(today, -6);
     label = "Last 7 Days";
   } else if (key === "last_30_days") {

@@ -3,6 +3,14 @@ import "server-only";
 import type { DateRange } from "@/lib/date-range";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
 
+const SETTER_PIPELINE_ID = "GYqHbZyWUxxc3K03efVT";
+const CLOSER_PIPELINE_ID = "z1FEJfbtOHusjdwe40Ko";
+
+export type AgentDirectoryEntry = {
+  ghl_user_id: string;
+  display_name: string;
+};
+
 export type AgentActivityEvent = {
   event_timestamp: string;
   event_kind: "assignment" | "crm_stage" | "call" | "whatsapp" | "communication";
@@ -34,15 +42,18 @@ export type AgentActivityAnalysis = {
   byKind: Record<AgentActivityEvent["event_kind"], number>;
 };
 
-export type AgentSetterFunnel = {
-  new_leads: number;
-  contacted: number;
+export type AgentSetterJourney = {
+  new_leads_assigned: number;
+  new_leads_contacted: number;
+  new_to_contacted_pct: number | null;
+  calls_made: number;
   responded: number;
+  no_answer: number;
+  disqualified: number;
   meaningful: number;
   qualified: number;
   tour_booked: number;
-  new_to_contacted_pct: number | null;
-  contacted_to_responded_pct: number | null;
+  calls_to_responded_pct: number | null;
   responded_to_meaningful_pct: number | null;
   meaningful_to_qualified_pct: number | null;
   contacted_to_tour_pct: number | null;
@@ -52,6 +63,16 @@ type LocalParts = {
   date: string;
   hour: number;
   minute: number;
+};
+
+type AppUserRow = {
+  ghl_user_id: string | null;
+  display_name: string | null;
+};
+
+type OpportunityOwnerRow = {
+  assigned_user_id: string | null;
+  assigned_user: string | null;
 };
 
 const meridaFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -97,25 +118,57 @@ function nullableNumeric(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function fallbackName(userId: string, assignedUser: string | null | undefined): string {
+  const clean = assignedUser?.trim();
+  if (clean && clean !== userId) return clean;
+  return `GHL · ${userId.slice(-6)}`;
+}
+
+export async function getSetterAgentDirectory(): Promise<AgentDirectoryEntry[]> {
+  const admin = createSupabaseAdmin();
+  const [usersResult, ownersResult] = await Promise.all([
+    admin
+      .from("milhano_app_users")
+      .select("ghl_user_id,display_name")
+      .eq("is_active", true)
+      .not("ghl_user_id", "is", null),
+    admin
+      .from("milhano_opportunities")
+      .select("assigned_user_id,assigned_user")
+      .in("pipeline_id", [SETTER_PIPELINE_ID, CLOSER_PIPELINE_ID])
+      .not("assigned_user_id", "is", null),
+  ]);
+
+  if (usersResult.error) {
+    throw new Error(`No se pudo cargar el directorio GHL: ${usersResult.error.message}`);
+  }
+  if (ownersResult.error) {
+    throw new Error(`No se pudieron cargar los owners de opportunities: ${ownersResult.error.message}`);
+  }
+
+  const names = new Map<string, string>();
+  ((usersResult.data ?? []) as AppUserRow[]).forEach((row) => {
+    if (!row.ghl_user_id) return;
+    const name = row.display_name?.trim();
+    if (name) names.set(row.ghl_user_id, name);
+  });
+
+  ((ownersResult.data ?? []) as OpportunityOwnerRow[]).forEach((row) => {
+    if (!row.assigned_user_id) return;
+    if (!names.has(row.assigned_user_id)) {
+      names.set(row.assigned_user_id, fallbackName(row.assigned_user_id, row.assigned_user));
+    }
+  });
+
+  return [...names.entries()]
+    .map(([ghl_user_id, display_name]) => ({ ghl_user_id, display_name }))
+    .sort((a, b) => a.display_name.localeCompare(b.display_name, "es"));
+}
+
 export async function getAgentActivityAnalysis(
   range: DateRange,
   agentId: string,
 ): Promise<AgentActivityAnalysis> {
-  if (!agentId) {
-    return {
-      events: [],
-      scatter: [],
-      totalEvents: 0,
-      workWindowEvents: 0,
-      activeThirtyMinuteBlocks: 0,
-      medianGapMinutes: null,
-      maxGapMinutes: null,
-      actionsPerActiveBlock: 0,
-      outsideWorkWindow: 0,
-      byKind: { assignment: 0, crm_stage: 0, call: 0, whatsapp: 0, communication: 0 },
-    };
-  }
-
   const admin = createSupabaseAdmin();
   const result = await admin.rpc("milhano_get_agent_activity", {
     p_start: range.start,
@@ -198,45 +251,33 @@ export async function getAgentActivityAnalysis(
   };
 }
 
-export async function getAgentSetterFunnel(
+export async function getSetterAgentJourney(
   range: DateRange,
   agentId: string,
-): Promise<AgentSetterFunnel> {
-  const empty: AgentSetterFunnel = {
-    new_leads: 0,
-    contacted: 0,
-    responded: 0,
-    meaningful: 0,
-    qualified: 0,
-    tour_booked: 0,
-    new_to_contacted_pct: null,
-    contacted_to_responded_pct: null,
-    responded_to_meaningful_pct: null,
-    meaningful_to_qualified_pct: null,
-    contacted_to_tour_pct: null,
-  };
-  if (!agentId) return empty;
-
+): Promise<AgentSetterJourney> {
   const admin = createSupabaseAdmin();
-  const result = await admin.rpc("milhano_get_agent_setter_funnel", {
+  const result = await admin.rpc("milhano_get_setter_agent_journey", {
     p_start: range.start,
     p_end: range.end,
     p_agent_id: agentId,
   });
   if (result.error) {
-    throw new Error(`No se pudo cargar la conversión Setter del agente: ${result.error.message}`);
+    throw new Error(`No se pudo cargar el viaje Setter: ${result.error.message}`);
   }
 
   const row = ((result.data ?? [])[0] ?? {}) as Record<string, unknown>;
   return {
-    new_leads: numeric(row.new_leads),
-    contacted: numeric(row.contacted),
+    new_leads_assigned: numeric(row.new_leads_assigned),
+    new_leads_contacted: numeric(row.new_leads_contacted),
+    new_to_contacted_pct: nullableNumeric(row.new_to_contacted_pct),
+    calls_made: numeric(row.calls_made),
     responded: numeric(row.responded),
+    no_answer: numeric(row.no_answer),
+    disqualified: numeric(row.disqualified),
     meaningful: numeric(row.meaningful),
     qualified: numeric(row.qualified),
     tour_booked: numeric(row.tour_booked),
-    new_to_contacted_pct: nullableNumeric(row.new_to_contacted_pct),
-    contacted_to_responded_pct: nullableNumeric(row.contacted_to_responded_pct),
+    calls_to_responded_pct: nullableNumeric(row.calls_to_responded_pct),
     responded_to_meaningful_pct: nullableNumeric(row.responded_to_meaningful_pct),
     meaningful_to_qualified_pct: nullableNumeric(row.meaningful_to_qualified_pct),
     contacted_to_tour_pct: nullableNumeric(row.contacted_to_tour_pct),

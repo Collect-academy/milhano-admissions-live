@@ -16,7 +16,7 @@ import type { Locale } from "@/lib/locale";
 import { tr } from "@/lib/locale";
 
 const labels: Record<AgentScatterPoint["kind"], { en: string; es: string }> = {
-  assignment: { en: "Owner assignment", es: "Asignación owner" },
+  assignment: { en: "Opportunity owner assignment", es: "Asignación owner de opportunity" },
   crm_stage: { en: "CRM stage", es: "Movimiento CRM" },
   call: { en: "Call", es: "Llamada" },
   whatsapp: { en: "WhatsApp", es: "WhatsApp" },
@@ -29,8 +29,24 @@ function hourLabel(value: number) {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-function tooltipLabel(point: AgentScatterPoint, locale: Locale) {
-  return `${point.date} · ${point.time} · ${locale === "es" ? labels[point.kind].es : labels[point.kind].en}`;
+type ScatterTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload?: AgentScatterPoint }>;
+  locale: Locale;
+};
+
+function ScatterTooltipContent({ active, payload, locale }: ScatterTooltipProps) {
+  const point = payload?.[0]?.payload;
+  if (!active || !point) return null;
+
+  return (
+    <div className="agent-scatter-tooltip">
+      <strong>{locale === "es" ? labels[point.kind].es : labels[point.kind].en}</strong>
+      <span>{point.date}</span>
+      <span><b>{tr(locale, "Interaction time", "Hora de interacción")}:</b> {point.time}</span>
+      <span><b>{tr(locale, "Number of interactions", "Número de interacciones")}:</b> {point.y}</span>
+    </div>
+  );
 }
 
 export function AgentActivityScatter({ data, locale }: { data: AgentActivityAnalysis; locale: Locale }) {
@@ -45,8 +61,8 @@ export function AgentActivityScatter({ data, locale }: { data: AgentActivityAnal
           <p className="panel-note">
             {tr(
               locale,
-              "Each point is a 15-minute block. Y is the number of attributable events in that block; this does not treat the span between the first and last event as worked time.",
-              "Cada punto es un bloque de 15 minutos. Y es la cantidad de eventos atribuibles en ese bloque; no se interpreta el intervalo entre la primera y última acción como tiempo trabajado.",
+              "Each point is a 15-minute block. Y is the number of attributable actions in that block; the span between the first and last action is not treated as worked time.",
+              "Cada punto es un bloque de 15 minutos. Y es la cantidad de acciones atribuibles en ese bloque; el intervalo entre la primera y última acción no se interpreta como tiempo trabajado.",
             )}
           </p>
         </div>
@@ -72,20 +88,12 @@ export function AgentActivityScatter({ data, locale }: { data: AgentActivityAnal
                 ticks={[7, 8, 9, 10, 11, 12, 13, 14, 15]}
                 tickFormatter={hourLabel}
                 tick={{ fontSize: 11 }}
-                name={tr(locale, "Time", "Horario")}
               />
-              <YAxis type="number" dataKey="y" allowDecimals={false} tick={{ fontSize: 11 }} name={tr(locale, "Interactions", "Interacciones")} />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3" }}
-                formatter={(value) => [Number(value), tr(locale, "Interactions", "Interacciones")]}
-                labelFormatter={(_, payload) => {
-                  const point = payload?.[0]?.payload as AgentScatterPoint | undefined;
-                  return point ? tooltipLabel(point, locale) : "";
-                }}
-              />
+              <YAxis type="number" dataKey="y" allowDecimals={false} tick={{ fontSize: 11 }} />
+              <Tooltip cursor={{ strokeDasharray: "3 3" }} content={<ScatterTooltipContent locale={locale} />} />
               <Legend />
               <Scatter data={series("crm_stage")} name={tr(locale, "CRM stages", "Movimientos CRM")} fill="var(--green)" />
-              <Scatter data={series("assignment")} name={tr(locale, "Assignments", "Asignaciones")} fill="var(--gold)" />
+              <Scatter data={series("assignment")} name={tr(locale, "Opportunity assignments", "Asignaciones de opportunity")} fill="var(--gold)" />
               <Scatter data={series("call")} name={tr(locale, "Calls", "Llamadas")} fill="var(--blue)" />
               <Scatter data={series("whatsapp")} name="WhatsApp" fill="var(--red)" />
             </ScatterChart>
@@ -97,7 +105,7 @@ export function AgentActivityScatter({ data, locale }: { data: AgentActivityAnal
 
       <div className="agent-activity-source-note">
         <span>CRM <strong>{data.byKind.crm_stage}</strong></span>
-        <span>{tr(locale, "Assignments", "Asignaciones")} <strong>{data.byKind.assignment}</strong></span>
+        <span>{tr(locale, "Opportunity assignments", "Asignaciones opp")} <strong>{data.byKind.assignment}</strong></span>
         <span>{tr(locale, "Calls", "Llamadas")} <strong>{data.byKind.call}</strong></span>
         <span>WhatsApp <strong>{data.byKind.whatsapp}</strong></span>
         {data.outsideWorkWindow ? <span>{tr(locale, "Outside 07–15", "Fuera de 07–15")} <strong>{data.outsideWorkWindow}</strong></span> : null}

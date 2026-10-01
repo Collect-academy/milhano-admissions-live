@@ -11,6 +11,7 @@ const presets: Array<{
   es: string;
 }> = [
   { key: "today", en: "Today", es: "Hoy" },
+  { key: "yesterday", en: "Yesterday", es: "Ayer" },
   { key: "last_7_days", en: "7 Days", es: "7 Días" },
   { key: "last_30_days", en: "30 Days", es: "30 Días" },
   { key: "this_month", en: "This Month", es: "Este Mes" },

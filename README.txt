@@ -1,11 +1,12 @@
-Fix puntual para el error de Vercel:
-Parameter 'row' implicitly has an 'any' type.
+MILHANO V25 — archivos para commit directo
 
-Reemplaza únicamente:
-app/api/alumnos/asistencia/route.ts
+Sube/reemplaza exactamente estos archivos conservando sus rutas:
+- app/agentes/page.tsx
+- app/globals.css
+- components/agent-activity-scatter.tsx
+- components/agent-conversion-funnel.tsx
+- components/date-range-filter.tsx
+- lib/agent-analytics.ts
+- lib/date-range.ts
 
-O aplica fix.patch desde la raíz del repo:
-git apply fix.patch
-
-El cambio sólo agrega el tipo AttendanceRow y tipa incomingRows/rows.
-No cambia la lógica de guardado ni Supabase.
+No ejecutes SQL: los cambios de Supabase correspondientes ya fueron aplicados.
