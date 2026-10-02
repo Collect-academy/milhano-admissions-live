@@ -49,14 +49,14 @@ export type AgentSetterJourney = {
   new_leads_assigned: number;
   new_leads_contacted: number;
   new_to_contacted_pct: number | null;
-  calls_made: number;
+  opportunities_moved: number;
   responded: number;
   no_answer: number;
   disqualified: number;
   meaningful: number;
   qualified: number;
   tour_booked: number;
-  calls_to_responded_pct: number | null;
+  moved_to_responded_pct: number | null;
   responded_to_meaningful_pct: number | null;
   meaningful_to_qualified_pct: number | null;
   contacted_to_tour_pct: number | null;
@@ -292,14 +292,14 @@ export async function getSetterAgentJourney(
     new_leads_assigned: numeric(row.new_leads_assigned),
     new_leads_contacted: numeric(row.new_leads_contacted),
     new_to_contacted_pct: nullableNumeric(row.new_to_contacted_pct),
-    calls_made: numeric(row.calls_made),
+    opportunities_moved: numeric(row.calls_made),
     responded: numeric(row.responded),
     no_answer: numeric(row.no_answer),
     disqualified: numeric(row.disqualified),
     meaningful: numeric(row.meaningful),
     qualified: numeric(row.qualified),
     tour_booked: numeric(row.tour_booked),
-    calls_to_responded_pct: nullableNumeric(row.calls_to_responded_pct),
+    moved_to_responded_pct: nullableNumeric(row.calls_to_responded_pct),
     responded_to_meaningful_pct: nullableNumeric(row.responded_to_meaningful_pct),
     meaningful_to_qualified_pct: nullableNumeric(row.meaningful_to_qualified_pct),
     contacted_to_tour_pct: nullableNumeric(row.contacted_to_tour_pct),

@@ -10,8 +10,8 @@ function pct(value: number | null) {
 
 export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourney; locale: Locale }) {
   const steps = [
-    { label: tr(locale, "Calls made", "Llamadas hechas"), value: data.calls_made, rate: null },
-    { label: tr(locale, "Responded", "Respondieron"), value: data.responded, rate: data.calls_to_responded_pct },
+    { label: tr(locale, "Opportunities moved", "Opps movidas de stage"), value: data.opportunities_moved, rate: null },
+    { label: tr(locale, "Responded", "Respondieron"), value: data.responded, rate: data.moved_to_responded_pct },
     { label: "Meaningful Conversation", value: data.meaningful, rate: data.responded_to_meaningful_pct },
     { label: "Qualified", value: data.qualified, rate: data.meaningful_to_qualified_pct },
     { label: "Tour Booked", value: data.tour_booked, rate: null },
@@ -26,8 +26,8 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
           <p className="panel-note">
             {tr(
               locale,
-              "A worked opportunity is counted once when it leaves New Lead for another operational stage, including a direct handoff to Tour Booked. During the current historical transition, an unassigned opportunity is attributed to Paty. Contact ownership is not used.",
-              "Una opportunity se cuenta como trabajada una sola vez cuando sale de New Lead hacia otro stage operativo, incluido un traspaso directo a Tour Booked. Durante esta transición histórica, una opportunity sin assignee se atribuye a Paty. El owner del contacto no se usa.",
+              "For this version, a worked opportunity is any opportunity with at least one real stage change during the selected period, regardless of the starting stage. The same opportunity counts once per agent even if it changes stage multiple times. Follow-ups without a stage change are not included yet. During the current historical transition, an unassigned opportunity is attributed to Paty. Contact ownership is not used.",
+              "Para esta versión, una opportunity trabajada es cualquier opp que tenga al menos un cambio real de stage durante el periodo, sin importar desde qué stage partió. La misma opp cuenta una sola vez por agente aunque cambie de stage varias veces. Los seguimientos sin cambio de stage todavía no entran. Durante esta transición histórica, una opp sin assignee se atribuye a Paty. El owner del contacto no se usa.",
             )}
           </p>
         </div>
@@ -70,12 +70,12 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
         <div>
           <span>{tr(locale, "No response", "No respondieron")}</span>
           <strong>{data.no_answer}</strong>
-          <small>New Lead → No answer - Day 1</small>
+          <small>{tr(locale, "Latest move in period → No answer / Never Answered", "Último movimiento del periodo → No answer / Never Answered")}</small>
         </div>
         <div>
           <span>{tr(locale, "Disqualified (Lost)", "Disqualified (Lost)")}</span>
           <strong>{data.disqualified}</strong>
-          <small>New Lead → Disqualified</small>
+          <small>{tr(locale, "Latest move in period → Disqualified", "Último movimiento del periodo → Disqualified")}</small>
         </div>
         <div className="agent-tour-rate">
           <span>Contacted → Tour Booked</span>
@@ -87,8 +87,8 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
       <p className="agent-attribution-note">
         {tr(
           locale,
-          "Responded = Calls made − No response, exactly as defined operationally. Meaningful, Qualified and Tour Booked count opportunities from the worked cohort that reached those stages later, so an opportunity is not lost from the journey after advancing.",
-          "Respondieron = Llamadas hechas − No respondieron, exactamente como se definió operativamente. Meaningful, Qualified y Tour Booked cuentan las opportunities de la cohorte trabajada que alcanzaron después esos stages, para que una opp no desaparezca del viaje al seguir avanzando.",
+          "Responded = opportunities moved − No response. No response uses the latest stage movement in the selected period, so Day 1 → Day 2 follow-up movement still counts as no response. Meaningful, Qualified and Tour Booked count opportunities from the worked cohort that reached those stages later.",
+          "Respondieron = opps movidas de stage − No respondieron. No respondieron usa el último movimiento de stage del periodo, por lo que un seguimiento Day 1 → Day 2 sigue contando como no respuesta. Meaningful, Qualified y Tour Booked cuentan las opps de la cohorte trabajada que alcanzaron después esos stages.",
         )}
       </p>
     </section>
