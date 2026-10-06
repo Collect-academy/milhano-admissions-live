@@ -53,6 +53,7 @@ export type AgentSetterJourney = {
   responded: number;
   no_answer: number;
   disqualified: number;
+  callback: number;
   meaningful: number;
   qualified: number;
   tour_booked: number;
@@ -296,6 +297,7 @@ export async function getSetterAgentJourney(
     responded: numeric(row.responded),
     no_answer: numeric(row.no_answer),
     disqualified: numeric(row.disqualified),
+    callback: numeric(row.callback),
     meaningful: numeric(row.meaningful),
     qualified: numeric(row.qualified),
     tour_booked: numeric(row.tour_booked),

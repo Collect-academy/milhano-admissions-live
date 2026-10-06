@@ -8,13 +8,38 @@ function pct(value: number | null) {
   return value === null ? "—" : `${value.toFixed(1)}%`;
 }
 
+function ratio(numerator: number, denominator: number) {
+  if (!denominator) return null;
+  return (numerator / denominator) * 100;
+}
+
 export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourney; locale: Locale }) {
   const steps = [
-    { label: tr(locale, "Opportunities moved", "Opps movidas de stage"), value: data.opportunities_moved, rate: null },
-    { label: tr(locale, "Responded", "Respondieron"), value: data.responded, rate: data.moved_to_responded_pct },
-    { label: "Meaningful Conversation", value: data.meaningful, rate: data.responded_to_meaningful_pct },
-    { label: "Qualified", value: data.qualified, rate: data.meaningful_to_qualified_pct },
-    { label: "Tour Booked", value: data.tour_booked, rate: null },
+    {
+      label: tr(locale, "Calls made", "Llamadas hechas"),
+      value: data.opportunities_moved,
+      rate: null,
+    },
+    {
+      label: tr(locale, "Responded", "Respondieron"),
+      value: data.responded,
+      rate: data.moved_to_responded_pct,
+    },
+    {
+      label: "Meaningful Conversation",
+      value: data.meaningful,
+      rate: data.responded_to_meaningful_pct,
+    },
+    {
+      label: "Qualified",
+      value: data.qualified,
+      rate: data.meaningful_to_qualified_pct,
+    },
+    {
+      label: "Tour Booked",
+      value: data.tour_booked,
+      rate: ratio(data.tour_booked, data.qualified),
+    },
   ];
 
   return (
@@ -26,8 +51,8 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
           <p className="panel-note">
             {tr(
               locale,
-              "For this version, a worked opportunity is any opportunity with at least one real stage change during the selected period, regardless of the starting stage. The same opportunity counts once per agent even if it changes stage multiple times. Follow-ups without a stage change are not included yet. During the current historical transition, an unassigned opportunity is attributed to Paty. Contact ownership is not used.",
-              "Para esta versión, una opportunity trabajada es cualquier opp que tenga al menos un cambio real de stage durante el periodo, sin importar desde qué stage partió. La misma opp cuenta una sola vez por agente aunque cambie de stage varias veces. Los seguimientos sin cambio de stage todavía no entran. Durante esta transición histórica, una opp sin assignee se atribuye a Paty. El owner del contacto no se usa.",
+              "Calls made is the operational count of unique opportunities with at least one real stage movement during the selected period. It is not a literal phone-call count. Later milestones are cumulative: an opportunity that reaches Qualified also counts as Meaningful, and one that reaches Tour Booked also counts as Qualified and Meaningful. Follow-ups without a stage change are not included yet. Unassigned historical opportunities are temporarily attributed to Paty.",
+              "Llamadas hechas es el conteo operativo de opportunities únicas con al menos un cambio real de stage durante el periodo seleccionado; no es el conteo literal de llamadas telefónicas. Los milestones posteriores son acumulativos: una opp que llega a Qualified también cuenta en Meaningful, y una que llega a Tour Booked también cuenta en Qualified y Meaningful. Los seguimientos sin cambio de stage todavía no entran. Las opps históricas sin assignee se atribuyen temporalmente a Paty.",
             )}
           </p>
         </div>
@@ -70,25 +95,25 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
         <div>
           <span>{tr(locale, "No response", "No respondieron")}</span>
           <strong>{data.no_answer}</strong>
-          <small>{tr(locale, "Latest move in period → No answer / Never Answered", "Último movimiento del periodo → No answer / Never Answered")}</small>
+          <small>{tr(locale, "Attempted opportunities with no response outcome in the period", "Opps intentadas sin ningún outcome de respuesta en el periodo")}</small>
         </div>
         <div>
-          <span>{tr(locale, "Disqualified (Lost)", "Disqualified (Lost)")}</span>
+          <span>Disqualified</span>
           <strong>{data.disqualified}</strong>
-          <small>{tr(locale, "Latest move in period → Disqualified", "Último movimiento del periodo → Disqualified")}</small>
+          <small>{tr(locale, "Responded, but exited through Disqualified before Meaningful", "Respondieron, pero salieron por Disqualified antes de Meaningful")}</small>
         </div>
-        <div className="agent-tour-rate">
-          <span>Contacted → Tour Booked</span>
-          <strong>{pct(data.contacted_to_tour_pct)}</strong>
-          <small>{tr(locale, "Same worked-opportunity cohort", "Misma cohorte de opps trabajadas")}</small>
+        <div>
+          <span>{tr(locale, "Callback / follow-up", "Callback / seguimiento")}</span>
+          <strong>{data.callback}</strong>
+          <small>{tr(locale, "Responded, but remained in Callback before Meaningful", "Respondieron, pero quedaron en Callback antes de Meaningful")}</small>
         </div>
       </div>
 
       <p className="agent-attribution-note">
         {tr(
           locale,
-          "Responded = opportunities moved − No response. No response uses the latest stage movement in the selected period, so Day 1 → Day 2 follow-up movement still counts as no response. Meaningful, Qualified and Tour Booked count opportunities from the worked cohort that reached those stages later.",
-          "Respondieron = opps movidas de stage − No respondieron. No respondieron usa el último movimiento de stage del periodo, por lo que un seguimiento Day 1 → Day 2 sigue contando como no respuesta. Meaningful, Qualified y Tour Booked cuentan las opps de la cohorte trabajada que alcanzaron después esos stages.",
+          "Reconciliation: Calls made = No response + Responded. Responded = Disqualified + Callback/follow-up + Meaningful Conversation. Meaningful, Qualified and Tour Booked are cumulative milestones, so a later stage implies the previous stages even when GHL was moved directly and the intermediate stage event was skipped.",
+          "Cuadre: Llamadas hechas = No respondieron + Respondieron. Respondieron = Disqualified + Callback/seguimiento + Meaningful Conversation. Meaningful, Qualified y Tour Booked son milestones acumulativos, así que un stage posterior implica los anteriores aunque en GHL hayan movido la opp directamente y se hayan saltado el evento intermedio.",
         )}
       </p>
     </section>
