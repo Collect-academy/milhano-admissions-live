@@ -117,7 +117,10 @@ export function AdmissionsV2Cascade({
           return (
             <div className="v2-funnel-step" key={metric.metric_key} title={tooltip}>
               {conversionRate ? (
-                <div aria-label={`Conversión desde ${previousMetric?.label}: ${conversionRate}`} className="v2-funnel-connector">
+                <div
+                  aria-label={`Conversión desde ${previousMetric?.label}: ${conversionRate}`}
+                  className={`v2-funnel-connector ${scope === "general" && index === 5 ? "v2-funnel-connector-wrap-desktop" : ""}`}
+                >
                   <span>{conversionRate}</span>
                 </div>
               ) : null}
