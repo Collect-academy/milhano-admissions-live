@@ -75,13 +75,13 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
       <section className="panel agent-scope-panel">
         <div className="panel-heading compact-panel-heading agent-productivity-heading">
           <div>
-            <p className="eyebrow">OPPORTUNITY OWNER · GHL USER ID</p>
+            <p className="eyebrow">ACTOR REAL · GHL AUDIT LOG / USER ID</p>
             <h2>{scopeLabel}</h2>
             <p className="panel-note">
               {tr(
                 locale,
-                "The dashboard unit is the opportunity. Contact owner is not used in these productivity metrics.",
-                "La unidad del dashboard es la opportunity. El owner del contacto no se usa en estas métricas de productividad.",
+                "The dashboard unit is the opportunity. Stage productivity is attributed to the real GHL user from Audit Logs whenever an exact match exists; Contact owner is not used.",
+                "La unidad del dashboard es la opportunity. La productividad de stages se atribuye al usuario real de GHL desde Audit Logs cuando existe un match exacto; el owner del Contact no se usa.",
               )}
             </p>
           </div>
@@ -112,8 +112,8 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
       <p className="agent-analysis-footnote">
         {tr(
           locale,
-          "Stage actions use Opportunity ownership. We first use the owner captured at the event; if it is missing, we recover the latest owner before the event or an owner claimed within the next 60 minutes. Historical movements before Oct 6 may still use the Paty legacy fallback. From Oct 6 onward, truly unassigned movements stay unassigned. Contact owner is never used for productivity attribution.",
-          "Las acciones de stage usan el ownership de la Opportunity. Primero usamos el owner capturado en el evento; si falta, recuperamos el último owner anterior o un owner reclamado dentro de los siguientes 60 minutos. Los movimientos históricos anteriores al 6 de octubre todavía pueden usar el fallback legacy de Paty. Desde el 6 de octubre, los movimientos realmente sin assignee permanecen Sin asignar. El owner del Contact nunca se usa para atribuir productividad.",
+          "Stage actions now use the real user from GHL Audit Logs as the primary attribution source. We match Opportunity ID + resulting stage + timestamp. Only when there is no Audit Log evidence do we fall back to event owner, prior owner, or an owner claimed within 60 minutes. Historical movements before Oct 6 may still use the Paty legacy fallback. Contact owner is never used for productivity attribution.",
+          "Las acciones de stage ahora usan como fuente principal al usuario real de GHL en Audit Logs. Hacemos match por Opportunity ID + stage resultante + timestamp. Sólo cuando no existe evidencia de Audit Log usamos como fallback el owner del evento, el owner anterior o un owner reclamado dentro de 60 minutos. Los movimientos históricos anteriores al 6 de octubre todavía pueden usar el fallback legacy de Paty. El owner del Contact nunca se usa para atribuir productividad.",
         )}
       </p>
     </DashboardLayout>

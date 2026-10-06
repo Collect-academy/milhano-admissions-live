@@ -43,6 +43,7 @@ export type AgentActivityAnalysis = {
   outsideWorkWindow: number;
   pathiFallbackEvents: number;
   claimWindowRecoveredEvents: number;
+  auditLogEvents: number;
   unassignedEvents: number;
   byKind: Record<AgentActivityEvent["event_kind"], number>;
 };
@@ -222,6 +223,7 @@ export async function getAgentActivityAnalysis(
   let outsideWorkWindow = 0;
   let pathiFallbackEvents = 0;
   let claimWindowRecoveredEvents = 0;
+  let auditLogEvents = 0;
   let unassignedEvents = 0;
 
   events.forEach((event) => {
@@ -229,6 +231,7 @@ export async function getAgentActivityAnalysis(
     byKind[kind] += 1;
     if (event.attribution_basis === "pathi_legacy_fallback") pathiFallbackEvents += 1;
     if (event.attribution_basis === "owner_claimed_within_1h") claimWindowRecoveredEvents += 1;
+    if (event.attribution_basis === "audit_log_exact") auditLogEvents += 1;
     if (event.agent_id === "__unassigned__") unassignedEvents += 1;
 
     const local = localParts(event.event_timestamp);
@@ -284,6 +287,7 @@ export async function getAgentActivityAnalysis(
     outsideWorkWindow,
     pathiFallbackEvents,
     claimWindowRecoveredEvents,
+    auditLogEvents,
     unassignedEvents,
     byKind,
   };
