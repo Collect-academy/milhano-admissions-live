@@ -94,9 +94,9 @@ export function AdmissionsV2Cascade({
                 ? "v2-kpi-card-closed"
                 : "";
           const tooltip = metricTooltips[metric.metric_key];
-          const previousMetric = index > 0 ? metrics[index - 1] : null;
-          const conversionRate = previousMetric && conversionMetricSet.has(metric.metric_key)
-            ? formatConversionRate(metric.value, previousMetric.value)
+          const nextMetric = index < metrics.length - 1 ? metrics[index + 1] : null;
+          const conversionRate = nextMetric && conversionMetricSet.has(nextMetric.metric_key)
+            ? formatConversionRate(nextMetric.value, metric.value)
             : null;
           const subtext = metricSubtexts[metric.metric_key];
           const body = (
@@ -118,8 +118,8 @@ export function AdmissionsV2Cascade({
             <div className="v2-funnel-step" key={metric.metric_key} title={tooltip}>
               {conversionRate ? (
                 <div
-                  aria-label={`Conversión desde ${previousMetric?.label}: ${conversionRate}`}
-                  className={`v2-funnel-connector ${scope === "general" && index === 5 ? "v2-funnel-connector-wrap-desktop" : ""}`}
+                  aria-label={`Conversión de ${metric.label} a ${nextMetric?.label}: ${conversionRate}`}
+                  className="v2-funnel-connector"
                 >
                   <span>{conversionRate}</span>
                 </div>

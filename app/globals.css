@@ -5740,19 +5740,14 @@ html[data-theme="dark"] .student-note-item {
 
 .v2-funnel-connector {
   position: absolute;
-  top: 50%;
-  left: -5px;
+  top: 66%;
+  right: -5px;
   z-index: 4;
-  transform: translate(-50%, -50%);
+  transform: translate(50%, -50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-}
-
-.v2-funnel-connector-wrap-desktop {
-  top: -5px;
-  left: 50%;
 }
 
 .v2-funnel-connector span {
@@ -5771,14 +5766,23 @@ html[data-theme="dark"] .student-note-item {
   box-shadow: 0 3px 10px rgba(25, 61, 48, 0.06);
 }
 
+/* The fifth GENERAL card wraps to the second row on desktop.
+   Put its conversion below Qualified instead of over Tour Booked text. */
+.v2-cascade-panel:not(.v2-cascade-compact) .v2-funnel-step:nth-child(5) .v2-funnel-connector {
+  top: auto;
+  right: 50%;
+  bottom: -5px;
+  transform: translate(50%, 50%);
+}
+
 .v2-kpi-card {
   display: flex;
   min-width: 0;
   min-height: 104px;
   width: 100%;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 0;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--surface);
@@ -5832,8 +5836,12 @@ html[data-theme="dark"] .student-note-item {
   line-height: 1.18;
 }
 
+.v2-kpi-label-row {
+  margin-top: 7px;
+}
+
 .v2-kpi-value {
-  margin: 0;
+  margin: auto 0 0;
   font-size: 1.7rem;
   font-weight: 880;
   letter-spacing: -0.045em;
@@ -5845,7 +5853,7 @@ html[data-theme="dark"] .student-note-item {
 }
 
 .v2-kpi-subtext {
-  margin: -2px 0 0;
+  margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.64rem;
   font-weight: 720;
@@ -5904,14 +5912,18 @@ html[data-theme="dark"] .student-note-item {
 }
 
 @media (max-width: 900px) {
-  .v2-funnel-connector-wrap-desktop {
-    top: 50%;
-    left: -5px;
+  .v2-cascade-panel:not(.v2-cascade-compact) .v2-funnel-step:nth-child(5) .v2-funnel-connector {
+    top: 66%;
+    right: -5px;
+    bottom: auto;
+    transform: translate(50%, -50%);
   }
 
-  .v2-funnel-step:nth-child(4) .v2-funnel-connector {
-    top: -5px;
-    left: 50%;
+  .v2-funnel-step:nth-child(3n) .v2-funnel-connector {
+    top: auto;
+    right: 50%;
+    bottom: -5px;
+    transform: translate(50%, 50%);
   }
 }
 
@@ -5924,16 +5936,18 @@ html[data-theme="dark"] .student-note-item {
     min-height: 96px;
   }
 
-  .v2-funnel-step:nth-child(3) .v2-funnel-connector,
-  .v2-funnel-step:nth-child(5) .v2-funnel-connector {
-    top: -5px;
-    left: 50%;
+  .v2-funnel-step:nth-child(3n) .v2-funnel-connector {
+    top: 66%;
+    right: -5px;
+    bottom: auto;
+    transform: translate(50%, -50%);
   }
 
-  .v2-funnel-step:nth-child(4) .v2-funnel-connector,
-  .v2-funnel-step:nth-child(6) .v2-funnel-connector {
-    top: 50%;
-    left: -5px;
+  .v2-funnel-step:nth-child(2n) .v2-funnel-connector {
+    top: auto;
+    right: 50%;
+    bottom: -5px;
+    transform: translate(50%, 50%);
   }
 
   .v2-funnel-connector span {
