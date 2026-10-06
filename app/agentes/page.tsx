@@ -112,8 +112,8 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
       <p className="agent-analysis-footnote">
         {tr(
           locale,
-          "Stage actions use Opportunity owner-at-event. During the current historical transition, opportunities with no assignee are attributed to Paty as the legacy-agent fallback. Contact owner remains an internal operational safeguard and is never used as the dashboard unit.",
-          "Las acciones de stage usan el owner de la Opportunity al momento del evento. Durante esta transición histórica, las opportunities sin assignee se atribuyen a Paty como fallback de la agente histórica. El owner del Contact queda sólo como seguro operativo interno y nunca se usa como unidad del dashboard.",
+          "Stage actions use Opportunity ownership. We first use the owner captured at the event; if it is missing, we recover the latest owner before the event or an owner assigned later that same day. Historical movements before Oct 6 may still use the Paty legacy fallback. From Oct 6 onward, truly unassigned movements stay unassigned. Contact owner is never used for productivity attribution.",
+          "Las acciones de stage usan el ownership de la Opportunity. Primero usamos el owner capturado en el evento; si falta, recuperamos el último owner anterior o un owner asignado más tarde ese mismo día. Los movimientos históricos anteriores al 6 de octubre todavía pueden usar el fallback legacy de Paty. Desde el 6 de octubre, los movimientos realmente sin assignee permanecen Sin asignar. El owner del Contact nunca se usa para atribuir productividad.",
         )}
       </p>
     </DashboardLayout>

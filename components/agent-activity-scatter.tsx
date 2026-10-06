@@ -19,12 +19,14 @@ const PATHI_ID = "LTJEPAdClnxPxUd2mRXp";
 const CINTHIA_ID = "77kxc0w2hMphBCnyl9Fe";
 const MIGUEL_ID = "CVHK8CdZzT6A7zLxr5Sg";
 const JOSE_ID = "WieQXvNTFqSPfUgXy1LZ";
+const UNASSIGNED_ID = "__unassigned__";
 
 const knownColors: Record<string, string> = {
   [PATHI_ID]: "#8A9099",
   [CINTHIA_ID]: "#2F6FDB",
   [MIGUEL_ID]: "#2C8A62",
   [JOSE_ID]: "#C47A1A",
+  [UNASSIGNED_ID]: "#5B5148",
 };
 
 const fallbackColors = ["#C47A1A", "#8A5CC2", "#C65366", "#2E8FA3", "#B58A22"];
@@ -36,6 +38,7 @@ function hourLabel(value: number) {
 }
 
 function displayName(agentId: string, agents: AgentDirectoryEntry[]) {
+  if (agentId === UNASSIGNED_ID) return "Sin asignar";
   return agents.find((agent) => agent.ghl_user_id === agentId)?.display_name ?? `GHL · ${agentId.slice(-6)}`;
 }
 
@@ -144,6 +147,8 @@ export function AgentActivityScatter({
         <span>{tr(locale, "Opportunity assignments", "Asignaciones opp")} <strong>{data.byKind.assignment}</strong></span>
         <span>{tr(locale, "Calls", "Llamadas")} <strong>{data.byKind.call}</strong></span>
         <span>WhatsApp <strong>{data.byKind.whatsapp}</strong></span>
+        {data.sameDayRecoveredEvents ? <span>{tr(locale, "Owner recovered same day", "Owner recuperado mismo día")} <strong>{data.sameDayRecoveredEvents}</strong></span> : null}
+        {data.unassignedEvents ? <span>{tr(locale, "Unassigned", "Sin asignar")} <strong>{data.unassignedEvents}</strong></span> : null}
         {data.outsideWorkWindow ? <span>{tr(locale, "Outside 07–15", "Fuera de 07–15")} <strong>{data.outsideWorkWindow}</strong></span> : null}
       </div>
     </section>

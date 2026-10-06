@@ -42,6 +42,8 @@ export type AgentActivityAnalysis = {
   actionsPerActiveBlock: number;
   outsideWorkWindow: number;
   pathiFallbackEvents: number;
+  sameDayRecoveredEvents: number;
+  unassignedEvents: number;
   byKind: Record<AgentActivityEvent["event_kind"], number>;
 };
 
@@ -57,6 +59,12 @@ export type AgentSetterJourney = {
   meaningful: number;
   qualified: number;
   tour_booked: number;
+  no_answer_followups: number;
+  no_answer_d1_to_d2: number;
+  no_answer_d2_to_d3: number;
+  no_answer_d3_to_nurturing: number;
+  no_answer_other_moves: number;
+  unassigned_stage_moves: number;
   moved_to_responded_pct: number | null;
   responded_to_meaningful_pct: number | null;
   meaningful_to_qualified_pct: number | null;
@@ -212,11 +220,15 @@ export async function getAgentActivityAnalysis(
   let workWindowEvents = 0;
   let outsideWorkWindow = 0;
   let pathiFallbackEvents = 0;
+  let sameDayRecoveredEvents = 0;
+  let unassignedEvents = 0;
 
   events.forEach((event) => {
     const kind = event.event_kind in byKind ? event.event_kind : "communication";
     byKind[kind] += 1;
-    if (event.attribution_basis === "pathi_fallback_unassigned") pathiFallbackEvents += 1;
+    if (event.attribution_basis === "pathi_legacy_fallback") pathiFallbackEvents += 1;
+    if (event.attribution_basis === "owner_assigned_same_day") sameDayRecoveredEvents += 1;
+    if (event.agent_id === "__unassigned__") unassignedEvents += 1;
 
     const local = localParts(event.event_timestamp);
     const minutes = local.hour * 60 + local.minute;
@@ -270,6 +282,8 @@ export async function getAgentActivityAnalysis(
     actionsPerActiveBlock: blockKeys.size ? workWindowEvents / blockKeys.size : 0,
     outsideWorkWindow,
     pathiFallbackEvents,
+    sameDayRecoveredEvents,
+    unassignedEvents,
     byKind,
   };
 }
@@ -301,6 +315,12 @@ export async function getSetterAgentJourney(
     meaningful: numeric(row.meaningful),
     qualified: numeric(row.qualified),
     tour_booked: numeric(row.tour_booked),
+    no_answer_followups: numeric(row.no_answer_followups),
+    no_answer_d1_to_d2: numeric(row.no_answer_d1_to_d2),
+    no_answer_d2_to_d3: numeric(row.no_answer_d2_to_d3),
+    no_answer_d3_to_nurturing: numeric(row.no_answer_d3_to_nurturing),
+    no_answer_other_moves: numeric(row.no_answer_other_moves),
+    unassigned_stage_moves: numeric(row.unassigned_stage_moves),
     moved_to_responded_pct: nullableNumeric(row.calls_to_responded_pct),
     responded_to_meaningful_pct: nullableNumeric(row.responded_to_meaningful_pct),
     meaningful_to_qualified_pct: nullableNumeric(row.meaningful_to_qualified_pct),
