@@ -147,7 +147,7 @@ export function AgentActivityScatter({
         <span>{tr(locale, "Opportunity assignments", "Asignaciones opp")} <strong>{data.byKind.assignment}</strong></span>
         <span>{tr(locale, "Calls", "Llamadas")} <strong>{data.byKind.call}</strong></span>
         <span>WhatsApp <strong>{data.byKind.whatsapp}</strong></span>
-        {data.sameDayRecoveredEvents ? <span>{tr(locale, "Owner recovered same day", "Owner recuperado mismo día")} <strong>{data.sameDayRecoveredEvents}</strong></span> : null}
+        {data.claimWindowRecoveredEvents ? <span>{tr(locale, "Owner claimed within 1h", "Owner reclamado ≤1 h")} <strong>{data.claimWindowRecoveredEvents}</strong></span> : null}
         {data.unassignedEvents ? <span>{tr(locale, "Unassigned", "Sin asignar")} <strong>{data.unassignedEvents}</strong></span> : null}
         {data.outsideWorkWindow ? <span>{tr(locale, "Outside 07–15", "Fuera de 07–15")} <strong>{data.outsideWorkWindow}</strong></span> : null}
       </div>

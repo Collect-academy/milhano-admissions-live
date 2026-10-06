@@ -79,13 +79,13 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
   );
   const tourBookingTooltip = tr(
     locale,
-    `${payload.booking_breakdown.school_tours.total} School Tour appointments scheduled inside the selected period. Each appointment counts separately, including siblings sharing one contact.`,
-    `${payload.booking_breakdown.school_tours.total} citas de School Tour programadas dentro del periodo seleccionado. Cada cita cuenta por separado, incluso entre hermanos que comparten contacto.`,
+    `${payload.booking_breakdown.school_tours.total} School Tour appointments created/booked inside the selected period. Each appointment counts separately, including siblings sharing one contact.`,
+    `${payload.booking_breakdown.school_tours.total} citas de School Tour creadas/agendadas dentro del periodo seleccionado. Cada cita cuenta por separado, incluso entre hermanos que comparten contacto.`,
   );
   const trialBookingTooltip = tr(
     locale,
-    `${payload.booking_breakdown.trial_days.total} Trial Day appointments scheduled inside the selected period. Each appointment counts separately, including siblings sharing one contact.`,
-    `${payload.booking_breakdown.trial_days.total} citas de Pasadía programadas dentro del periodo seleccionado. Cada cita cuenta por separado, incluso entre hermanos que comparten contacto.`,
+    `${payload.booking_breakdown.trial_days.total} Trial Day appointments created/booked inside the selected period. Each appointment counts separately, including siblings sharing one contact.`,
+    `${payload.booking_breakdown.trial_days.total} citas de Pasadía creadas/agendadas dentro del periodo seleccionado. Cada cita cuenta por separado, incluso entre hermanos que comparten contacto.`,
   );
   const cascadeTooltips = {
     responded_leads: responseTooltip,
@@ -111,6 +111,11 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
     `${payload.booking_breakdown.school_tours.cohort} this cycle · ${payload.booking_breakdown.school_tours.external} previous cycles`,
     `${payload.booking_breakdown.school_tours.cohort} este ciclo · ${payload.booking_breakdown.school_tours.external} anteriores`,
   );
+  const trialDayBreakdownText = tr(
+    locale,
+    `${payload.booking_breakdown.trial_days.cohort} this cycle · ${payload.booking_breakdown.trial_days.external} previous cycles`,
+    `${payload.booking_breakdown.trial_days.cohort} este ciclo · ${payload.booking_breakdown.trial_days.external} anteriores`,
+  );
 
   const automaticCascades = (
     <>
@@ -121,7 +126,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         metrics={payload.general}
         metricTooltips={cascadeTooltips}
         conversionMetrics={generalConversionMetrics}
-        metricSubtexts={{ school_tours_booked: schoolTourBreakdownText }}
+        metricSubtexts={{ school_tours_booked: schoolTourBreakdownText, trial_days_booked: trialDayBreakdownText }}
         range={range}
         note={tr(locale, "Setter = 2:30 PM Mérida operational cohort · Closer = real events in the selected period", "Setter = cohorte operativa con corte 2:30 p. m. Mérida · Closer = eventos reales del periodo")}
       />
@@ -163,7 +168,8 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
             trial_days_booked: trialBookingTooltip,
           }}
           range={range}
-          note={tr(locale, "Booked / Attended = scheduled appointment date · Closed = real close-event date", "Booked / Attended = fecha programada de la cita · Closed = fecha real del cierre")}
+          metricSubtexts={{ school_tours_booked: schoolTourBreakdownText, trial_days_booked: trialDayBreakdownText }}
+          note={tr(locale, "Booked = appointment creation date · Attended = scheduled date + attendance outcome · Closed = real close-event date", "Booked = fecha de creación de la cita · Attended = fecha programada + resultado de asistencia · Closed = fecha real del cierre")}
         />
       </div>
     </>

@@ -51,8 +51,8 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
           <p className="panel-note">
             {tr(
               locale,
-              "Calls made is the operational count of unique opportunities with at least one real stage movement during the selected period. It is not a literal phone-call count. Later milestones are cumulative. No Answer follow-up movements are included in agent productivity even though they do not belong in the main admissions funnel. Since Oct 6, unattributed movements remain unassigned instead of being credited to Paty; when an owner is assigned later the same day, that ownership is recovered for attribution.",
-              "Llamadas hechas es el conteo operativo de opportunities únicas con al menos un cambio real de stage durante el periodo seleccionado; no es el conteo literal de llamadas telefónicas. Los milestones posteriores son acumulativos. Los movimientos de seguimiento de No Answer sí cuentan en productividad de agentes aunque no formen parte de la cascada principal de admisiones. Desde el 6 de octubre, un movimiento sin owner queda Sin asignar en vez de acreditarse a Paty; si el owner se asigna más tarde ese mismo día, recuperamos esa asignación para la atribución.",
+              "Calls made is the operational count of unique opportunities with at least one real stage movement during the selected period; an actual School Tour booking created in GHL also counts as work evidence when the stage event is missing. It is not a literal phone-call count. Meaningful and Qualified are cumulative milestones, while Tour Booked now comes from real GHL appointment bookings created in the selected period. No Answer follow-up movements count in agent productivity. Since Oct 6, an owner can claim a previously unattributed movement only within 60 minutes; after that, it remains unassigned.",
+              "Llamadas hechas es el conteo operativo de opportunities únicas con al menos un cambio real de stage durante el periodo seleccionado; una cita real de School Tour creada en GHL también sirve como evidencia de trabajo si faltó el evento de stage. No es el conteo literal de llamadas telefónicas. Meaningful y Qualified son milestones acumulativos, mientras que Tour Booked ahora sale de citas reales creadas en GHL dentro del periodo. Los movimientos de seguimiento de No Answer sí cuentan en productividad. Desde el 6 de octubre, un owner sólo puede reclamar un movimiento sin atribución dentro de los siguientes 60 minutos; después queda Sin asignar.",
             )}
           </p>
         </div>
@@ -97,6 +97,10 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
             <span>{tr(locale, "No Answer follow-ups", "Seguimientos No Answer")}</span>
             <strong>{data.no_answer_followups}</strong>
           </div>
+          <div className="agent-health-badge">
+            <span>{tr(locale, "Inferred WA attempts", "Intentos WA inferidos")}</span>
+            <strong>{data.inferred_no_answer_call_attempts}</strong>
+          </div>
           {data.unassigned_stage_moves ? (
             <div className="agent-health-badge">
               <span>{tr(locale, "Unassigned stage moves", "Movimientos sin owner")}</span>
@@ -110,6 +114,13 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
           <div><span>Day 3 → Nurturing A</span><strong>{data.no_answer_d3_to_nurturing}</strong></div>
           <div><span>{tr(locale, "Other moves from No Answer", "Otros desde No Answer")}</span><strong>{data.no_answer_other_moves}</strong></div>
         </div>
+        <p className="agent-followup-note">
+          {tr(
+            locale,
+            "WhatsApp call attempts are not directly available in the current ingestion. For a no-response progression Day 1→2, Day 2→3 or Day 3→Nurturing A, the operational equivalence is two WhatsApp call attempts for one card movement.",
+            "Las llamadas de WhatsApp no están disponibles directamente en la ingesta actual. Para un avance sin respuesta Day 1→2, Day 2→3 o Day 3→Nurturing A, usamos la equivalencia operativa de dos intentos de llamada por un movimiento de tarjeta.",
+          )}
+        </p>
       </div>
 
       <div className="agent-journey-outcomes">
@@ -133,8 +144,8 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
       <p className="agent-attribution-note">
         {tr(
           locale,
-          "Reconciliation: Calls made = No response + Responded. Responded = Disqualified + Callback/follow-up + Meaningful Conversation. Meaningful, Qualified and Tour Booked are cumulative milestones, so a later stage implies the previous stages even when GHL was moved directly and the intermediate stage event was skipped.",
-          "Cuadre: Llamadas hechas = No respondieron + Respondieron. Respondieron = Disqualified + Callback/seguimiento + Meaningful Conversation. Meaningful, Qualified y Tour Booked son milestones acumulativos, así que un stage posterior implica los anteriores aunque en GHL hayan movido la opp directamente y se hayan saltado el evento intermedio.",
+          "Reconciliation: Calls made = No response + Responded. Responded = Disqualified + Callback/follow-up + Meaningful Conversation. Meaningful and Qualified are cumulative milestones. Tour Booked is audited against real School Tour appointments created in GHL during the period and attributed to the appointment creator; downstream cleanup movements no longer inflate it.",
+          "Cuadre: Llamadas hechas = No respondieron + Respondieron. Respondieron = Disqualified + Callback/seguimiento + Meaningful Conversation. Meaningful y Qualified son milestones acumulativos. Tour Booked se audita contra citas reales de School Tour creadas en GHL durante el periodo y se atribuye al creador de la cita; los movimientos posteriores de limpieza ya no lo inflan.",
         )}
       </p>
     </section>

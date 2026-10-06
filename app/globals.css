@@ -6353,3 +6353,11 @@ html[data-theme="dark"] .student-note-item {
 .agent-followup-flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.agent-followup-flow>div{display:flex;align-items:center;justify-content:space-between;gap:9px;border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:9px 10px}.agent-followup-flow span{font-size:.61rem;color:var(--muted);font-weight:760;line-height:1.25}.agent-followup-flow strong{font-size:1rem;color:var(--green-dark)}
 @media(max-width:900px){.agent-followup-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:520px){.agent-followup-flow{grid-template-columns:1fr}}
+
+/* V33 · Agent follow-up telemetry note */
+.agent-followup-note {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 0.66rem;
+  line-height: 1.4;
+}
