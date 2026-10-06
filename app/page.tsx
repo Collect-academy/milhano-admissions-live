@@ -93,6 +93,25 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
     trial_days_booked: trialBookingTooltip,
   };
 
+  const generalConversionMetrics = [
+    "unique_contacted_leads",
+    "responded_leads",
+    "meaningful_conversations",
+    "qualified_leads",
+    "school_tours_booked",
+  ];
+  const setterConversionMetrics = [
+    "unique_contacted_leads",
+    "responded_leads",
+    "meaningful_conversations",
+    "qualified_leads",
+  ];
+  const schoolTourBreakdownText = tr(
+    locale,
+    `${payload.booking_breakdown.school_tours.cohort} this cycle · ${payload.booking_breakdown.school_tours.external} previous cycles`,
+    `${payload.booking_breakdown.school_tours.cohort} este ciclo · ${payload.booking_breakdown.school_tours.external} anteriores`,
+  );
+
   const automaticCascades = (
     <>
       <AdmissionsV2Cascade
@@ -101,17 +120,20 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         scope="general"
         metrics={payload.general}
         metricTooltips={cascadeTooltips}
+        conversionMetrics={generalConversionMetrics}
+        metricSubtexts={{ school_tours_booked: schoolTourBreakdownText }}
         range={range}
         note={tr(locale, "Setter = 2:30 PM Mérida operational cohort · Closer = real events in the selected period", "Setter = cohorte operativa con corte 2:30 p. m. Mérida · Closer = eventos reales del periodo")}
       />
       <div className="v2-two-cascades">
         <AdmissionsV2Cascade
           compact
-          eyebrow="SETTER · EQUIPO"
+          eyebrow="SETTER · PATY"
           title={tr(locale, "Setter Cascade", "Cascada Setter")}
           scope="setter"
           metrics={payload.setter.funnel}
           metricTooltips={{ responded_leads: responseTooltip }}
+          conversionMetrics={setterConversionMetrics}
           range={range}
           infoMetrics={[
             {
@@ -132,7 +154,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         />
         <AdmissionsV2Cascade
           compact
-          eyebrow="CLOSER · EQUIPO"
+          eyebrow="CLOSER · CINTHIA"
           title={tr(locale, "Closer Cascade", "Cascada Closer")}
           scope="closer"
           metrics={payload.closer.funnel}
@@ -267,8 +289,8 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       </section>
 
       <div className="v2-two-cascades">
-        <V2CurrentStages title="Setter Pipeline" owner="Equipo" stages={payload.setter.current_stages} />
-        <V2CurrentStages title="Closer Pipeline" owner="Equipo" stages={payload.closer.current_stages} />
+        <V2CurrentStages title="Setter Pipeline" owner={payload.setter.owner} stages={payload.setter.current_stages} />
+        <V2CurrentStages title="Closer Pipeline" owner={payload.closer.owner} stages={payload.closer.current_stages} />
       </div>
     </DashboardLayout>
   );

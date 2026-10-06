@@ -17,6 +17,13 @@ import type { DateRange } from "@/lib/date-range";
 import { dateRangeQuery } from "@/lib/date-range";
 import { number } from "@/lib/format";
 
+function formatConversionRate(current: number, previous: number) {
+  if (previous <= 0) return null;
+  const rate = (current / previous) * 100;
+  const rounded = Math.round(rate * 10) / 10;
+  return Number.isInteger(rounded) ? `${rounded.toFixed(0)}%` : `${rounded.toFixed(1)}%`;
+}
+
 const iconByMetric = {
   new_leads: Activity,
   unique_contacted_leads: ContactRound,
@@ -48,6 +55,8 @@ export function AdmissionsV2Cascade({
   scope = "general",
   infoMetrics = [],
   metricTooltips = {},
+  conversionMetrics = [],
+  metricSubtexts = {},
 }: {
   eyebrow: string;
   title: string;
@@ -59,8 +68,11 @@ export function AdmissionsV2Cascade({
   scope?: "general" | "setter" | "closer";
   infoMetrics?: InfoMetric[];
   metricTooltips?: Record<string, string | undefined>;
+  conversionMetrics?: string[];
+  metricSubtexts?: Record<string, string | undefined>;
 }) {
   const query = dateRangeQuery(range);
+  const conversionMetricSet = new Set(conversionMetrics);
 
   return (
     <section className={`panel v2-cascade-panel ${compact ? "v2-cascade-compact" : ""}`}>
@@ -82,6 +94,11 @@ export function AdmissionsV2Cascade({
                 ? "v2-kpi-card-closed"
                 : "";
           const tooltip = metricTooltips[metric.metric_key];
+          const previousMetric = index > 0 ? metrics[index - 1] : null;
+          const conversionRate = previousMetric && conversionMetricSet.has(metric.metric_key)
+            ? formatConversionRate(metric.value, previousMetric.value)
+            : null;
+          const subtext = metricSubtexts[metric.metric_key];
           const body = (
             <>
               <div className="v2-kpi-topline">
@@ -93,11 +110,17 @@ export function AdmissionsV2Cascade({
                 {tooltip ? <span aria-label={tooltip} className="v2-kpi-tooltip-hint" title={tooltip}>i</span> : null}
               </div>
               <p className="v2-kpi-value">{number(metric.value)}</p>
+              {subtext ? <p className="v2-kpi-subtext">{subtext}</p> : null}
             </>
           );
 
           return (
             <div className="v2-funnel-step" key={metric.metric_key} title={tooltip}>
+              {conversionRate ? (
+                <div aria-label={`Conversión desde ${previousMetric?.label}: ${conversionRate}`} className="v2-funnel-connector">
+                  <span>{conversionRate}</span>
+                </div>
+              ) : null}
               {clickable ? (
                 <Link
                   aria-label={tooltip ? `${metric.label}. ${tooltip}` : metric.label}

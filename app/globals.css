@@ -5735,6 +5735,35 @@ html[data-theme="dark"] .student-note-item {
 .v2-funnel-step {
   display: block;
   min-width: 0;
+  position: relative;
+  padding-top: 18px;
+}
+
+.v2-funnel-connector {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.v2-funnel-connector span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  padding: 3px 8px;
+  border: 1px solid rgba(23, 107, 82, 0.18);
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 0.67rem;
+  font-weight: 840;
+  line-height: 1;
+  box-shadow: 0 3px 10px rgba(25, 61, 48, 0.06);
 }
 
 .v2-kpi-card {
@@ -5806,6 +5835,18 @@ html[data-theme="dark"] .student-note-item {
   line-height: 1;
 }
 
+.v2-kpi-conversion {
+  display: none;
+}
+
+.v2-kpi-subtext {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 720;
+  line-height: 1.2;
+}
+
 .v2-stage-total {
   display: flex;
   align-items: baseline;
@@ -5864,6 +5905,20 @@ html[data-theme="dark"] .student-note-item {
 
   .v2-kpi-card {
     min-height: 96px;
+  }
+
+  .v2-funnel-step {
+    padding-top: 16px;
+  }
+
+  .v2-funnel-connector {
+    top: -2px;
+  }
+
+  .v2-funnel-connector span {
+    min-width: 48px;
+    padding: 3px 7px;
+    font-size: 0.64rem;
   }
 }
 
@@ -6216,39 +6271,3 @@ html[data-theme="dark"] .student-note-item {
 
 /* V23.1 · asistencia diaria + reportes */
 .attendance-filter-simple{display:flex;align-items:end;gap:14px;flex-wrap:wrap}.attendance-room-select{min-width:250px}.attendance-today-active{background:#dff4e7!important;border-color:#74bf91!important;color:#11663d!important}.attendance-day-banner{margin-top:14px;padding:14px 18px;border:1px solid var(--border);border-radius:14px;background:var(--surface-soft);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.attendance-day-banner span{font-size:.65rem;font-weight:900;letter-spacing:.08em;color:var(--muted)}.attendance-day-banner strong{text-transform:capitalize}.attendance-day-banner.is-today{background:#e7f7ed;border-color:#8bcba3;color:#145f3d}.attendance-report{margin-top:26px}.attendance-report-filters{display:grid;grid-template-columns:repeat(5,minmax(130px,1fr)) auto;gap:10px;align-items:end;margin:14px 0 18px}.attendance-report-filters label{display:grid;gap:5px}.attendance-report-filters label>span{font-size:.62rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.attendance-report-filters input,.attendance-report-filters select{min-height:42px;border:1px solid var(--border);border-radius:11px;background:var(--surface-soft);color:var(--text);padding:8px 10px}.attendance-report-table th:nth-child(n+4),.attendance-report-table td:nth-child(n+4){text-align:center}@media(max-width:1000px){.attendance-report-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.attendance-report-filters .primary-button{width:100%}}@media(max-width:600px){.attendance-report-filters{grid-template-columns:1fr}.attendance-filter-simple,.attendance-filter-main{align-items:stretch}.attendance-room-select{min-width:100%}}
-
-/* V23 · Attendance explicit save flow */
-.attendance-savebar{position:sticky;top:10px;z-index:35;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:14px;border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:12px 14px;box-shadow:0 8px 24px rgba(22,55,43,.08)}
-.attendance-savebar.has-changes{border-color:#d2ad52;background:#fffaf0}
-.attendance-savebar>div{display:grid;gap:2px}.attendance-savebar strong{font-size:.78rem}.attendance-savebar span{color:var(--muted);font-size:.65rem}
-.attendance-save-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap}
-.attendance-save-button:disabled{cursor:not-allowed;opacity:.55}
-.attendance-save-error,.attendance-save-success{margin:8px 0 0;border-radius:10px;padding:9px 12px;font-size:.68rem;font-weight:700}
-.attendance-save-error{background:#fff0f0;color:#9f1c13}.attendance-save-success{background:#e8f8ef;color:#157347}
-.attendance-row-dirty td:first-child strong::after{content:" •";color:#b47c00}
-@media(max-width:600px){.attendance-savebar{top:6px;align-items:stretch;flex-direction:column}.attendance-save-button{width:100%}}
-
-/* V23 · Opportunity owner / agent productivity */
-.agent-productivity-panel{display:grid;gap:16px}.agent-productivity-heading{align-items:flex-end;gap:18px}.agent-productivity-heading .panel-note{max-width:780px;margin-top:5px}
-.agent-productivity-filter{display:flex;align-items:end;gap:8px;flex-wrap:wrap}.agent-productivity-filter label{display:grid;gap:5px;min-width:220px}.agent-productivity-filter label>span{font-size:.62rem;font-weight:850;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.agent-productivity-filter select{min-height:40px;border:1px solid var(--border);border-radius:10px;background:var(--surface-soft);color:var(--text);padding:7px 10px}
-.agent-unassigned-note{display:flex;align-items:baseline;gap:7px;border:1px solid #e5c66f;border-radius:11px;background:#fff9e9;padding:9px 12px}.agent-unassigned-note strong{font-size:1.05rem;color:#916300}.agent-unassigned-note span{font-size:.68rem;color:var(--muted)}
-.agent-productivity-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.agent-stage-strip{display:flex;gap:8px;flex-wrap:wrap}.agent-stage-strip span{border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);padding:7px 10px;font-size:.64rem}.agent-stage-strip strong{margin-left:4px;color:var(--green-dark)}
-.agent-productivity-table th:not(:first-child),.agent-productivity-table td:not(:first-child){text-align:center}.agent-productivity-table td:first-child{white-space:nowrap}.agent-attribution-note{margin:0;color:var(--muted);font-size:.62rem;line-height:1.5}
-@media(max-width:980px){.agent-productivity-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.agent-productivity-heading{align-items:stretch;flex-direction:column}.agent-productivity-filter{width:100%}}
-@media(max-width:600px){.agent-productivity-kpis{grid-template-columns:1fr}.agent-productivity-filter{align-items:stretch;flex-direction:column}.agent-productivity-filter label{min-width:0}.agent-productivity-filter .primary-button,.agent-productivity-filter .secondary-button{width:100%;text-align:center}}
-
-/* V24 · Agent analytics view */
-.agent-view-badge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);padding:8px 11px;color:var(--green-dark);font-size:.68rem;font-weight:850;letter-spacing:.04em}
-.agent-focus-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
-.agent-activity-panel,.agent-conversion-panel{display:grid;gap:16px}.agent-activity-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.agent-activity-stats>div{display:grid;gap:4px;border:1px solid var(--border);border-radius:11px;background:var(--surface-soft);padding:10px 12px}.agent-activity-stats span{font-size:.61rem;color:var(--muted);font-weight:750}.agent-activity-stats strong{font-size:1rem;color:var(--green-dark)}
-.agent-scatter-chart{height:340px;border:1px solid var(--border);border-radius:14px;background:var(--surface);padding:10px 8px 4px}.agent-chart-empty{height:100%;display:grid;place-items:center;color:var(--muted);font-size:.75rem}.agent-activity-source-note{display:flex;gap:8px;flex-wrap:wrap}.agent-activity-source-note span{border:1px solid var(--border);border-radius:999px;background:var(--surface-soft);padding:6px 9px;font-size:.61rem;color:var(--muted)}.agent-activity-source-note strong{margin-left:3px;color:var(--text)}
-.agent-conversion-flow{display:flex;align-items:center;gap:6px;overflow-x:auto;padding-bottom:4px}.agent-conversion-node-wrap{display:flex;align-items:center;gap:6px;min-width:max-content}.agent-conversion-arrow{display:grid;place-items:center;gap:2px;color:var(--muted);font-size:.58rem}.agent-conversion-arrow strong{color:var(--green-dark)}.agent-conversion-node{display:grid;gap:4px;min-width:120px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft);padding:11px 12px;text-align:center}.agent-conversion-node span{font-size:.62rem;color:var(--muted);font-weight:800}.agent-conversion-node strong{font-size:1.2rem;color:var(--green-dark)}.agent-tour-conversion{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.agent-tour-conversion>div{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(23,107,82,.22);border-radius:12px;background:var(--green-soft);padding:12px 14px}.agent-tour-conversion span{font-size:.68rem;color:var(--muted);font-weight:800}.agent-tour-conversion strong{font-size:1.05rem;color:var(--green-dark)}.agent-funnel-empty{border:1px dashed var(--border);border-radius:12px;padding:18px;color:var(--muted);font-size:.7rem;line-height:1.5}.agent-analysis-footnote{margin:0;color:var(--muted);font-size:.62rem;line-height:1.5}
-@media(max-width:1050px){.agent-activity-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.agent-focus-kpis{grid-template-columns:1fr}.agent-conversion-flow{align-items:stretch}}
-@media(max-width:700px){.agent-activity-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.agent-tour-conversion{grid-template-columns:1fr}.agent-scatter-chart{height:300px}}
-@media(max-width:480px){.agent-activity-stats{grid-template-columns:1fr}}
-
-/* ==========================================================
-   Agent Analytics V25 · opportunity journey
-========================================================== */
-.agent-scope-panel{display:grid;gap:12px}.agent-cohort-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid rgba(23,107,82,.22);border-radius:12px;background:var(--green-soft);padding:11px 13px}.agent-cohort-strip>div{display:grid;gap:2px}.agent-cohort-strip span{font-size:.62rem;color:var(--muted);font-weight:800}.agent-cohort-strip strong{font-size:1.02rem;color:var(--green-dark)}.agent-cohort-rate{margin-left:auto;text-align:right}.agent-journey-outcomes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.agent-journey-outcomes>div{display:grid;gap:4px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft);padding:12px 14px}.agent-journey-outcomes span{font-size:.66rem;color:var(--muted);font-weight:800}.agent-journey-outcomes strong{font-size:1.18rem;color:var(--green-dark)}.agent-journey-outcomes small{font-size:.58rem;color:var(--muted)}.agent-tour-rate{border-color:rgba(23,107,82,.22)!important;background:var(--green-soft)!important}.agent-scatter-tooltip{display:grid;gap:4px;min-width:170px;border:1px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:0 8px 24px rgba(25,35,31,.12);padding:9px 11px;font-size:.63rem;color:var(--text)}.agent-scatter-tooltip strong{color:var(--green-dark);font-size:.68rem}.agent-scatter-tooltip span{color:var(--muted)}.agent-scatter-tooltip b{color:var(--text)}
-@media(max-width:760px){.agent-journey-outcomes{grid-template-columns:1fr}.agent-cohort-rate{margin-left:0;text-align:left}}
