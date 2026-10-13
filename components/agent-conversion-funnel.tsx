@@ -1,6 +1,9 @@
-import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Route, School } from "lucide-react";
 
-import type { AgentSetterJourney } from "@/lib/agent-analytics";
+import type { AgentCloserMetrics, AgentSetterJourney } from "@/lib/agent-analytics";
+import type { DateRange } from "@/lib/date-range";
+import { dateRangeQuery } from "@/lib/date-range";
 import type { Locale } from "@/lib/locale";
 import { tr } from "@/lib/locale";
 
@@ -8,12 +11,17 @@ function pct(value: number | null) {
   return value === null ? "—" : `${value.toFixed(1)}%`;
 }
 
-function ratio(numerator: number, denominator: number) {
-  if (!denominator) return null;
-  return (numerator / denominator) * 100;
-}
-
-export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourney; locale: Locale }) {
+export function AgentConversionFunnel({
+  data,
+  closerMetrics,
+  locale,
+  range,
+}: {
+  data: AgentSetterJourney;
+  closerMetrics: AgentCloserMetrics;
+  locale: Locale;
+  range: DateRange;
+}) {
   const steps = [
     {
       label: tr(locale, "Calls made", "Llamadas hechas"),
@@ -35,10 +43,37 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
       value: data.qualified,
       rate: data.meaningful_to_qualified_pct,
     },
+  ];
+
+  const query = dateRangeQuery(range);
+  const closerCards = [
     {
-      label: "Tour Booked",
-      value: data.tour_booked,
-      rate: ratio(data.tour_booked, data.qualified),
+      metricKey: "school_tours_booked",
+      label: "ST Booked",
+      value: closerMetrics.school_tours_booked,
+      Icon: Route,
+      asyncTone: false,
+    },
+    {
+      metricKey: "school_tours_attended",
+      label: "ST Attended",
+      value: closerMetrics.school_tours_attended,
+      Icon: School,
+      asyncTone: true,
+    },
+    {
+      metricKey: "trial_days_booked",
+      label: tr(locale, "Trial Day Booked", "Pasadía Booked"),
+      value: closerMetrics.trial_days_booked,
+      Icon: Route,
+      asyncTone: false,
+    },
+    {
+      metricKey: "trial_days_showed",
+      label: tr(locale, "Trial Day Attended", "Pasadía Attended"),
+      value: closerMetrics.trial_days_attended,
+      Icon: School,
+      asyncTone: true,
     },
   ];
 
@@ -51,8 +86,8 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
           <p className="panel-note">
             {tr(
               locale,
-              "Calls made is the operational count of unique opportunities with at least one real stage movement during the selected period; it is not a literal phone-call count. Stage movements are attributed first to the real GHL user identified by Audit Logs. Meaningful and Qualified are cumulative milestones, while Tour Booked comes from real GHL appointments created in the selected period and is attributed to the appointment creator. No Answer follow-up movements count in agent productivity. Owner-based attribution is now only a fallback when Audit Log evidence is unavailable.",
-              "Llamadas hechas es el conteo operativo de opportunities únicas con al menos un cambio real de stage durante el periodo seleccionado; no es el conteo literal de llamadas telefónicas. Los movimientos de stage se atribuyen primero al usuario real identificado por Audit Logs de GHL. Meaningful y Qualified son milestones acumulativos, mientras que Tour Booked sale de citas reales creadas en GHL dentro del periodo y se atribuye al creador de la cita. Los seguimientos de No Answer sí cuentan en productividad. El ownership queda únicamente como fallback cuando no hay evidencia de Audit Log.",
+              "Calls made is the operational count of unique opportunities worked during the selected period; it is not a literal phone-call count. Stage movements are attributed first to the real GHL user identified by Audit Logs. Meaningful and Qualified are cumulative milestones. School Tour and Trial Day appointment outcomes are shown separately below and mirror V2 Summary exactly for the same date range.",
+              "Llamadas hechas es el conteo operativo de opportunities trabajadas durante el periodo seleccionado; no es el conteo literal de llamadas telefónicas. Los movimientos de stage se atribuyen primero al usuario real identificado por Audit Logs de GHL. Meaningful y Qualified son milestones acumulativos. Los resultados de School Tour y Pasadía se muestran aparte abajo y son una calca exacta de V2 Summary para el mismo rango de fechas.",
             )}
           </p>
         </div>
@@ -87,6 +122,40 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
               <span>{step.label}</span>
               <strong>{step.value}</strong>
             </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="panel-heading compact-panel-heading" style={{ marginTop: 18, marginBottom: 8 }}>
+        <div>
+          <p className="eyebrow">CLOSER · MISMA FUENTE QUE V2 SUMMARY</p>
+          <h3>{tr(locale, "Appointments in the selected period", "Citas del periodo seleccionado")}</h3>
+          <p className="panel-note">
+            {tr(
+              locale,
+              "These four scorecards use the exact same backend values and drill-downs as V2 Summary. Team and Cinthia show the period totals; other individual setters show zero because these outcomes belong to the Closer view.",
+              "Estas cuatro scorecards usan exactamente los mismos valores y drill-downs que V2 Summary. Team y Cinthia muestran los totales del periodo; los demás setters individuales muestran cero porque estos outcomes pertenecen a la vista de Closer.",
+            )}
+          </p>
+        </div>
+      </div>
+
+      <div className="v2-funnel-flow">
+        {closerCards.map(({ metricKey, label, value, Icon, asyncTone }, index) => (
+          <div className="v2-funnel-step" key={metricKey}>
+            <Link
+              className={`v2-kpi-card ${asyncTone ? "v2-kpi-card-async" : ""}`}
+              href={`/v2/leads?metric=${encodeURIComponent(metricKey)}&scope=closer&${query}`}
+            >
+              <div className="v2-kpi-topline">
+                <span className="v2-step-number">{String(index + 1).padStart(2, "0")}</span>
+                <span className="v2-kpi-icon"><Icon size={16} strokeWidth={1.9} /></span>
+              </div>
+              <div className="v2-kpi-label-row">
+                <p className="v2-kpi-label">{label}</p>
+              </div>
+              <p className="v2-kpi-value">{value}</p>
+            </Link>
           </div>
         ))}
       </div>
@@ -144,8 +213,8 @@ export function AgentConversionFunnel({ data, locale }: { data: AgentSetterJourn
       <p className="agent-attribution-note">
         {tr(
           locale,
-          "Reconciliation: Calls made = No response + Responded. Responded = Disqualified + Callback/follow-up + Meaningful Conversation. Stage actor comes from exact Audit Log matching whenever available. Meaningful and Qualified are cumulative milestones. Tour Booked is audited against real School Tour appointments created in GHL during the period and attributed to the appointment creator.",
-          "Cuadre: Llamadas hechas = No respondieron + Respondieron. Respondieron = Disqualified + Callback/seguimiento + Meaningful Conversation. El actor del movimiento sale del match exacto con Audit Logs siempre que esté disponible. Meaningful y Qualified son milestones acumulativos. Tour Booked se audita contra citas reales de School Tour creadas en GHL durante el periodo y se atribuye al creador de la cita.",
+          "Reconciliation: Calls made = No response + Responded. Responded = Disqualified + Callback/follow-up + Meaningful Conversation. Stage actor comes from exact Audit Log matching whenever available. Meaningful and Qualified are cumulative milestones. Appointment scorecards are sourced from the same V2 Summary closer metrics and use the same clickable event drill-down.",
+          "Cuadre: Llamadas hechas = No respondieron + Respondieron. Respondieron = Disqualified + Callback/seguimiento + Meaningful Conversation. El actor del movimiento sale del match exacto con Audit Logs siempre que esté disponible. Meaningful y Qualified son milestones acumulativos. Las scorecards de citas salen de las mismas métricas Closer de V2 Summary y usan el mismo drill-down clicable por evento.",
         )}
       </p>
     </section>

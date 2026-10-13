@@ -73,6 +73,13 @@ export type AgentSetterJourney = {
   contacted_to_tour_pct: number | null;
 };
 
+export type AgentCloserMetrics = {
+  school_tours_booked: number;
+  school_tours_attended: number;
+  trial_days_booked: number;
+  trial_days_attended: number;
+};
+
 type LocalParts = {
   date: string;
   hour: number;
@@ -333,3 +340,27 @@ export async function getSetterAgentJourney(
     contacted_to_tour_pct: nullableNumeric(row.contacted_to_tour_pct),
   };
 }
+
+export async function getAgentCloserMetrics(
+  range: DateRange,
+  agentId: string,
+): Promise<AgentCloserMetrics> {
+  const admin = createSupabaseAdmin();
+  const result = await admin.rpc("milhano_get_agent_closer_metrics", {
+    p_start: range.start,
+    p_end: range.end,
+    p_agent_id: agentId,
+  });
+  if (result.error) {
+    throw new Error(`No se pudieron cargar las métricas Closer de Agents: ${result.error.message}`);
+  }
+
+  const row = ((result.data ?? [])[0] ?? {}) as Record<string, unknown>;
+  return {
+    school_tours_booked: numeric(row.school_tours_booked),
+    school_tours_attended: numeric(row.school_tours_attended),
+    trial_days_booked: numeric(row.trial_days_booked),
+    trial_days_attended: numeric(row.trial_days_attended),
+  };
+}
+

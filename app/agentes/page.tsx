@@ -9,6 +9,7 @@ import { DateRangeFilter } from "@/components/date-range-filter";
 import { ADMISSIONS_V2_CUTOVER, clampV2Range } from "@/lib/admissions-v2";
 import {
   getAgentActivityAnalysis,
+  getAgentCloserMetrics,
   getSetterAgentDirectory,
   getSetterAgentJourney,
 } from "@/lib/agent-analytics";
@@ -49,9 +50,10 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
   const selectedAgent = agents.find((agent) => agent.ghl_user_id === detailAgentId) ?? null;
   const scopeLabel = selectedAgent?.display_name ?? tr(locale, "All team", "Todo el equipo");
 
-  const [activity, journey] = await Promise.all([
+  const [activity, journey, closerMetrics] = await Promise.all([
     getAgentActivityAnalysis(range, detailAgentId),
     getSetterAgentJourney(range, detailAgentId),
+    getAgentCloserMetrics(range, detailAgentId),
   ]);
 
   return (
@@ -106,7 +108,7 @@ export default async function AgentsPage({ searchParams }: { searchParams: Promi
         </div>
       </section>
 
-      <AgentConversionFunnel data={journey} locale={locale} />
+      <AgentConversionFunnel data={journey} closerMetrics={closerMetrics} locale={locale} range={range} />
       <AgentActivityScatter data={activity} locale={locale} agents={agents} />
 
       <p className="agent-analysis-footnote">
