@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/ticketing/db';
-export const EVENT_SLUG = 'halloween-2026';
+export const EVENT_SLUG = process.env.ENABLE_SANDBOX==='true' && process.env.VERCEL_ENV!=='production' ? 'halloween-2026-sandbox' : 'halloween-2026';
 export function ip(req: NextRequest): string { return (req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown').trim().slice(0, 100); }
 export function token(req: NextRequest): string { return req.cookies.get('milhano_ticket_family')?.value || ''; }
 export async function event() {
