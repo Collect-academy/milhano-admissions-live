@@ -1,0 +1,13 @@
+PARCHE V0.3.1 - SANDBOX EN PRODUCCION (SOLO ENSAYO)
+Copiar DOS archivos exactamente sobre sus rutas del repositorio:
+lib/ticketing/server.ts
+app/api/boletos/config/route.ts
+
+Permite ENABLE_SANDBOX=true en Production y usa el evento 'halloween-2026-sandbox'.
+NO convierte el evento comercial en público.
+
+ADVERTENCIA: los endpoints sandbox quedan disponibles al público mientras ENABLE_SANDBOX=true. No enviar el enlace a padres hasta deshabilitarlo y completar Stripe.
+
+Si aparece NOT_CONFIGURED tras este parche: Vercel > Logs, filtrar /api/boletos/config y buscar '[ticketing/config]'. Comprobar la URI del Transaction Pooler y que DATABASE_URL exista en Production. Los caracteres especiales de la contraseña deben escaparse en la URI.
+
+Para apagar el sandbox: ENABLE_SANDBOX=false, volver a desplegar, y validar cierres.
