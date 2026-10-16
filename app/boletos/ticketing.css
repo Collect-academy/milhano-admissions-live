@@ -1,0 +1,90 @@
+.ticketing-root, .ticketing-root *{box-sizing:border-box}
+.ticketing-root{background:#120d1c;color:#f5f0e7}
+.ticketing-root{margin:0;font-family:Arial,Helvetica,sans-serif}
+.ticketing-root button, .ticketing-root input, .ticketing-root select{font:inherit}
+.ticketing-root.app{min-height:100vh;background:radial-gradient(circle at 50% 0%,#4c2953 0%,#23172e 32%,#120d1c 70%)}
+.ticketing-root .top{text-align:center;padding:38px 16px 25px}
+.ticketing-root .eyebrow{font-weight:700;letter-spacing:.24em;font-size:12px;color:#e2bf85}
+.ticketing-root .top h1{font-family:Georgia,serif;font-size:clamp(31px,5vw,55px);line-height:1.05;margin:18px auto;max-width:920px}
+.ticketing-root .top h1 em{color:#e5c179;font-style:normal}
+.ticketing-root .top p{color:#cfc5d0}
+.ticketing-root .ribbon{display:inline-block;border:1px solid #ba9456;color:#e9c99e;background:#392b36;border-radius:30px;padding:9px 17px;font-size:12px;font-weight:700;margin-top:8px}
+.ticketing-root .shell{max-width:1170px;margin:0 auto;padding:16px 18px 40px}
+.ticketing-root .status{display:flex;align-items:center;gap:9px;padding:16px 18px;background:#292137;border:1px solid #59466b;border-radius:12px;margin-bottom:20px;color:#f6ead9}
+.ticketing-root .status small{color:#bcb0c2}
+.ticketing-root .dot{width:10px;height:10px;border-radius:50%;background:#a8a2a9}
+.ticketing-root .dot.on{background:#2bbb82}
+.ticketing-root .notice, .ticketing-root .auth{max-width:560px;margin:35px auto;background:#f7f0e4;color:#231c27;border-radius:18px;padding:34px;box-shadow:0 18px 40px #0005}
+.ticketing-root .notice h2, .ticketing-root .auth h2{font-family:Georgia,serif;margin-top:0}
+.ticketing-root .notice p, .ticketing-root .auth p{color:#685d69;line-height:1.5}
+.ticketing-root .auth label{display:block;margin:20px 0;font-size:14px;font-weight:700}
+.ticketing-root .auth input, .ticketing-root .auth select{display:block;width:100%;background:#fff;border:1px solid #cec5d3;border-radius:9px;padding:13px;margin-top:8px;color:#1a1220}
+.ticketing-root .auth input{letter-spacing:.4em;font-size:22px}
+.ticketing-root .auth button, .ticketing-root button:not(.seat){border:0;background:#60366f;color:#fff;padding:13px 18px;border-radius:9px;font-weight:700;cursor:pointer}
+.ticketing-root button:disabled{opacity:.45;cursor:not-allowed}
+.ticketing-root button.ghost{background:#f2e7f3;color:#44264e}
+.ticketing-root .toolbar{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.ticketing-root .toolbar h2{font-family:Georgia,serif;font-size:30px;margin:7px 0}
+.ticketing-root .toolbar p{color:#ccbdd0}
+.ticketing-root .legend{display:flex;gap:18px;flex-wrap:wrap;margin:17px 0;color:#e9dded;font-size:13px}
+.ticketing-root .legend span{display:flex;align-items:center;gap:7px}
+.ticketing-root .sw{display:inline-block;width:18px;height:18px;border-radius:4px}
+.ticketing-root .stage{border:2px solid #ba9456;border-radius:50% 50% 5px 5px/24px 24px 5px 5px;background:#301b36;color:#e2c994;text-align:center;padding:15px;font-weight:900;letter-spacing:.28em;max-width:560px;margin:20px auto}
+.ticketing-root .seatArea{overflow-x:auto;padding:18px 12px;background:#ecdfc8;border:3px solid #ac8255;border-radius:15px;color:#251b24}
+.ticketing-root .seats{width:max-content;max-width:none;margin:auto}
+.ticketing-root .seatRow{display:flex;gap:5px;align-items:center;margin-bottom:6px}
+.ticketing-root .rowLetter{width:27px;color:#4d2e5a;font-weight:900;text-align:center}
+.ticketing-root .seat{background:#c4f4ce;border:1px solid #568c63;border-radius:5px;color:#193f2b;width:42px;height:36px;cursor:pointer;font-size:12px;font-weight:700}
+.ticketing-root .seat.held{background:#aeb1ba;border-color:#8d909b;color:#252c3a}
+.ticketing-root .seat.paid{background:#8b58b0;border-color:#573470;color:white}
+.ticketing-root .seat.blocked{background:#d5cec4;border-color:#c0aca4;color:#847873}
+.ticketing-root .seat.selected{background:#f3bb59;border-color:#a56a1f;color:#452913}
+.ticketing-root .seat.aisle{margin-left:32px}
+.ticketing-root .summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;padding:25px;background:#2a2136;border:1px solid #675578;border-radius:13px;margin-top:20px}
+.ticketing-root .summary p{margin:8px 0;color:#d3c6d7}
+.ticketing-root .checkoutPane{max-width:590px}
+.ticketing-root .checkoutPane strong{color:#e8c98f}
+.ticketing-root .checkoutPane p{line-height:1.45;font-size:13px}
+.ticketing-root .sandboxActions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.ticketing-root .sandboxActions span{font-size:12px;color:#e6c48c}
+.ticketing-root .alert{background:#4f303e;border:1px solid #b47c90;padding:15px;border-radius:8px;margin-top:20px}
+.ticketing-root footer{text-align:center;color:#928799;font-size:12px;margin-top:30px}
+@media(max-width:650px){.ticketing-root .seat{width:35px;height:32px}
+.ticketing-root .seatRow{gap:3px}
+.ticketing-root .seat.aisle{margin-left:22px}
+.ticketing-root .top{padding-top:28px}
+.ticketing-root .toolbar{display:block}
+.ticketing-root .summary{display:block}
+.ticketing-root .summary button{margin-top:8px}
+.ticketing-root .legend{gap:12px}}
+/* V0.2: responsive venue and polished ticketing-only presentation */
+.ticketing-root .top{padding:48px 18px 28px;background:linear-gradient(180deg,#1b1026 0%,transparent 100%)}
+.ticketing-root .top h1{letter-spacing:-.025em}
+.ticketing-root .headerTags{display:flex;justify-content:center;flex-wrap:wrap;gap:9px;margin:19px auto}
+.ticketing-root .headerTags span{border:1px solid #67516d;background:#281c32;color:#eadbbf;padding:8px 13px;border-radius:30px;font-size:12px}
+.ticketing-root .notice{text-align:center}
+.ticketing-root .noticeIcon{font-size:43px;margin-bottom:10px}
+.ticketing-root .stepLabel{font-size:11px;font-weight:900;letter-spacing:.14em;color:#b18dd0}
+.ticketing-root .auth .stepLabel{color:#714681}
+.ticketing-root .micro{font-size:11px;text-align:center}
+.ticketing-root .toolbar{margin:26px 0 18px}
+.ticketing-root .venue{border:2px solid #95704c;background:#e9dcc4;border-radius:16px;padding:18px 14px 10px;box-shadow:0 18px 40px #0004}
+.ticketing-root .venueHead,.ticketing-root .venueFoot{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;text-align:center;color:#6a455d;font-weight:900;font-size:11px;letter-spacing:.08em}
+.ticketing-root .stage{margin:18px auto 22px;max-width:620px;background:linear-gradient(90deg,#271431,#48235b,#271431);color:#f6d998;box-shadow:0 4px 12px #46304a4d}
+.ticketing-root .seatArea{border:0;box-shadow:none;padding:8px 0 24px;background:transparent}
+.ticketing-root .seats{width:100%;min-width:650px}
+.ticketing-root .seatRow{width:100%;margin-bottom:6px;gap:8px}
+.ticketing-root .seatGroup{display:grid;grid-template-columns:repeat(20,minmax(0,1fr));gap:4px;flex:1}
+.ticketing-root .rowLetter{flex:0 0 20px}
+.ticketing-root .seat{width:100%;height:37px;font-size:11px;transition:transform .12s, box-shadow .12s;border-width:1.5px}
+.ticketing-root .seat:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 3px 8px #0003}
+.ticketing-root .seat.aisle{margin-left:0}
+.ticketing-root .seatGroup .seat:nth-child(11){margin-left:4px;width:calc(100% - 4px)}
+.ticketing-root .seatRow:first-child .seatGroup{grid-template-columns:repeat(20,minmax(0,1fr))}
+.ticketing-root .seatRow:first-child .seat:nth-child(n+11){display:none}
+.ticketing-root .venueFoot{border-top:1px solid #c3a98c;padding:12px 5px 2px}
+.ticketing-root .summary{position:sticky;bottom:10px;z-index:4;background:#32233e;box-shadow:0 12px 36px #0009}
+.ticketing-root .summary .total{display:block;margin-top:9px;color:#f7d18a;font-size:19px}
+.ticketing-root .summary .stepLabel{margin-bottom:6px}
+.ticketing-root button:focus-visible,.ticketing-root input:focus-visible,.ticketing-root select:focus-visible{outline:3px solid #e4a841;outline-offset:2px}
+@media(max-width:730px){.ticketing-root .venue{padding:12px 9px}.ticketing-root .seats{min-width:680px}.ticketing-root .seat{height:31px}.ticketing-root .seatArea{overflow-x:auto}.ticketing-root .summary{bottom:0;margin:16px -8px 0;border-radius:10px}.ticketing-root .venueHead{font-size:9px}}

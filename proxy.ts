@@ -46,13 +46,14 @@ function basicAuthFallback(request: NextRequest): NextResponse {
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const isPublicTicketingRoute = pathname === "/boletos" || pathname.startsWith("/boletos/") || pathname.startsWith("/api/boletos/");
   const isPublicAfterSchoolRoute =
     pathname === "/after-school/registro" ||
     pathname === "/after-school/gracias" ||
     pathname.startsWith("/api/after-school/register") ||
     pathname.startsWith("/api/after-school/availability");
 
-  if (isPublicAfterSchoolRoute) {
+  if (isPublicAfterSchoolRoute || isPublicTicketingRoute) {
     return NextResponse.next();
   }
 
