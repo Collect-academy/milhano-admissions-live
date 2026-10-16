@@ -1,0 +1,22 @@
+/* Ticketing Block 2: reserved ten-place left area and numbered 1-10 on far right, no inventory mutation */
+.ticketing-root .seatGroup.firstRow{grid-template-columns:repeat(20,minmax(0,1fr))}
+.ticketing-root .reservedSeat{display:flex;align-items:center;justify-content:center;height:37px;border-radius:5px;background:#776b72;color:#fff;border:1.5px solid #675960;font-size:11px;font-weight:800;cursor:not-allowed}
+.ticketing-root .sw.reserved{background:#776b72;border:1px solid #675960}
+.ticketing-root .seatGroup .seat.aisleAfter20{margin-left:10px;width:calc(100% - 10px)}
+.ticketing-root .seatGroup.firstRow .reservedSeat:nth-child(10){margin-right:0}
+.ticketing-root .seatGroup.firstRow .seat:first-of-type{margin-left:0;width:100%}
+.ticketing-root .seatRow:first-child .seat:nth-child(n+11){display:initial}
+.ticketing-root .ticketingInfo{max-width:440px;border-radius:8px;padding:11px 13px;background:#453151;color:#f3dfbd;font-size:12px;line-height:1.45}
+.ticketing-root .ticketingInfo strong{color:inherit}
+.ticketing-root .paidInfo{margin-top:16px;background:#204437;color:#e0fae4;max-width:none}
+@media(max-width:730px){.ticketing-root .reservedSeat{height:31px}.ticketing-root .seatGroup .seat.aisleAfter20{margin-left:7px;width:calc(100% - 7px)}}
+
+.ticketing-root .ticketingPaymentOverlay{position:fixed;inset:0;z-index:100;background:#120b1ee8;display:flex;align-items:center;justify-content:center;padding:15px}
+.ticketing-root .ticketingPaymentModal{color:#281d30;background:white;border-radius:16px;padding:23px;max-height:94vh;overflow-y:auto;width:min(100%,520px);box-shadow:0 12px 70px #0009}
+.ticketing-root .ticketingPaymentTop{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.ticketing-root .ticketingPaymentModal p{font-size:13px;line-height:1.45;color:#5e5063}
+.ticketing-root .ticketingPaymentModal .ticketingPaymentForm button{width:100%;margin-top:18px}
+.ticketing-root button.ticketingClose{background:#e9e1ed;color:#34233e;padding:6px 12px}
+.ticketing-root button.ticketingRelease{display:block;background:#9a4558;margin-top:9px}
+.ticketing-root button.ticketingRelease:disabled{background:#777;color:#ddd;opacity:.6}
+.ticketing-root .ticketingPaymentWarning{background:#f9f0e6;border-radius:8px;padding:9px}
