@@ -1,0 +1,14 @@
+
+.ticketing-root .ticketingNoise{color:#6d3752;background:#fff4da;border:1px solid #dcb37b;padding:10px;border-radius:8px;font-size:12px;margin:10px 0}
+.ticketing-root .seatGroup{position:relative;column-gap:4px}
+.ticketing-root .seatGroup:before{content:'';position:absolute;left:50%;top:-4px;bottom:-4px;width:18px;transform:translateX(-50%);background:#e9dcc4;border-left:1px dashed #ae987d;border-right:1px dashed #ae987d;pointer-events:none}
+.ticketing-root .seatGroup .seat:nth-child(11){margin-left:22px;width:calc(100% - 22px)}
+.ticketing-root .seatGroup .seat:nth-child(10){margin-right:11px;width:calc(100% - 11px)}
+.ticketing-root .seatRow:first-child .seatGroup .seat{grid-column:span 1}
+.ticketing-root .seatRow:first-child .seatGroup .seat:first-child{grid-column:11}
+.ticketing-root .seat.mine{background:#f49d3b;border-color:#9d510c;color:#2a1600}
+.ticketing-root .sw.mine{background:#f49d3b}
+.ticketing-root .ticketingMyTickets{margin-top:16px;padding:20px;background:#31243d;color:#fff;border:1px solid #825b94;border-radius:13px;display:grid;gap:10px}
+.ticketing-root .ticketingMyTickets input{display:block;width:100%;max-width:490px;padding:12px;border:1px solid #d2bacd;border-radius:7px;margin-top:8px;color:#17131a;background:#fff}
+.ticketing-root .ticketingPdfLink{display:inline-block;background:#edbd67;color:#301932;padding:12px 18px;text-decoration:none;border-radius:9px;font-weight:700;width:fit-content}
+@media(max-width:730px){.ticketing-root .seatGroup .seat:nth-child(11){margin-left:15px;width:calc(100% - 15px)}.ticketing-root .seatGroup:before{width:12px}}
