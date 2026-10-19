@@ -1,4 +1,4 @@
-use client';
+'use client';
 import './ticketing.css';
 import './ticketing.conflictos-v032.css';
 import './ticketing.bloque2.css';
