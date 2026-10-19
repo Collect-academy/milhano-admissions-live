@@ -1,18 +1,56 @@
-/* Ticketing Block 2: reserved ten-place left area and numbered 1-10 on far right, no inventory mutation */
-.ticketing-root .seatGroup.firstRow{grid-template-columns:repeat(20,minmax(0,1fr))}
-.ticketing-root .reservedSeat{display:flex;align-items:center;justify-content:center;height:37px;border-radius:5px;background:#776b72;color:#fff;border:1.5px solid #675960;font-size:11px;font-weight:800;cursor:not-allowed}
-.ticketing-root .sw.reserved{background:#776b72;border:1px solid #675960}
-.ticketing-root .seatGroup .seat.aisleAfter20{margin-left:10px;width:calc(100% - 10px)}
-.ticketing-root .seatGroup.firstRow .reservedSeat:nth-child(10){margin-right:0}
-.ticketing-root .seatGroup.firstRow .seat:first-of-type{margin-left:0;width:100%}
-.ticketing-root .seatRow:first-child .seat:nth-child(n+11){display:initial}
-.ticketing-root .ticketingInfo{max-width:440px;border-radius:8px;padding:11px 13px;background:#453151;color:#f3dfbd;font-size:12px;line-height:1.45}
+/* Ticketing final polish: centered aisle, aligned seats, clearer legend, and Stripe modal */
+.ticketing-root{
+  --seat-w: 46px;
+  --seat-h: 38px;
+  --seat-gap: 6px;
+  --aisle-w: 58px;
+}
+.ticketing-root .ticketLegendGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px 14px;align-items:center}
+.ticketing-root .ticketLegendGrid span{font-weight:700;color:#f3e8f4}
+.ticketing-root .seatSample,
+.ticketing-root .reservedSeat,
+.ticketing-root .seat{
+  display:flex;align-items:center;justify-content:center;
+  width:var(--seat-w);height:var(--seat-h);border-radius:8px;
+  font-weight:800;font-size:12px;line-height:1;
+}
+.ticketing-root .seatSample{font-style:normal;flex:0 0 auto;border:1.5px solid transparent}
+.ticketing-root .seatSample.reserved,.ticketing-root .sw.reserved,.ticketing-root .reservedSeat{background:#756d76;border-color:#625a64;color:#fff}
+.ticketing-root .seatSample.available{background:#d5f3d9;border-color:#7aa281;color:#20452e}
+.ticketing-root .seatSample.held{background:#b9bbc2;border-color:#8d909b;color:#273041}
+.ticketing-root .seatSample.paid{background:#8050aa;border-color:#603685;color:#fff}
+.ticketing-root .seatSample.mine{background:#f0ae42;border-color:#bb7f1f;color:#4e2d08}
+.ticketing-root .seatSample.selected{background:#efbb61;border-color:#a56a1f;color:#452913}
+
+.ticketing-root .venue{position:relative;overflow:hidden}
+.ticketing-root .venueHead,.ticketing-root .venueFoot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ticketing-root .venueBadge{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#f4ead9;border:1px solid #cfb28f;color:#704860;font-weight:900;font-size:12px;letter-spacing:.05em}
+.ticketing-root .speakerNotice{margin:0 auto 12px;padding:10px 14px;border-radius:12px;background:#f4ead9;border:1px solid #d8bb91;color:#6a4357;font-size:13px;line-height:1.45}
+.ticketing-root .seatArea{position:relative;padding:12px 0 22px;overflow-x:auto}
+.ticketing-root .splitSeats{min-width:calc((var(--seat-w) * 20) + (var(--seat-gap) * 18) + var(--aisle-w) + 48px);width:max-content;margin:0 auto;position:relative}
+.ticketing-root .splitRow{display:grid;grid-template-columns:28px auto var(--aisle-w) auto;align-items:center;column-gap:8px;margin-bottom:8px;position:relative;z-index:1}
+.ticketing-root .rowLetter{width:28px;text-align:center;color:#4d2e5a;font-weight:900}
+.ticketing-root .seatHalf{display:grid;grid-template-columns:repeat(10,var(--seat-w));gap:var(--seat-gap);align-items:center}
+.ticketing-root .seatGap{width:var(--aisle-w);height:100%;position:relative}
+.ticketing-root .seatGap::before,.ticketing-root .seatGap::after{content:'';position:absolute;top:-10px;bottom:-10px;width:1px;border-left:2px dashed #d0a26e}
+.ticketing-root .seatGap::before{left:7px}.ticketing-root .seatGap::after{right:7px}
+.ticketing-root .aisleOverlay{position:absolute;top:0;bottom:0;left:50%;transform:translateX(-50%);width:var(--aisle-w);display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:0}
+.ticketing-root .aisleOverlay span{writing-mode:vertical-rl;transform:rotate(180deg);font-weight:900;font-size:13px;letter-spacing:.18em;color:#8e6a45;opacity:.95}
+.ticketing-root .seat{cursor:pointer;transition:transform .12s,box-shadow .12s;border:1.5px solid #568c63;background:#c4f4ce;color:#193f2b}
+.ticketing-root .seat:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 3px 8px #0003}
+.ticketing-root .seat.held{background:#b1b3bb;border-color:#8d909b;color:#252c3a}
+.ticketing-root .seat.paid{background:#8b58b0;border-color:#573470;color:#fff}
+.ticketing-root .seat.mine{background:#f0ae42;border-color:#bb7f1f;color:#4e2d08}
+.ticketing-root .seat.blocked{background:#d9d2c9;border-color:#c2b2a4;color:#847873}
+.ticketing-root .seat.selected{background:#f3bb59;border-color:#a56a1f;color:#452913}
+.ticketing-root .seat:disabled{cursor:not-allowed}
+.ticketing-root .venueFoot{border-top:1px solid #c3a98c;padding:12px 5px 2px}
+.ticketing-root .ticketingInfo{max-width:460px;border-radius:10px;padding:11px 13px;background:#453151;color:#f3dfbd;font-size:12px;line-height:1.45}
 .ticketing-root .ticketingInfo strong{color:inherit}
 .ticketing-root .paidInfo{margin-top:16px;background:#204437;color:#e0fae4;max-width:none}
-@media(max-width:730px){.ticketing-root .reservedSeat{height:31px}.ticketing-root .seatGroup .seat.aisleAfter20{margin-left:7px;width:calc(100% - 7px)}}
 
 .ticketing-root .ticketingPaymentOverlay{position:fixed;inset:0;z-index:100;background:#120b1ee8;display:flex;align-items:center;justify-content:center;padding:15px}
-.ticketing-root .ticketingPaymentModal{color:#281d30;background:white;border-radius:16px;padding:23px;max-height:94vh;overflow-y:auto;width:min(100%,520px);box-shadow:0 12px 70px #0009}
+.ticketing-root .ticketingPaymentModal{color:#281d30;background:#fff;border-radius:16px;padding:23px;max-height:94vh;overflow-y:auto;width:min(100%,520px);box-shadow:0 12px 70px #0009}
 .ticketing-root .ticketingPaymentTop{display:flex;justify-content:space-between;gap:12px;align-items:center}
 .ticketing-root .ticketingPaymentModal p{font-size:13px;line-height:1.45;color:#5e5063}
 .ticketing-root .ticketingPaymentModal .ticketingPaymentForm button{width:100%;margin-top:18px}
@@ -20,3 +58,17 @@
 .ticketing-root button.ticketingRelease{display:block;background:#9a4558;margin-top:9px}
 .ticketing-root button.ticketingRelease:disabled{background:#777;color:#ddd;opacity:.6}
 .ticketing-root .ticketingPaymentWarning{background:#f9f0e6;border-radius:8px;padding:9px}
+
+@media(max-width:900px){
+  .ticketing-root{--seat-w:42px;--seat-h:36px;--seat-gap:5px;--aisle-w:50px}
+  .ticketing-root .splitSeats{min-width:calc((var(--seat-w) * 20) + (var(--seat-gap) * 18) + var(--aisle-w) + 44px)}
+}
+@media(max-width:730px){
+  .ticketing-root{--seat-w:38px;--seat-h:34px;--seat-gap:4px;--aisle-w:44px}
+  .ticketing-root .venue{padding:12px 9px}
+  .ticketing-root .seatArea{overflow-x:auto}
+  .ticketing-root .splitSeats{min-width:calc((var(--seat-w) * 20) + (var(--seat-gap) * 18) + var(--aisle-w) + 40px)}
+  .ticketing-root .summary{bottom:0;margin:16px -8px 0;border-radius:10px}
+  .ticketing-root .speakerNotice{font-size:12px}
+  .ticketing-root .venueHead,.ticketing-root .venueFoot{justify-content:flex-start}
+}
