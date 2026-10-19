@@ -19,7 +19,7 @@ export async function POST(req:NextRequest){
  if(!o||o.provider!=='stripe'||o.provider_checkout_id!==pi.id||o.slug!=='halloween-2026-sandbox'||o.environment!=='sandbox'||Number(o.amount_cents)!==pi.amount||String(o.currency).toLowerCase()!==pi.currency||pi.metadata?.event_slug!=='halloween-2026-sandbox')return reply({error:'ORDER_MISMATCH'},400);
  if(event.type==='payment_intent.payment_failed')return reply({received:true,retryAllowed:true});
  const success=pi.status==='succeeded';if(!success&&pi.status!=='canceled')return reply({received:true,pending:true});
- const settled=await sql`select ticketing.settle_order(${orderId}::uuid,${event.id},${success},${JSON.stringify({verification:'server_verified',intentId:pi.id})}::jsonb) as status`;
+ const settled=await sql`select ticketing.settle_order(${orderId}::uuid,${event.id},${success},${sql.json({verification:'server_verified',intentId:pi.id})}::jsonb) as status`;
  return reply({received:true,status:settled[0]?.status});
  }catch(err){console.error('[ticketing/webhook]',err instanceof Error?err.message:'error');return reply({error:'PROCESSING_FAILED'},500)}
 }
