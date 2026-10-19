@@ -72,3 +72,6 @@
   .ticketing-root .speakerNotice{font-size:12px}
   .ticketing-root .venueHead,.ticketing-root .venueFoot{justify-content:flex-start}
 }
+
+.ticketing-root .seatGap{display:flex;align-items:center;justify-content:center}
+.ticketing-root .seatGap span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:12px;font-weight:900;letter-spacing:.2em;color:#825932}
