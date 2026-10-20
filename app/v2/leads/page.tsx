@@ -5,7 +5,7 @@ import { ADMISSIONS_V2_CUTOVER, getAdmissionsV2MetricLeads, isAdmissionsV2EventM
 import { dateRangeQuery, resolveDateRange, type DateRange } from "@/lib/date-range";
 import { dateLabel } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
-import { elapsed, getContactTimingRows } from "@/lib/lead-timing";
+import { getManagementEvidenceRows, managementElapsed } from "@/lib/lead-timing";
 import { tr } from "@/lib/locale";
 import { formatMeridaDateTime, opportunityOperationalDate } from "@/lib/operational-date";
 
@@ -43,8 +43,9 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
   const eventMetric = isAdmissionsV2EventMetric(metric);
   const appointmentMetric = ["school_tours_booked", "school_tours_attended", "trial_days_booked", "trial_days_showed"].includes(metric);
   const showContactTiming = ["unique_contacted_leads", "responded_leads", "no_answer"].includes(metric);
-  const contactTimings = showContactTiming ? await getContactTimingRows(leads.map((lead) => lead.ghl_opportunity_id)) : [];
-  const timingByOpportunity = new Map(contactTimings.map((item) => [item.ghl_opportunity_id, item]));
+  const ids = showContactTiming ? leads.map((lead) => lead.ghl_opportunity_id) : [];
+  const managementRows = showContactTiming ? await getManagementEvidenceRows(ids) : [];
+  const managementByOpportunity = new Map(managementRows.map((item) => [item.ghl_opportunity_id, item]));
   const columnCount = (appointmentMetric ? 12 : eventMetric ? 11 : 9) + (showContactTiming ? 2 : 0);
 
   return (
@@ -65,7 +66,7 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
           ← {tr(locale, "Back to V2", "Volver a V2")}
         </Link>
       </div>
-      {showContactTiming ? <p className="panel-note">{tr(locale,"Timing is based on GHL communications and No Answer stage transitions, not on current stage inference. Automatic messages are excluded from the first human attempt. Open a lead's timing report to inspect gaps between follow-ups.","Tiempos basados en comunicaciones GHL y movimientos No Answer, no en inferencias del stage actual. Los mensajes automáticos no cuentan como primer intento humano. Abre Tiempos del lead para revisar intervalos entre seguimientos.")}</p> : null}
+      {showContactTiming ? <p className="panel-note">{tr(locale,"First management is the earliest observable stage change, booked appointment or manual outbound message. ≤ is an upper bound, not the exact call time. Initial imported stages are excluded.","Primera gestión = primer cambio real de stage, cita creada o mensaje manual. ≤ indica límite superior, no hora exacta de la llamada. No se cuentan stages iniciales importados.")}</p> : null}
       <section className="panel">
         <div className="table-scroll">
           <table>
@@ -78,8 +79,8 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
                 {appointmentMetric ? <th>{tr(locale, "Scheduled for (Mérida)", "Programada para (Mérida)")}</th> : null}
                 {eventMetric && !appointmentMetric ? <th>{tr(locale, "Milestone date (Mérida)", "Fecha del hito (Mérida)")}</th> : null}
                 {eventMetric ? <th>{tr(locale, "Event status", "Estado del evento")}</th> : null}
-                {showContactTiming ? <th>{tr(locale, "Lead → first human attempt", "Ingreso → 1er intento humano")}</th> : null}
-                {showContactTiming ? <th>{tr(locale, "Unanswered follow-ups (calls / stages)", "Seguimientos sin respuesta (llamadas / stages)")}</th> : null}
+                {showContactTiming ? <th>{tr(locale, "Lead → first observable management", "Ingreso → 1a gestión detectable")}</th> : null}
+                {showContactTiming ? <th>{tr(locale, "Verified No Answer Day 2/3 follow-ups", "Seguimientos Day 2/3 verificados")}</th> : null}
                 <th>{tr(locale, "Current owner", "Owner actual")}</th>
                 <th>Pipeline</th>
                 <th>{tr(locale, "Current stage", "Stage actual")}</th>
@@ -99,8 +100,8 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
                   {appointmentMetric ? <td><strong>{formatMeridaDateTime(lead.appointment_scheduled_at, locale)}</strong></td> : null}
                   {eventMetric && !appointmentMetric ? <td><strong>{formatMeridaDateTime(lead.metric_at, locale)}</strong></td> : null}
                   {eventMetric ? <td>{lead.metric_status ?? "—"}</td> : null}
-                  {showContactTiming ? <td><strong>{elapsed(lead.lead_at,timingByOpportunity.get(lead.ghl_opportunity_id)?.first_human_attempt_at)}</strong></td> : null}
-                  {showContactTiming ? <td>{timingByOpportunity.has(lead.ghl_opportunity_id) ? `${timingByOpportunity.get(lead.ghl_opportunity_id)?.unanswered_call_followups ?? 0} / ${timingByOpportunity.get(lead.ghl_opportunity_id)?.no_answer_stage_followups ?? 0}` : "—"}</td> : null}
+                  {showContactTiming ? <td><strong>{managementElapsed(lead.lead_at,managementByOpportunity.get(lead.ghl_opportunity_id))}</strong></td> : null}
+                  {showContactTiming ? <td>{managementByOpportunity.has(lead.ghl_opportunity_id) ? managementByOpportunity.get(lead.ghl_opportunity_id)?.real_stage_followup_count ?? 0 : "—"}</td> : null}
                   <td>{lead.operational_owner ?? "—"}</td>
                   <td>{lead.pipeline_name ?? lead.current_pipeline_role ?? "—"}</td>
                   <td>{lead.current_stage ?? "—"}</td>
