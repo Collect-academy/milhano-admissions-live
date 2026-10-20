@@ -221,6 +221,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       <div className="v2-toolbar">
         <AdmissionsVersionSwitcher current="v2" />
         <DashboardRefreshButton />
+        <Link className="secondary-button" href="/analisis-leads">{tr(locale, "Lead timing analysis", "Análisis de tiempos")}</Link>
       </div>
 
       <div className="v2-cutover-note">

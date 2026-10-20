@@ -107,6 +107,8 @@ export type AdmissionsV2Lead = {
   lost_reason: string | null;
   lead_at: string;
   metric_at?: string | null;
+  appointment_booked_at?: string | null;
+  appointment_scheduled_at?: string | null;
   metric_event_id?: string | null;
   metric_title?: string | null;
   metric_status?: string | null;
@@ -190,7 +192,24 @@ export async function getAdmissionsV2MetricLeads(
       throw new Error(`Unable to load V2 metric events: ${result.error.message}`);
     }
 
-    return (result.data ?? []) as AdmissionsV2Lead[];
+    const leads = (result.data ?? []) as AdmissionsV2Lead[];
+    // Only read appointment dates for the events already selected by the existing metric RPC.
+    // The metrics view retains historical booking-date overrides, exclusions and sibling mappings.
+    const appointmentIds = Array.from(new Set(leads.map((lead) => lead.metric_event_id).filter((id): id is string => Boolean(id))));
+    if (!appointmentIds.length) return leads;
+
+    const { data: appointments, error: datesError } = await supabase
+      .from("vw_milhano_appointment_events_v22")
+      .select("appointment_id,date_added,start_time")
+      .in("appointment_id", appointmentIds);
+    if (datesError) throw new Error(`Unable to read appointment dates: ${datesError.message}`);
+
+    const dates = new Map((appointments ?? []).map((item) => [item.appointment_id, item]));
+    return leads.map((lead) => ({
+      ...lead,
+      appointment_booked_at: dates.get(lead.metric_event_id ?? "")?.date_added ?? null,
+      appointment_scheduled_at: dates.get(lead.metric_event_id ?? "")?.start_time ?? null,
+    }));
   }
 
   const result = await supabase.rpc("milhano_get_v2_metric_leads_scoped", {
