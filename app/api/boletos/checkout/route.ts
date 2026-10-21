@@ -1,3 +1,4 @@
+import {ticketingCanPurchase} from '@/lib/ticketing/admin-access';
 import {ticketStripeKeys} from '@/lib/ticketing/mode';
 import {NextRequest} from 'next/server';
 import Stripe from 'stripe';
@@ -8,8 +9,11 @@ const Input=z.object({reservationId:z.string().uuid()});
 export const runtime='nodejs';export const dynamic='force-dynamic';
 export async function POST(req:NextRequest){try{
  const parsed=Input.safeParse(await req.json());if(!parsed.success)return fail('INVALID_INPUT');
- const e=await event();const keys=ticketStripeKeys();const key=keys.secret;
- const family=await familyFromToken(token(req));const id=parsed.data.reservationId;
+ const e=await event();
+ const family=await familyFromToken(token(req));
+ if(!await ticketingCanPurchase(family,String(e.id)))return fail('PURCHASES_ADMIN_ONLY',403);
+ const keys=ticketStripeKeys();const key=keys.secret;
+ const id=parsed.data.reservationId;
  const reservation=await sql`select id,expires_at,status from ticketing.reservations where id=${id} and family_id=${family} and event_id=${e.id}`;
  if(!reservation.length)return fail('RESERVATION_NOT_FOUND',404);
  if(!['held','checkout_pending'].includes(String(reservation[0].status)) || new Date(reservation[0].expires_at).getTime()<=Date.now()+30000)return fail('RESERVATION_EXPIRED',409);
