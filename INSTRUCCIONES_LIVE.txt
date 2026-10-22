@@ -1,0 +1,72 @@
+MILHANO TICKETING — PREPARACIÓN LIVE (22 OCT 2026)
+
+BASE: milhano-admissions-live-main (21).zip. No se alteró otro módulo.
+
+SU BASE DE DATOS YA FUE PREPARADA EN SUPABASE.
+NO EJECUTE ninguna migración otra vez. Live: 210 asientos; 68 familias (67 + Admin);
+83 alumnos; 0 reservas al momento de la migración; sales_enabled=false.
+No existe acceso de pago LIVE hasta que usted configure credenciales y abra ventas.
+
+REGLAS HORARIAS (hora America/Merida):
+- Consulta familiar: disponible aunque venta cerrada.
+- Admin: puede reservar/comprar ANTES de 18:00, sólo si sales_enabled=true
+  y TICKETING_MODE=live y Stripe Live está completo.
+- Familias normales: 22 oct 2026 18:00 (inclusive) a 26 oct 2026 00:00 (exclusive).
+- A partir del 26 oct 00:00: nuevas reservas/checkout bloqueados para TODOS.
+- Protección en base de datos y en API, no sólo visual.
+- Los pagos tardíos confirmados por Stripe quedan para refund automático/reconciliación.
+
+INSTALAR SIN APLANAR LAS CARPETAS:
+1. Clone el repositorio desde GitHub Desktop (rama main); NO lo suba arrastrando
+   15 archivos individuales a la raíz en github.com.
+2. Descomprima este ZIP en una carpeta local independiente.
+3. Abra PowerShell en la carpeta que contiene APLICAR_EN_REPOSITORIO.ps1 y ejecute:
+   powershell -ExecutionPolicy Bypass -File .\APLICAR_EN_REPOSITORIO.ps1 -RepoPath "C:\ruta\al\repositorio\milhano-admissions-live"
+4. El instalador confirma checksums del ZIP (21) ANTES de reemplazar todo.
+   Si detecta una versión diferente, se DETIENE: no fuerce el cambio.
+5. Revise los cambios en GitHub Desktop: SOLO lib/ticketing, app/api/boletos,
+   app/boletos/page.tsx y scripts/. No altere otros módulos.
+6. Corra: node --test scripts/ticketing-regression.test.mjs
+   y npm run build (en su clon, con dependencias previamente instaladas).
+7. Haga Commit y Push. Verifique que Vercel termine Ready.
+
+CONFIGURACIÓN PRIVADA (NO PEGAR LAS CLAVES EN GITHUB O EN CHAT):
+En Vercel -> Project -> Settings -> Environment Variables -> Production:
+STRIPE_TICKETING_LIVE_SECRET_KEY                sk_live_...
+NEXT_PUBLIC_STRIPE_TICKETING_LIVE_PUBLISHABLE_KEY pk_live_...
+STRIPE_TICKETING_LIVE_WEBHOOK_SECRET             whsec_...
+TICKETING_MODE                                   test (mantener ahora)
+
+En Stripe Workbench Live configure el endpoint:
+https://milhano-admissions-live.vercel.app/api/boletos/webhooks/stripe-ticketing
+Eventos: payment_intent.succeeded, payment_intent.canceled, payment_intent.payment_failed.
+Ambos modos firman y comprueban por separado. No mezclar claves de After School.
+
+ORDEN DE ACTIVACIÓN (SIN COMPRAS REALES):
+A. Confirmar compilación y Test admin-only, sin tocar Stripe Live.
+B. Guardar tres claves Live en Vercel; crear webhook Live en Stripe.
+C. Cambiar TICKETING_MODE=live mediante nuevo DEPLOY antes de 18:00.
+D. Mientras sales_enabled=false, familias ven plano pero NADIE puede pagar.
+E. Ejecutar preflight: con variables exportadas localmente:
+   node scripts/ticketing-live-preflight.mjs
+   (Sólo lee Supabase y Stripe; NO crea PaymentIntents ni compras).
+F. Cuando todos los checks estén OK, habilitar sales_enabled=true para
+   halloween-2026 mediante acción SQL auditada (incluida en este ZIP).
+   Desde ese instante ADMIN PUEDE COMPRAR TEMPRANO.
+   Las familias normales quedarán bloqueadas hasta 18:00 automáticamente.
+G. En el instante de apertura NO se necesita cron ni redeploy: Postgres
+   comprueba la hora con clock_timestamp(). El frontend muestra contador.
+
+IMPORTANTE:
+- Un preflight sin cargo NO demuestra el flujo de un cobro real hasta conciliación.
+- Un PaymentIntent emitido ANTES del cierre podría ser confirmado después en
+  Stripe si no se cancela. La función settle_order marca pagos fuera de plazo
+  como refund_required, y el webhook inicia devolución automática; verificar
+  manualmente casos refund_required pendientes.
+- Con LIVE deshabilitado en BD, no habrá checkout aunque un desarrollador
+  manipule HTML/JS o envíe requests a APIs: el servidor + SQL lo bloquean.
+- El botón "Volver al inicio" y el aviso permanecen intactos.
+- El endpoint /api/boletos/families ahora responde 410 (antes revelaba etiquetas
+  familiares sin sesión). El acceso sigue por código individual.
+- No hemos cambiado las claves ni TICKETING_MODE ni desplegado a Vercel.
+- Si aún no se ha verificado relación padre-alumno, resolver antes de entregar códigos.

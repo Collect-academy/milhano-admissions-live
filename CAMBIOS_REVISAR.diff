@@ -1,0 +1,326 @@
+--- BEFORE/lib/ticketing/admin-access.ts
++++ AFTER/lib/ticketing/admin-access.ts
+@@ -1,17 +1,8 @@
+ import 'server-only';
+ import {sql} from '@/lib/ticketing/db';
+-
+-// Bloqueo por defecto: solo la familia administradora del evento activo puede
+-// reservar o crear pagos. La comprobacion usa la sesion autorizada del servidor.
+-export async function ticketingCanPurchase(familyId: string, eventId: string): Promise<boolean> {
+-  const rows = await sql`
+-    select 1 from ticketing.families
+-    where id=${familyId}::uuid
+-      and event_id=${eventId}::uuid
+-      and active=true
+-      and label='Familia Admin'
+-      and public_code='MH-ADMIN-4D5D893684F4'
+-    limit 1
+-  `;
+-  return rows.length > 0;
++// Admin flag and time checks are resolved in Postgres using the database clock.
++// Reuse this for frontend hint and APIs. reserve_seats/create_order enforce independently.
++export async function ticketingCanPurchase(familyId:string,eventId:string):Promise<boolean>{
++ const r=await sql`select ticketing.can_purchase(${familyId}::uuid,${eventId}::uuid) as allowed`;
++ return r[0]?.allowed===true;
+ }
+--- BEFORE/lib/ticketing/mode.ts
++++ AFTER/lib/ticketing/mode.ts
+@@ -1,7 +1,16 @@
+ import 'server-only';
+ export type TicketMode='test'|'live';
+-export function ticketMode():TicketMode {const mode=process.env.TICKETING_MODE||'test';if(mode!=='test'&&mode!=='live')throw new Error('INVALID_TICKETING_MODE');return mode;}
+-export function ticketStripeKeys(){const mode=ticketMode();const secret=mode==='test'?process.env.STRIPE_TICKETING_SECRET_KEY:process.env.STRIPE_TICKETING_LIVE_SECRET_KEY;
+-const pub=mode==='test'?process.env.NEXT_PUBLIC_STRIPE_TICKETING_PUBLISHABLE_KEY:process.env.NEXT_PUBLIC_STRIPE_TICKETING_LIVE_PUBLISHABLE_KEY;
+-const webhook=mode==='test'?process.env.STRIPE_TICKETING_WEBHOOK_SECRET:process.env.STRIPE_TICKETING_LIVE_WEBHOOK_SECRET;
+-const prefix=mode==='test'?'test':'live';if(!secret?.startsWith('sk_'+prefix+'_')||!pub?.startsWith('pk_'+prefix+'_'))throw new Error('STRIPE_KEYS_NOT_CONFIGURED');return {mode,secret,pub,webhook};}
++export function ticketMode():TicketMode {
++ const mode=process.env.TICKETING_MODE||'test';
++ if(mode!=='test'&&mode!=='live')throw new Error('INVALID_TICKETING_MODE');
++ return mode;
++}
++export function ticketStripeKeys(){
++ const mode=ticketMode();
++ const secret=mode==='test'?process.env.STRIPE_TICKETING_SECRET_KEY:process.env.STRIPE_TICKETING_LIVE_SECRET_KEY;
++ const pub=mode==='test'?process.env.NEXT_PUBLIC_STRIPE_TICKETING_PUBLISHABLE_KEY:process.env.NEXT_PUBLIC_STRIPE_TICKETING_LIVE_PUBLISHABLE_KEY;
++ const webhook=mode==='test'?process.env.STRIPE_TICKETING_WEBHOOK_SECRET:process.env.STRIPE_TICKETING_LIVE_WEBHOOK_SECRET;
++ const prefix=mode==='test'?'test':'live';
++ if(!secret?.startsWith('sk_'+prefix+'_')||!pub?.startsWith('pk_'+prefix+'_')||!webhook?.startsWith('whsec_'))throw new Error('STRIPE_KEYS_NOT_CONFIGURED');
++ return {mode,secret,pub,webhook};
++}
+--- BEFORE/lib/ticketing/server.ts
++++ AFTER/lib/ticketing/server.ts
+@@ -1,16 +1,22 @@
+ import {ticketMode} from '@/lib/ticketing/mode';
+-import { NextRequest, NextResponse } from 'next/server';
+-import { sql } from '@/lib/ticketing/db';
+-export const EVENT_SLUG = ticketMode()==='test' ? 'halloween-2026-sandbox' : 'halloween-2026';
+-export function ip(req: NextRequest): string { return (req.headers.get('x-real-ip') || req.headers.get('x-forwarded-for')?.split(',')[0] || 'unknown').trim().slice(0, 100); }
+-export function token(req: NextRequest): string { return req.cookies.get('milhano_ticket_family')?.value || ''; }
+-export async function event() {
+-  const rows = await sql`select id,title,price_cents,currency,max_per_family,hold_seconds,sales_enabled,opens_at,closes_at,environment, now() as db_now from ticketing.events where slug=${EVENT_SLUG} limit 1`;
+-  if (!rows.length) throw new Error('EVENT_NOT_CONFIGURED'); if(rows[0].environment!==(ticketMode()==='test'?'sandbox':'live'))throw new Error('EVENT_MODE_MISMATCH');return rows[0];
++import {NextRequest,NextResponse} from 'next/server';
++import {sql} from '@/lib/ticketing/db';
++export const EVENT_SLUG=ticketMode()==='test'?'halloween-2026-sandbox':'halloween-2026';
++export function ip(req:NextRequest):string{return (req.headers.get('x-real-ip')||req.headers.get('x-forwarded-for')?.split(',')[0]||'unknown').trim().slice(0,100)}
++export function token(req:NextRequest):string{return req.cookies.get('milhano_ticket_family')?.value||''}
++export async function event(){
++ const rows=await sql`select id,title,price_cents,currency,max_per_family,hold_seconds,sales_enabled,access_enabled,sale_policy,opens_at,closes_at,environment,now() as db_now from ticketing.events where slug=${EVENT_SLUG} limit 1`;
++ if(!rows.length)throw new Error('EVENT_NOT_CONFIGURED');
++ if(rows[0].environment!==(ticketMode()==='test'?'sandbox':'live'))throw new Error('EVENT_MODE_MISMATCH');
++ return rows[0];
+ }
+-export function isOpen(e: Record<string, any>):boolean { const now = new Date(e.db_now).getTime(); return Boolean(e.sales_enabled && e.opens_at && new Date(e.opens_at).getTime()<=now && (!e.closes_at || new Date(e.closes_at).getTime()>now)); }
+-export function fail(code: string, status=400) { return NextResponse.json({error:code}, {status, headers:{'Cache-Control':'no-store'}}); }
+-export function safeError(e: unknown) { const msg = e instanceof Error ? e.message : ''; const known=['SALES_CLOSED','SESSION_INVALID','FAMILY_LIMIT','SEAT_UNAVAILABLE','INVALID_SEATS','RATE_LIMITED','IDEMPOTENCY_CONFLICT','RESERVATION_EXPIRED','PROVIDER_MODE_MISMATCH','FAMILY_EVENT_MISMATCH','INVALID_IDEMPOTENCY','ORDER_NOT_FOUND','SANDBOX_ONLY'];return fail(known.find(x=>msg.includes(x)) || 'REQUEST_FAILED',known.some(x=>msg.includes(x))?409:500); }
+-export async function familyFromToken(t: string):Promise<string> { const rows=await sql`select ticketing.authorize_family(${t}) as family_id`; return String(rows[0].family_id); }
+-export function sandboxActive():boolean { return ticketMode()==='test'; }
+-export function noStoreJson(data:unknown,status=200) { return NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}}); }
++// Public opening status; Admin may purchase before opening only when sales are enabled.
++export function isOpen(e:Record<string,any>):boolean{
++ const now=new Date(e.db_now).getTime();
++ return Boolean(e.sales_enabled&&(e.environment==='sandbox'||e.sale_policy==='all')&&e.opens_at&&new Date(e.opens_at).getTime()<=now&&(!e.closes_at||new Date(e.closes_at).getTime()>now));
++}
++export function fail(code:string,status=400){return NextResponse.json({error:code},{status,headers:{'Cache-Control':'no-store'}})}
++export function safeError(e:unknown){const msg=e instanceof Error?e.message:'';const known=['SALES_CLOSED','PURCHASES_NOT_ALLOWED','PURCHASES_ADMIN_ONLY','SESSION_INVALID','FAMILY_LIMIT','SEAT_UNAVAILABLE','INVALID_SEATS','RATE_LIMITED','IDEMPOTENCY_CONFLICT','RESERVATION_EXPIRED','PROVIDER_MODE_MISMATCH','FAMILY_EVENT_MISMATCH','INVALID_IDEMPOTENCY','ORDER_NOT_FOUND','SANDBOX_ONLY','STRIPE_KEYS_NOT_CONFIGURED'];return fail(known.find(x=>msg.includes(x))||'REQUEST_FAILED',msg.includes('STRIPE_KEYS_NOT_CONFIGURED')?503:known.some(x=>msg.includes(x))?409:500)}
++export async function familyFromToken(t:string):Promise<string>{const rows=await sql`select ticketing.authorize_family(${t}) as family_id`;return String(rows[0].family_id)}
++export function sandboxActive():boolean{return ticketMode()==='test'}
++export function noStoreJson(data:unknown,status=200){return NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}})}
+--- BEFORE/app/api/boletos/config/route.ts
++++ AFTER/app/api/boletos/config/route.ts
+@@ -1,4 +1,8 @@
+ import {event,isOpen,noStoreJson} from '@/lib/ticketing/server';
+ import {ticketMode,ticketStripeKeys} from '@/lib/ticketing/mode';
+ export const dynamic='force-dynamic';
+-export async function GET(){try{const e=await event();const mode=ticketMode();let paymentsEnabled=false,publishableKey='';try{const keys=ticketStripeKeys();paymentsEnabled=true;publishableKey=keys.pub}catch{}return noStoreJson({title:e.title,priceCents:e.price_cents,currency:e.currency,open:isOpen(e),opensAt:e.opens_at,serverTime:e.db_now,environment:e.environment,mode,paymentsEnabled,publishableKey,sandboxEnabled:mode==='test'});}catch(err){console.error('[ticketing/config]',err instanceof Error?err.message:'failed');return noStoreJson({error:'NOT_CONFIGURED',message:'Configuración de boletos no disponible'},503)}}
++export async function GET(){try{
++ const e=await event(),mode=ticketMode();let paymentsEnabled=false,publishableKey='';
++ try{const keys=ticketStripeKeys();paymentsEnabled=true;publishableKey=keys.pub}catch{}
++ return noStoreJson({title:e.title,priceCents:e.price_cents,currency:e.currency,open:isOpen(e),accessEnabled:e.access_enabled,salesEnabled:e.sales_enabled,salePolicy:e.sale_policy,opensAt:e.opens_at,closesAt:e.closes_at,serverTime:e.db_now,environment:e.environment,mode,paymentsEnabled,publishableKey,sandboxEnabled:mode==='test'});
++}catch(err){console.error('[ticketing/config]',err instanceof Error?err.message:'failed');return noStoreJson({error:'NOT_CONFIGURED',message:'Configuración de boletos no disponible'},503)}}
+--- BEFORE/app/api/boletos/pin/route.ts
++++ AFTER/app/api/boletos/pin/route.ts
+@@ -1,10 +1,10 @@
+ import {NextRequest} from 'next/server';
+ import {z} from 'zod';
+ import {sql} from '@/lib/ticketing/db';
+-import {event,isOpen,ip,fail,noStoreJson} from '@/lib/ticketing/server';
++import {event,ip,fail,noStoreJson} from '@/lib/ticketing/server';
+ const Input=z.object({code:z.string().trim().min(8).max(80)});
+ export async function POST(req:NextRequest){try{
+- const e=await event();if(!isOpen(e))return fail('SALES_CLOSED',423);
++ const e=await event();if(!e.access_enabled)return fail('ACCESS_CLOSED',423);
+  const body=Input.safeParse(await req.json());if(!body.success)return fail('INVALID_INPUT');
+  const rows=await sql`select session_token,session_expires_at from ticketing.verify_family_code(${e.id}::uuid,${body.data.code},${ip(req)})`;
+  if(!rows.length||!rows[0].session_token)return fail('INVALID_CODE_OR_LOCKED',401);
+--- BEFORE/app/api/boletos/seats/route.ts
++++ AFTER/app/api/boletos/seats/route.ts
+@@ -1,7 +1,7 @@
+ import {NextRequest} from 'next/server';import {sql} from '@/lib/ticketing/db';
+-import {event,isOpen,token,familyFromToken,fail,noStoreJson} from '@/lib/ticketing/server';
++import {event,token,familyFromToken,fail,noStoreJson} from '@/lib/ticketing/server';
+ export const dynamic='force-dynamic';
+-export async function GET(req:NextRequest){try{const e=await event();if(!isOpen(e))return fail('SALES_CLOSED',423);const family=await familyFromToken(token(req));const valid=await sql`select 1 from ticketing.families where id=${family} and event_id=${e.id} and active=true`;if(!valid.length)return fail('SESSION_INVALID',401);
++export async function GET(req:NextRequest){try{const e=await event();if(!e.access_enabled)return fail('ACCESS_CLOSED',423);const family=await familyFromToken(token(req));const valid=await sql`select 1 from ticketing.families where id=${family} and event_id=${e.id} and active=true`;if(!valid.length)return fail('SESSION_INVALID',401);
+ const seats=await sql`select s.id,s.seat_code as code,s.row_label as row,s.seat_number as number,s.status,
+  case when s.status='blocked' then 'blocked' when exists(select 1 from ticketing.reservation_seats rs join ticketing.reservations r on r.id=rs.reservation_id where rs.seat_id=s.id and r.status='paid') then 'paid'
+  when exists(select 1 from ticketing.reservation_seats rs join ticketing.reservations r on r.id=rs.reservation_id where rs.seat_id=s.id and (r.status='payment_review' or (r.status in ('held','checkout_pending') and r.expires_at>now()))) then 'held' else 'available' end as availability
+--- BEFORE/app/api/boletos/me/route.ts
++++ AFTER/app/api/boletos/me/route.ts
+@@ -1,9 +1,12 @@
+ import {ticketingCanPurchase} from '@/lib/ticketing/admin-access';
+ import {NextRequest} from 'next/server';import {sql} from '@/lib/ticketing/db';import {token,familyFromToken,event,fail,noStoreJson} from '@/lib/ticketing/server';
+ export const dynamic='force-dynamic';
+-export async function GET(req:NextRequest){try{const family=await familyFromToken(token(req));const e=await event();const f=await sql`select label from ticketing.families where id=${family} and event_id=${e.id}`;if(!f.length)return fail('NOT_FOUND',404);
+- const children=await sql`select display_name from ticketing.students where family_id=${family} and eligible=true order by display_name`;
+- const paid=await sql`select distinct s.seat_number,s.seat_code from ticketing.reservations r join ticketing.reservation_seats rs on rs.reservation_id=r.id join ticketing.seats s on s.id=rs.seat_id where r.family_id=${family} and r.event_id=${e.id} and r.status='paid' order by s.seat_number`;
++export async function GET(req:NextRequest){try{
++ const e=await event();const family=await familyFromToken(token(req));
++ const f=await sql`select label from ticketing.families where id=${family}::uuid and event_id=${e.id}::uuid and active=true`;
++ if(!f.length)return fail('SESSION_INVALID',401);
++ const children=await sql`select display_name from ticketing.students where family_id=${family}::uuid and eligible=true order by display_name`;
++ const paid=await sql`select distinct s.seat_number,s.seat_code from ticketing.reservations r join ticketing.reservation_seats rs on rs.reservation_id=r.id join ticketing.seats s on s.id=rs.seat_id where r.family_id=${family}::uuid and r.event_id=${e.id}::uuid and r.status='paid' order by s.seat_number`;
+  const canPurchase=await ticketingCanPurchase(family,String(e.id));
+  return noStoreJson({canPurchase,label:f[0].label,students:children.map(x=>x.display_name),purchasedCount:paid.length,purchasedSeats:paid.map(x=>x.seat_number)});
+ }catch{return fail('SESSION_INVALID',401)}}
+--- BEFORE/app/api/boletos/order/route.ts
++++ AFTER/app/api/boletos/order/route.ts
+@@ -1,6 +1,6 @@
+ import {NextRequest} from 'next/server';import {sql} from '@/lib/ticketing/db';
+-import {token,familyFromToken,fail,noStoreJson} from '@/lib/ticketing/server';
++import {token,familyFromToken,event,fail,noStoreJson} from '@/lib/ticketing/server';
+ export const dynamic='force-dynamic';
+-export async function GET(req:NextRequest){try{const family=await familyFromToken(token(req));const reservationId=req.nextUrl.searchParams.get('reservationId');if(!reservationId||!/^[0-9a-f-]{36}$/i.test(reservationId))return fail('INVALID_INPUT');
+-const rows=await sql`select r.id,r.status,r.expires_at,o.id as order_id,o.status as order_status,o.amount_cents from ticketing.reservations r left join ticketing.orders o on o.reservation_id=r.id where r.id=${reservationId} and r.family_id=${family}`;
++export async function GET(req:NextRequest){try{const e=await event();const family=await familyFromToken(token(req));const reservationId=req.nextUrl.searchParams.get('reservationId');if(!reservationId||!/^[0-9a-f-]{36}$/i.test(reservationId))return fail('INVALID_INPUT');
++const rows=await sql`select r.id,r.status,r.expires_at,o.id as order_id,o.status as order_status,o.amount_cents from ticketing.reservations r left join ticketing.orders o on o.reservation_id=r.id where r.id=${reservationId} and r.family_id=${family} and r.event_id=${e.id}`;
+ if(!rows.length)return fail('NOT_FOUND',404);return noStoreJson(rows[0]);}catch{return fail('SESSION_INVALID',401)}}
+--- BEFORE/app/api/boletos/families/route.ts
++++ AFTER/app/api/boletos/families/route.ts
+@@ -1,6 +1,3 @@
+-import {event,isOpen,fail,noStoreJson} from '@/lib/ticketing/server';
+-import {sql} from '@/lib/ticketing/db';
++import {NextResponse} from 'next/server';
+ export const dynamic='force-dynamic';
+-export async function GET(){try{const e=await event();if(!isOpen(e))return fail('SALES_CLOSED',423);
+- const rows=await sql`select id, label from ticketing.families where event_id=${e.id} and active=true order by label asc`;
+- return noStoreJson({families:rows});}catch{return fail('REQUEST_FAILED',500)}}
++export async function GET(){return NextResponse.json({error:'DIRECTORY_DISABLED'},{status:410,headers:{'Cache-Control':'no-store'}})}
+--- BEFORE/app/api/boletos/confirmation/route.ts
++++ AFTER/app/api/boletos/confirmation/route.ts
+@@ -1,6 +1,6 @@
+-import {NextRequest} from 'next/server';import {sql} from '@/lib/ticketing/db';import {fail,noStoreJson} from '@/lib/ticketing/server';
++import {NextRequest} from 'next/server';import {sql} from '@/lib/ticketing/db';import {event,fail,noStoreJson} from '@/lib/ticketing/server';
+ export const dynamic='force-dynamic';
+ export async function GET(req:NextRequest){try{const ref=req.nextUrl.searchParams.get('ref')||'';if(!/^[a-f0-9]{64}$/.test(ref))return fail('INVALID_REFERENCE',400);
+- const rows=await sql`select * from ticketing.lookup_confirmation(${ref})`;if(!rows.length)return fail('NOT_FOUND',404);
++ const e=await event();const rows=await sql`select * from ticketing.lookup_confirmation(${ref})`;if(!rows.length)return fail('NOT_FOUND',404);const owned=await sql`select 1 from ticketing.orders o join ticketing.reservations r on r.id=o.reservation_id where o.id=${rows[0].order_id}::uuid and r.event_id=${e.id}::uuid and o.status='paid' limit 1`;if(!owned.length)return fail('NOT_FOUND',404);
+  return noStoreJson({orderId:rows[0].order_id,seats:rows[0].seat_codes,amountCents:rows[0].amount_cents,paidAt:rows[0].paid_at});
+ }catch{return fail('REQUEST_FAILED',500)}}
+--- BEFORE/app/api/boletos/release/route.ts
++++ AFTER/app/api/boletos/release/route.ts
+@@ -1,21 +1,24 @@
+ import {NextRequest} from 'next/server';
+ import Stripe from 'stripe';import {z} from 'zod';import {sql} from '@/lib/ticketing/db';
+-import {token,familyFromToken,event,sandboxActive,fail,safeError,noStoreJson} from '@/lib/ticketing/server';
++import {ticketStripeKeys} from '@/lib/ticketing/mode';
++import {token,familyFromToken,event,fail,safeError,noStoreJson} from '@/lib/ticketing/server';
+ const Input=z.object({reservationId:z.string().uuid()});
+ export const runtime='nodejs';export const dynamic='force-dynamic';
+ export async function POST(req:NextRequest){try{
+  const parsed=Input.safeParse(await req.json());if(!parsed.success)return fail('INVALID_INPUT');
+- const e=await event();if(e.environment!=='sandbox'||!sandboxActive())return fail('TEST_ONLY',403);
+- const family=await familyFromToken(token(req));const id=parsed.data.reservationId;
+- const rows=await sql`select r.id,r.status as reservation_status,o.id as order_id,o.status as order_status,o.provider_checkout_id from ticketing.reservations r left join ticketing.orders o on o.reservation_id=r.id where r.id=${id} and r.family_id=${family} and r.event_id=${e.id}`;
+- if(!rows.length)return fail('RESERVATION_NOT_FOUND',404);const r=rows[0];
+- if(['paid','payment_review'].includes(String(r.reservation_status))||r.order_status==='paid')return fail('PAYMENT_ALREADY_CONFIRMED_OR_PENDING',409);
+- if(r.provider_checkout_id){const key=process.env.STRIPE_TICKETING_SECRET_KEY;if(!key?.startsWith('sk_test_'))return fail('TEST_STRIPE_NOT_CONFIGURED',503);const stripe=new Stripe(key);
+- let pi=await stripe.paymentIntents.retrieve(String(r.provider_checkout_id));
+- if(pi.status==='succeeded'||pi.status==='processing'||pi.status==='requires_capture')return fail('PAYMENT_ALREADY_CONFIRMED_OR_PENDING',409);
+- if(pi.status!=='canceled'){try{pi=await stripe.paymentIntents.cancel(pi.id);}catch{return fail('PAYMENT_CANNOT_BE_CANCELLED',409)}}
+- await sql`select ticketing.settle_order(${r.order_id}::uuid,${'manual-cancel-'+pi.id},false,${JSON.stringify({verification:'server_verified',reason:'customer_release'})}::jsonb)`;
+- }else if(r.order_id){await sql`update ticketing.orders set status='cancelled',updated_at=now() where id=${r.order_id} and status in ('created','open')`;}
+- await sql`update ticketing.reservations set status='cancelled',updated_at=now() where id=${id} and status in ('held','checkout_pending')`;
++ const e=await event(),family=await familyFromToken(token(req)),id=parsed.data.reservationId;
++ const rows=await sql`select r.id,r.status as reservation_status,o.id as order_id,o.status as order_status,o.provider_checkout_id from ticketing.reservations r left join ticketing.orders o on o.reservation_id=r.id where r.id=${id}::uuid and r.family_id=${family}::uuid and r.event_id=${e.id}::uuid`;
++ if(!rows.length)return fail('RESERVATION_NOT_FOUND',404);
++ const r=rows[0];if(['paid','payment_review'].includes(String(r.reservation_status))||['paid','refund_required','refunded'].includes(String(r.order_status)))return fail('PAYMENT_ALREADY_CONFIRMED_OR_PENDING',409);
++ if(r.provider_checkout_id){
++  const keys=ticketStripeKeys(),stripe=new Stripe(keys.secret);
++  let pi=await stripe.paymentIntents.retrieve(String(r.provider_checkout_id));
++  if(pi.livemode!==(keys.mode==='live')||pi.metadata?.order_id!==String(r.order_id)||pi.metadata?.event_slug!==(keys.mode==='live'?'halloween-2026':'halloween-2026-sandbox'))return fail('PAYMENT_INTENT_MISMATCH',409);
++  if(['succeeded','processing','requires_capture'].includes(pi.status))return fail('PAYMENT_ALREADY_CONFIRMED_OR_PENDING',409);
++  if(pi.status!=='canceled'){try{pi=await stripe.paymentIntents.cancel(pi.id)}catch{return fail('PAYMENT_CANNOT_BE_CANCELLED',409)}}
++  // The remote intent is canceled before releasing seats.
++  await sql`select ticketing.settle_order(${r.order_id}::uuid,${'manual-cancel-'+pi.id},false,${sql.json({verification:'server_verified',reason:'customer_release',intentId:pi.id})}::jsonb)`;
++ }else if(r.order_id){await sql`update ticketing.orders set status='cancelled',updated_at=now() where id=${r.order_id} and status in ('created','open')`}
++ await sql`update ticketing.reservations set status='cancelled',updated_at=now() where id=${id}::uuid and status in ('held','checkout_pending')`;
+  return noStoreJson({released:true});
+ }catch(err){console.error('[ticketing/release]',err instanceof Error?err.message:'error');return safeError(err)}}
+--- BEFORE/app/api/boletos/webhooks/stripe-ticketing/route.ts
++++ AFTER/app/api/boletos/webhooks/stripe-ticketing/route.ts
+@@ -1,25 +1,50 @@
+-import {NextRequest,NextResponse} from 'next/server';import Stripe from 'stripe';import {sql} from '@/lib/ticketing/db';
++import {NextRequest,NextResponse} from 'next/server';
++import Stripe from 'stripe';import {sql} from '@/lib/ticketing/db';
+ export const runtime='nodejs';export const dynamic='force-dynamic';
+ const reply=(data:unknown,status=200)=>NextResponse.json(data,{status,headers:{'Cache-Control':'no-store'}});
+ export async function POST(req:NextRequest){
+- const key=process.env.STRIPE_TICKETING_SECRET_KEY,secret=process.env.STRIPE_TICKETING_WEBHOOK_SECRET;
+- if(!key?.startsWith('sk_test_')||!secret)return reply({error:'WEBHOOK_NOT_CONFIGURED'},503);
+  const signature=req.headers.get('stripe-signature');if(!signature)return reply({error:'MISSING_SIGNATURE'},400);
+- const stripe=new Stripe(key);let event:Stripe.Event;
+- try{event=stripe.webhooks.constructEvent(await req.text(),signature,secret)}catch{return reply({error:'BAD_SIGNATURE'},400)}
++ const body=await req.text();
++ const configs=[
++  {mode:'test',key:process.env.STRIPE_TICKETING_SECRET_KEY,secret:process.env.STRIPE_TICKETING_WEBHOOK_SECRET,slug:'halloween-2026-sandbox',environment:'sandbox'},
++  {mode:'live',key:process.env.STRIPE_TICKETING_LIVE_SECRET_KEY,secret:process.env.STRIPE_TICKETING_LIVE_WEBHOOK_SECRET,slug:'halloween-2026',environment:'live'},
++ ] as const;
++ let verified:{stripe:Stripe,event:Stripe.Event,config:(typeof configs)[number]}|null=null;
++ for(const config of configs){
++  if(!config.key?.startsWith(config.mode==='live'?'sk_live_':'sk_test_')||!config.secret?.startsWith('whsec_'))continue;
++  const stripe=new Stripe(config.key);
++  try{const stripeEvent=stripe.webhooks.constructEvent(body,signature,config.secret);if(stripeEvent.livemode===(config.mode==='live')){verified={stripe,event:stripeEvent,config};break}}catch{}
++ }
++ if(!verified)return reply({error:'BAD_SIGNATURE_OR_WEBHOOK_NOT_CONFIGURED'},400);
++ const {stripe,event,config}=verified;
+  if(!['payment_intent.succeeded','payment_intent.canceled','payment_intent.payment_failed'].includes(event.type))return reply({received:true,ignored:true});
+  const incoming=event.data.object as Stripe.PaymentIntent;
+- if(incoming.livemode)return reply({error:'LIVE_DISABLED'},403);
++ if(incoming.livemode!==(config.mode==='live'))return reply({error:'EVENT_MODE_MISMATCH'},400);
+  try{
+- const pi=await stripe.paymentIntents.retrieve(incoming.id);
+- const orderId=pi.metadata?.order_id;
+- if(!orderId||!/^[0-9a-f-]{36}$/i.test(orderId))return reply({error:'ORDER_ID_MISSING'},400);
+- const rows=await sql`select o.id,o.amount_cents,o.currency,o.provider,o.provider_checkout_id,e.slug,e.environment from ticketing.orders o join ticketing.reservations r on r.id=o.reservation_id join ticketing.events e on e.id=r.event_id where o.id=${orderId}::uuid`;
+- const o=rows[0];
+- if(!o||o.provider!=='stripe'||o.provider_checkout_id!==pi.id||o.slug!=='halloween-2026-sandbox'||o.environment!=='sandbox'||Number(o.amount_cents)!==pi.amount||String(o.currency).toLowerCase()!==pi.currency||pi.metadata?.event_slug!=='halloween-2026-sandbox')return reply({error:'ORDER_MISMATCH'},400);
+- if(event.type==='payment_intent.payment_failed')return reply({received:true,retryAllowed:true});
+- const success=pi.status==='succeeded';if(!success&&pi.status!=='canceled')return reply({received:true,pending:true});
+- const settled=await sql`select ticketing.settle_order(${orderId}::uuid,${event.id},${success},${sql.json({verification:'server_verified',intentId:pi.id})}::jsonb) as status`;
+- return reply({received:true,status:settled[0]?.status});
++  const pi=await stripe.paymentIntents.retrieve(incoming.id),orderId=pi.metadata?.order_id;
++  if(pi.livemode!==(config.mode==='live')||!orderId||!/^[0-9a-f-]{36}$/i.test(orderId))return reply({error:'ORDER_ID_MISSING_OR_MODE_MISMATCH'},400);
++  const rows=await sql`select o.id,o.amount_cents,o.currency,o.provider,o.provider_checkout_id,e.slug,e.environment from ticketing.orders o join ticketing.reservations r on r.id=o.reservation_id join ticketing.events e on e.id=r.event_id where o.id=${orderId}::uuid`;
++  const o=rows[0];
++  if(!o||o.provider!=='stripe'||o.provider_checkout_id!==pi.id||o.slug!==config.slug||o.environment!==config.environment||Number(o.amount_cents)!==pi.amount||String(o.currency).toLowerCase()!==pi.currency||pi.metadata?.event_slug!==config.slug)return reply({error:'ORDER_MISMATCH'},400);
++  if(event.type==='payment_intent.payment_failed')return reply({received:true,retryAllowed:true});
++  const success=pi.status==='succeeded';if(!success&&pi.status!=='canceled')return reply({received:true,pending:true});
++  const settled=await sql`select ticketing.settle_order(${orderId}::uuid,${event.id},${success},${sql.json({verification:'server_verified',intentId:pi.id,mode:config.mode,stripeEventCreated:event.created})}::jsonb) as status`;
++  const state=String(settled[0]?.status||'');
++  if(success&&state==='refund_required'){
++   try{
++    // Stripe idempotency ensures webhook retries never refund twice.
++    const refund=await stripe.refunds.create({payment_intent:pi.id,reason:'requested_by_customer'},{idempotencyKey:'milhano-ticketing-late-refund-'+orderId});
++    if(refund.status==='succeeded'){
++     await sql`update ticketing.orders set status='refunded',updated_at=now() where id=${orderId}::uuid and status='refund_required'`;
++     await sql`insert into ticketing.audit_log(event_id,family_id,reservation_id,action,details)
++       select r.event_id,r.family_id,r.id,'late_payment_auto_refund',${sql.json({refundId:refund.id,status:refund.status})}::jsonb
++       from ticketing.orders o join ticketing.reservations r on r.id=o.reservation_id where o.id=${orderId}::uuid`;
++     return reply({received:true,status:'refunded'});
++    }
++    console.error('[ticketing/webhook] refund needs reconciliation',refund.id,refund.status);
++    return reply({received:true,status:'refund_required',refundStatus:refund.status});
++   }catch(error){console.error('[ticketing/webhook] refund creation failed',error instanceof Error?error.message:'unknown');return reply({error:'REFUND_RETRY_REQUIRED'},500)}
++  }
++  return reply({received:true,status:state});
+  }catch(err){console.error('[ticketing/webhook]',err instanceof Error?err.message:'error');return reply({error:'PROCESSING_FAILED'},500)}
+ }
+--- BEFORE/app/boletos/page.tsx
++++ AFTER/app/boletos/page.tsx
+@@ -7,20 +7,20 @@
+ import {Elements,PaymentElement,useElements,useStripe} from '@stripe/react-stripe-js';
+ import {loadStripe} from '@stripe/stripe-js';
+ type Family={id:string,label:string};type Seat={id:string,code:string,row:string|null,number:number|null,availability:string};
+-type Config={title:string,priceCents:number,open:boolean,opensAt:string|null,serverTime:string,environment:string,sandboxEnabled:boolean,paymentsEnabled?:boolean,publishableKey?:string};
++type Config={title:string,priceCents:number,open:boolean,accessEnabled?:boolean,salesEnabled?:boolean,salePolicy?:string,opensAt:string|null,closesAt?:string|null,serverTime:string,environment:string,sandboxEnabled:boolean,paymentsEnabled?:boolean,publishableKey?:string};
+ type ApiError=Error&{code?:string,conflictingSeats?:string[]};
+ async function api(url:string,options?:RequestInit){const r=await fetch(url,{cache:'no-store',...options,headers:{'Content-Type':'application/json',...(options?.headers||{})}});const j=await r.json();if(!r.ok){const e=new Error(j.message||j.error||'Error inesperado') as ApiError;e.code=j.error;e.conflictingSeats=j.conflictingSeats;throw e;}return j;}
+ const stripeCache=new Map<string,ReturnType<typeof loadStripe>>();function ticketStripeFor(key:string){if(!stripeCache.has(key))stripeCache.set(key,loadStripe(key));return stripeCache.get(key)!;}
+ function PaymentForm({onPaid,expired}:{onPaid:()=>void,expired:boolean}){const stripe=useStripe(),elements=useElements();const [paying,setPaying]=useState(false),[error,setError]=useState('');async function pay(e:React.FormEvent){e.preventDefault();if(!stripe||!elements||expired)return;setPaying(true);setError('');try{const result=await stripe.confirmPayment({elements,confirmParams:{return_url:window.location.origin+'/boletos'},redirect:'if_required'});if(result.error)setError(result.error.message||'No fue posible procesar el pago.');else if(result.paymentIntent?.status==='succeeded'||result.paymentIntent?.status==='processing')onPaid();else setError('La operación sigue pendiente. Verifica antes de intentar nuevamente.');}catch(e){setError((e as Error).message)}finally{setPaying(false)}}return <form onSubmit={pay} className="ticketingPaymentForm"><PaymentElement/><button disabled={!stripe||!elements||paying||expired} type="submit">{paying?'Procesando pago…':'Pagar de forma segura →'}</button>{error&&<p role="alert">{error}</p>}</form>}
+-export default function Home(){const [demo,setDemo]=useState(false),[config,setConfig]=useState<Config|null>(null),[families,setFamilies]=useState<Family[]>([]),[family,setFamily]=useState(''),[pin,setPin]=useState(''),[familyCode,setFamilyCode]=useState(''),[profile,setProfile]=useState<any>(null),[email,setEmail]=useState(''),[sendState,setSendState]=useState(''),[emailBusy,setEmailBusy]=useState(false),[verified,setVerified]=useState(false),[seats,setSeats]=useState<Seat[]>([]),[chosen,setChosen]=useState<string[]>([]),[reservedNumbers,setReservedNumbers]=useState<number[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[reservation,setReservation]=useState<{id:string,expires_at:string}|null>(null),[order,setOrder]=useState<string|null>(null),[clientSecret,setClientSecret]=useState(''),[paymentOpen,setPaymentOpen]=useState(false),[everOpenedPayment,setEverOpenedPayment]=useState(false),[status,setStatus]=useState(''),[clock,setClock]=useState(Date.now());const key=useRef<string>('');const lock=useRef(false);const [conflict,setConflict]=useState<string[]>([]);const selectedRef=useRef<string[]>([]);const seatsRef=useRef<Seat[]>([]);const pollingRef=useRef(false);const hasReservationRef=useRef(false);
++export default function Home(){const [serverOffset,setServerOffset]=useState(0),[demo,setDemo]=useState(false),[config,setConfig]=useState<Config|null>(null),[families,setFamilies]=useState<Family[]>([]),[family,setFamily]=useState(''),[pin,setPin]=useState(''),[familyCode,setFamilyCode]=useState(''),[profile,setProfile]=useState<any>(null),[email,setEmail]=useState(''),[sendState,setSendState]=useState(''),[emailBusy,setEmailBusy]=useState(false),[verified,setVerified]=useState(false),[seats,setSeats]=useState<Seat[]>([]),[chosen,setChosen]=useState<string[]>([]),[reservedNumbers,setReservedNumbers]=useState<number[]>([]),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[reservation,setReservation]=useState<{id:string,expires_at:string}|null>(null),[order,setOrder]=useState<string|null>(null),[clientSecret,setClientSecret]=useState(''),[paymentOpen,setPaymentOpen]=useState(false),[everOpenedPayment,setEverOpenedPayment]=useState(false),[status,setStatus]=useState(''),[clock,setClock]=useState(Date.now());const key=useRef<string>('');const lock=useRef(false);const [conflict,setConflict]=useState<string[]>([]);const selectedRef=useRef<string[]>([]);const seatsRef=useRef<Seat[]>([]);const pollingRef=useRef(false);const hasReservationRef=useRef(false);
+ useEffect(()=>{selectedRef.current=chosen},[chosen]);useEffect(()=>{hasReservationRef.current=Boolean(reservation)},[reservation]);
+-const loadConfig=async()=>{try{const c=await api('/api/boletos/config');setConfig(c);if(c.sandboxEnabled)setDemo(true);}catch(e){setMessage((e as Error).message)}};
++const loadConfig=async()=>{try{const c=await api('/api/boletos/config');setConfig(c);if(c.serverTime)setServerOffset(new Date(c.serverTime).getTime()-Date.now());if(c.sandboxEnabled)setDemo(true);}catch(e){setMessage((e as Error).message)}};
+ const loadSeats=async()=>{if(pollingRef.current)return;pollingRef.current=true;try{const x=await api('/api/boletos/seats');const latest:Seat[]=x.seats;seatsRef.current=latest;setSeats(latest);
+  if(!hasReservationRef.current){const unavailable=new Map(latest.filter(s=>s.availability!=='available').map(s=>[s.id,s]));const lost=selectedRef.current.filter(id=>unavailable.has(id));if(lost.length){const lostIds=new Set(lost);selectedRef.current=selectedRef.current.filter(id=>!lostIds.has(id));setChosen(prev=>prev.filter(id=>!lostIds.has(id)));setConflict(prev=>Array.from(new Set([...prev,...lost.map(id=>unavailable.get(id)?.code||id)])));key.current='';}}
+  }catch(e){setMessage((e as Error).message)}finally{pollingRef.current=false}};
+ useEffect(()=>{loadConfig();const t=setInterval(()=>setClock(Date.now()),1000);const refresh=setInterval(()=>loadConfig(),15000);return()=>{clearInterval(t);clearInterval(refresh)}},[]);
+ useEffect(()=>{if(!verified)return;loadSeats();loadProfile();const t=setInterval(()=>{loadSeats();loadProfile()},3000);return()=>clearInterval(t)},[verified]);
+-const displayOpen=Boolean(config?.open||demo);
++const saleStarts=config?.opensAt?new Date(config.opensAt).getTime():0;const serverNow=clock+serverOffset; const untilOpen=Math.max(0,Math.ceil((saleStarts-serverNow)/1000));const preOpening=Boolean(config?.opensAt&&!config.open&&serverNow<saleStarts);const generalSalesOpen=Boolean(config?.open||(config?.salePolicy==='all'&&config?.salesEnabled&&saleStarts>0&&serverNow>=saleStarts&&(!config?.closesAt||serverNow<new Date(config.closesAt).getTime())));
+ const remaining=reservation?Math.max(0,Math.ceil((new Date(reservation.expires_at).getTime()-clock)/1000)):0;
+ async function loadProfile(){try{setProfile(await api('/api/boletos/me'))}catch{}}
+ async function sendTickets(){if(emailBusy||!email)return;setEmailBusy(true);setSendState('');try{const x=await api('/api/boletos/email',{method:'POST',body:JSON.stringify({email})});setSendState(x.ok?'Boletos enviados al correo indicado.':'No se pudo enviar')}catch(e){setSendState((e as Error).message)}finally{setEmailBusy(false)}}
+@@ -40,8 +40,8 @@
+ function seatView(n:number,row:string){const s=byNumber.get(n);const availability=s?.availability||'blocked';const sid=s?.id||'';const active=chosen.includes(sid);const mine=Boolean(profile?.purchasedSeats?.includes(n));return <button key={n} type="button" title={`Fila ${row}, asiento ${n}: ${mine?'mi boleto':availability}`} aria-label={`Fila ${row}, asiento ${n}: ${mine?'mi boleto':availability}`} aria-pressed={active} disabled={profile?.canPurchase!==true||availability!=='available'||Boolean(reservation)} onClick={()=>select(sid)} className={'seat '+(active?'selected':mine?'mine':availability)}>{availability==='held'?'R':availability==='paid'?(mine?n:'V'):availability==='blocked'?'×':n}</button>}
+ return <main className="ticketing-root app">
+ <header className="top"><div className="eyebrow">MILHANO INTERNATIONAL SCHOOL · HALLOWEEN 2026</div><h1>El misterio en la mansión <em>Blackwood</em></h1><p>Una noche especial comienza con tu lugar favorito.</p><div className="headerTags"><span>🎃 Halloween 2026</span><span>🎭 Escenario principal</span><span>🎟️ Boletos numerados</span></div></header>
+-<section className="shell"><div className="status"><span className={'dot '+(config?.open?'on':'')}/><span><strong>{config?.open?'Venta abierta':'La venta todavía no está abierta'}</strong>{config?.opensAt&&!config.open?<small> · Apertura: {new Date(config.opensAt).toLocaleString('es-MX',{timeZone:'America/Merida'})}</small>:null}</span></div>
+-{!config?.open&&!demo?<div className="notice"><div className="noticeIcon">🕯️</div><h2>La mansión abrirá sus puertas pronto</h2><p>El acceso a familias y asientos se habilitará a la hora indicada por el colegio.</p><p>La plataforma todavía no admite reservaciones. El ensayo de bloqueos está disponible únicamente en el entorno de pruebas del equipo.</p>{config?.sandboxEnabled?<button onClick={()=>{setDemo(true);setMessage('')}}>Probar reservas con el equipo</button>:null}</div>:!verified?<div className="auth"><div className="stepLabel">PASO 01 / 03 · IDENTIFICACIÓN</div><h2>Ingresa tu código de familia</h2><p>Utiliza el código entregado por Milhano para consultar y comprar tus boletos.</p><label>Código de familia<input autoComplete="off" value={familyCode} onChange={e=>setFamilyCode(e.target.value)} placeholder="Código de familia" /></label><button disabled={!familyCode.trim()||busy} onClick={verify}>{busy?'Verificando…':'Continuar →'}</button><p className="micro">Tu código es privado. No lo compartas.</p></div>:<><div className="toolbar"><div><div className="stepLabel">{demo?'MODO DE PRUEBAS · INVENTARIO INDEPENDIENTE':'PASO 02 / 03 · ELIGE TUS LUGARES'}</div><h2>¡Bienvenidos! {profile?.students?.length?`Familia de ${profile.students.join(', ')}`:profile?.label||'Familia Milhano'}</h2><h3>{profile?.canPurchase===true?'Selecciona tus asientos':'Consulta los lugares disponibles'}</h3>{profile?.canPurchase===false?<p role="status">Las compras y reservaciones están temporalmente pausadas. Puedes consultar los lugares disponibles y tus boletos comprados.</p>:null}<p>{demo?'Los asientos se bloquean realmente por 10 minutos en el inventario de pruebas.':'Puedes volver a comprar hasta completar 20 boletos acumulados por familia.'}</p></div><div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,maxWidth:330}}><button className="ghost" disabled={busy} onClick={changeFamily}>Volver al inicio</button><p style={{margin:0,fontSize:12,lineHeight:1.45,textAlign:"right"}}>Volver al inicio no elimina los boletos que ya compraste, tampoco elimina tus reservaciones.</p></div></div>
++<section className="shell"><div className="status"><span className={'dot '+(generalSalesOpen?'on':'')}/><span><strong>{generalSalesOpen?'Venta abierta':'La venta todavía no está abierta'}</strong>{preOpening?<small> · Apertura 22 de octubre 18:00 (Mérida) · Cuenta regresiva {Math.floor(untilOpen/3600)}h {Math.floor((untilOpen%3600)/60)}m {String(untilOpen%60).padStart(2,'0')}s</small>:null}</span></div>
++{!verified?<div className="auth"><div className="stepLabel">PASO 01 / 03 · IDENTIFICACIÓN</div><h2>Ingresa tu código de familia</h2><p>Utiliza el código entregado por Milhano para consultar tus boletos y los asientos disponibles. Las compras se habilitarán en la fecha anunciada.</p><label>Código de familia<input autoComplete="off" value={familyCode} onChange={e=>setFamilyCode(e.target.value)} placeholder="Código de familia" /></label><button disabled={!familyCode.trim()||busy} onClick={verify}>{busy?'Verificando…':'Continuar →'}</button><p className="micro">Tu código es privado. No lo compartas.</p></div>:<><div className="toolbar"><div><div className="stepLabel">{demo?'MODO DE PRUEBAS · INVENTARIO INDEPENDIENTE':'PASO 02 / 03 · ELIGE TUS LUGARES'}</div><h2>¡Bienvenidos! {profile?.students?.length?`Familia de ${profile.students.join(', ')}`:profile?.label||'Familia Milhano'}</h2><h3>{profile?.canPurchase===true?'Selecciona tus asientos':'Consulta los lugares disponibles'}</h3>{profile?.canPurchase===false?<p role="status">La compra y reserva todavía no están disponibles para esta familia. Puedes consultar los lugares y tus boletos comprados.</p>:null}<p>{demo?'Los asientos se bloquean realmente por 10 minutos en el inventario de pruebas.':'Puedes volver a comprar hasta completar 20 boletos acumulados por familia.'}</p></div><div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,maxWidth:330}}><button className="ghost" disabled={busy} onClick={changeFamily}>Volver al inicio</button><p style={{margin:0,fontSize:12,lineHeight:1.45,textAlign:"right"}}>Volver al inicio no elimina los boletos que ya compraste, tampoco elimina tus reservaciones.</p></div></div>
+ <div className="legend ticketLegendGrid"><span><i className="seatSample reserved">R</i>Fila reservada</span><span><i className="seatSample available">12</i>Disponible</span><span><i className="seatSample held">R</i>Reservado · R</span><span><i className="seatSample paid">V</i>Vendido · V</span><span><i className="seatSample mine">12</i>Mis boletos</span><span><i className="seatSample selected">12</i>Seleccionado</span></div>
+ <div className="venue"><div className="venueHead"><span>🔊 BOCINAS · LADO IZQUIERDO</span><span>☕ CAFETERÍA · LADO DERECHO</span></div><div className="stage">✦ ESCENARIO ✦</div><p className="ticketingNoise">🔊 Zona de bocinas a la izquierda del escenario. Si hay sensibilidad al ruido, usa protección auditiva adecuada y considera asientos alejados.</p><div className="seatArea"><div className="seats splitSeats">{rows.map(([row,start,end])=><div className="seatRow splitRow" key={row}><span className="rowLetter">{row}</span><div className="seatHalf leftHalf">{row==='A'?Array.from({length:10},(_,i)=><div className="reservedSeat" title="Fila reservada" key={'r'+i}>R</div>):Array.from({length:10},(_,i)=>start+i).map(n=>seatView(n,row))}</div><div className="seatGap" aria-hidden="true"><span>PASILLO</span></div><div className="seatHalf rightHalf">{Array.from({length:10},(_,i)=>row==='A'?i+1:start+i+10).map(n=>seatView(n,row))}</div></div>)}</div></div><div className="venueFoot"><span>🚸 PASILLO CENTRAL</span><span>🍔 CAFETERÍA</span></div></div>
+ <div className="summary"><div><div className="stepLabel">PASO 03 / 03 · CONFIRMACIÓN</div><strong>{reservation?reservedNumbers.length:chosen.length} {(reservation?reservedNumbers.length:chosen.length)===1?'asiento seleccionado':'asientos seleccionados'}</strong>{!reservation&&<p className="ticketingInfo">💡 Da clic para apartar tus lugares por <strong>10 minutos</strong> y realiza el pago antes de que se agote el tiempo.</p>}<p>{reservation?`Lugares reservados: ${reservedNumbers.join(', ')}`:chosen.length?`Lugares: ${chosen.map(id=>seats.find(s=>s.id===id)?.number).join(', ')}`:'Toca los asientos verdes para elegir.'}</p><strong className="total">Total: ${(((reservation?reservedNumbers.length:chosen.length)*(config?.priceCents||4000))/100).toLocaleString('es-MX')} MXN</strong></div>{!reservation?<button onClick={reserve} disabled={profile?.canPurchase!==true||!chosen.length||busy}>{busy?'Reservando…':demo?'Reservar 10 minutos →':'Reservar y comprar →'}</button>:<div className="checkoutPane"><strong>Tiempo restante: {Math.floor(remaining/60)}:{String(remaining%60).padStart(2,'0')}</strong>{remaining===0&&<p role="alert">⚠️ Tu reserva llegó a su vencimiento. Cierra el formulario y solicita liberación o espera la confirmación de pago.</p>}<p>🔒 Tus lugares están apartados temporalmente. Completa el pago antes de que termine el contador.</p><p>Si cierras el pago sin completarlo, podrás liberar tus lugares para seleccionar otros cuando Stripe confirme que no hay un pago en proceso.</p>{status==='paid'?<p>✅ Pago confirmado.</p>:<><button onClick={()=>checkout()} disabled={profile?.canPurchase!==true||busy||remaining===0||!config?.paymentsEnabled}>{config?.paymentsEnabled?'Abrir pago seguro con Stripe':'Reserva de prueba registrada · Sin cobro'}</button><button className="ticketingRelease" disabled={busy||paymentOpen||!everOpenedPayment} onClick={release} title={paymentOpen?'Cierra primero la ventana de Stripe':'Liberar los lugares sólo si Stripe no tiene pagos en curso'}>Liberar asientos</button></>}</div>}</div><section className="ticketingMyTickets"><h3>🎟 Mis boletos comprados: {profile?.purchasedCount||0} / 20</h3><p>Asientos: {profile?.purchasedSeats?.join(', ')||'Todavía no hay boletos comprados.'}</p>{(profile?.purchasedCount||0)>0&&<><a className="ticketingPdfLink" href="/api/boletos/pdf" target="_blank" rel="noreferrer">⬇ Descargar todos mis boletos (PDF)</a><label>Enviar mis boletos por correo (opcional)<input type="email" placeholder="correo@ejemplo.com" value={email} onChange={e=>setEmail(e.target.value)} /></label><button disabled={!email.includes('@')||emailBusy} onClick={sendTickets}>{emailBusy?'Enviando…':'Enviar todos mis boletos'}</button>{sendState&&<p role="status">{sendState}</p>}</>}</section></>}
