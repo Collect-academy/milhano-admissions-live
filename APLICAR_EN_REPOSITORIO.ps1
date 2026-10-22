@@ -2,41 +2,37 @@ param([Parameter(Mandatory=$true)][string]$RepoPath)
 $ErrorActionPreference='Stop'
 $source=Split-Path -Parent $MyInvocation.MyCommand.Path
 $repo=(Resolve-Path $RepoPath).Path
+if (!(Test-Path (Join-Path $repo '.git'))) { throw 'La ruta no es un repositorio Git. Abre GitHub Desktop y clona primero el repositorio.' }
 $manifest=Get-Content (Join-Path $source 'manifest.json') -Raw | ConvertFrom-Json
-if (!(Test-Path (Join-Path $repo '.git'))) { throw 'No es un repositorio Git local. Use GitHub Desktop para clonarlo.' }
-Write-Host "Verificando $($manifest.Count) archivos contra el ZIP (21)..."
+Write-Host "Verificando $($manifest.Count) archivos sin realizar cambios..."
 foreach ($item in $manifest) {
-  $dest=Join-Path $repo ($item.path -replace '/','\')
-  $candidate=Join-Path $source ($item.path -replace '/','\')
-  if (!(Test-Path $candidate)) {throw "Paquete incompleto: $($item.path)"}
-  $candidateHash=(Get-FileHash -Path $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
-  if ($candidateHash -ne $item.new_sha256) {throw "Archivo del parche alterado: $($item.path)"}
-  if ($item.change -eq 'new') {
-    if (Test-Path $dest) {
-      $cur=(Get-FileHash -Path $dest -Algorithm SHA256).Hash.ToLowerInvariant()
-      if ($cur -ne $item.new_sha256) {throw "Existe un archivo nuevo distinto; no sobreescribir: $($item.path)"}
-    }
-  } elseif (!(Test-Path $dest)) {throw "Falta en GitHub: $($item.path)"}
-  else {
-    $cur=(Get-FileHash -Path $dest -Algorithm SHA256).Hash.ToLowerInvariant()
-    if (($cur -ne $item.old_sha256) -and ($cur -ne $item.new_sha256)) {throw "Archivo cambiado desde el ZIP (21); ABORTADO sin modificar nada: $($item.path)"}
-  }
+ $rel=$item.path -replace '/','\'
+ $candidate=Join-Path $source $rel; $dest=Join-Path $repo $rel
+ if (!(Test-Path $candidate)) { throw "Parche incompleto: $($item.path)" }
+ $newHash=(Get-FileHash $candidate -Algorithm SHA256).Hash.ToLowerInvariant()
+ if ($newHash -ne $item.target_sha256) { throw "El archivo del parche fue modificado: $($item.path)" }
+ if (Test-Path $dest) {
+  $cur=(Get-FileHash $dest -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($cur -eq $item.target_sha256) { continue }
+  if ($item.accepted_existing_sha256 -notcontains $cur) { throw "ABORTADO: $($item.path) difiere de ZIP(21) y del parche anterior. No reemplazado." }
+ } elseif ($item.accepted_existing_sha256.Count -gt 0) {throw "ABORTADO: falta un archivo existente: $($item.path)"}
 }
-$backup=Join-Path $env:TEMP ('milhano-ticketing-prelive-backup-'+(Get-Date -Format 'yyyyMMdd-HHmmss'))
+$backup=Join-Path $env:TEMP ('milhano-ticketing-backup-'+(Get-Date -Format 'yyyyMMdd-HHmmss'))
 New-Item -ItemType Directory -Force -Path $backup | Out-Null
-foreach($item in $manifest) {
-  $dest=Join-Path $repo ($item.path -replace '/','\')
-  $candidate=Join-Path $source ($item.path -replace '/','\')
-  $rel=$item.path -replace '/','\'
-  if (Test-Path $dest) {
-    $currentHash=(Get-FileHash -Path $dest -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($currentHash -eq $item.new_sha256) {continue}
-    $b=Join-Path $backup $rel
-    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $b) | Out-Null
-    Copy-Item -Path $dest -Destination $b
-  }
-  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
-  Copy-Item -Path $candidate -Destination $dest -Force
+foreach ($item in $manifest) {
+ $rel=$item.path -replace '/','\'
+ $candidate=Join-Path $source $rel; $dest=Join-Path $repo $rel
+ if (Test-Path $dest) {
+  $cur=(Get-FileHash $dest -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($cur -eq $item.target_sha256) {continue}
+  $destBackup=Join-Path $backup $rel
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destBackup) | Out-Null
+  Copy-Item $dest $destBackup
+ }
+ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $dest) | Out-Null
+ Copy-Item $candidate $dest -Force
 }
-Write-Host 'Parche copiado a rutas correctas. Copia de seguridad: ' $backup -ForegroundColor Green
-Write-Host 'Abra GitHub Desktop, revise cambios, ejecute tests y build antes del commit.'
+Write-Host 'Parche copiado respetando carpetas. Revise los cambios antes de Commit/Push.' -ForegroundColor Green
+Write-Host "Backup: $backup"
+Write-Host 'Luego: node --test scripts/ticketing-regression.test.mjs scripts/ticketing-mask-regression.test.mjs'
+Write-Host 'Luego: npm run build'

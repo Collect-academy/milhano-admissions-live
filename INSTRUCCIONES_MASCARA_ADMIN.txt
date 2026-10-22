@@ -1,0 +1,23 @@
+MILHANO HALLOWEEN LIVE — MÁSCARA 18:00 Y ADMIN SIN LÍMITE — 22 OCT 2026
+Base admitida: ZIP (21) o parche Live anterior (22 oct); el instalador aborta ante cambios inesperados.
+
+OBJETIVO
+• Hasta 18:00 America/Merida, familias NORMALES ven 210 asientos verdes (vista previa), sin datos de ocupación real y sin capacidad de reservar o abrir Stripe. La API de asientos sanitiza el JSON en el servidor, según la fecha de Postgres, no la fecha del navegador.
+• Familia Admin observa ocupación REAL, reserva y paga desde antes de las 18:00 SI TICKETING_MODE=live y LIVE.sales_enabled=true. Sin límite familiar de 20; máximo la capacidad restante del evento (se pueden hacer múltiples pedidos).
+• Desde 18:00, las APIs revelan los estados reales y se habilitan compras normales de hasta 20 boletos por familia automáticamente, sin redeploy. Desde 26 octubre a las 00:00 no se aceptan nuevas reservas/pagos.
+
+SECUENCIA SEGURA (NO OMITIR):
+1. Extraer ZIP en su propia carpeta. Clonar/actualizar repo mediante GitHub Desktop (no arrastrar route.ts a la raíz web).
+2. En PowerShell dentro de la carpeta del parche:
+   powershell -ExecutionPolicy Bypass -File .\APLICAR_EN_REPOSITORIO.ps1 -RepoPath "C:\ruta\a\milhano-admissions-live"
+3. Comparar cambios en GitHub Desktop: sólo rutas del módulo /boletos y lib/ticketing, y dos scripts nuevos. Commit/Push.
+4. Debe terminar npm run build y Vercel Ready antes de activar LIVE. No basta con que TypeScript sea sintácticamente válido.
+5. APLICAR UNA SOLA VEZ la migración sql/ticketing_admin_sin_limite_20261022.sql en Supabase (esquema ticketing), y verificar que haya exactamente 1 admin Live. NO ejecutarla otra vez sin necesidad. Este SQL no activa cobros.
+6. Mantener LIVE.sales_enabled=false hasta que código+SQL+Stripe Live estén comprobados. Cambiar TICKETING_MODE=live en Vercel y redeploy de manera controlada antes de las 18:00. Probar con código Admin y un código familiar normal.
+7. Sólo DESPUÉS de confirmar build, modo Live, claves y webhook, activar LIVE.sales_enabled=true. Esto permite la compra temprana Admin; los demás siguen bloqueados en Postgres hasta exactamente 18:00.
+8. Probar GET /api/boletos/seats con un código familiar normal (después de iniciar sesión): antes de 18:00 debe responder masked:true y disponibilidad=available para todos los asientos; el mismo navegador Admin debe responder masked:false y estados reales. No probar pagos Live con una cuenta familiar antes de 18:00.
+9. Cuando llega 18:00 del servidor, la máscara desaparece con polling cada 3 s. Confirmar ocupación real y compras normales. Nunca se basa en la hora del navegador para permisos o máscara.
+
+PROHIBIDO: activar ventas Live antes de verificar despliegue y SQL; usar Test keys en Live; subir archivos individuales al raíz; ejecutar la migración si está desplegada una versión de código incompatible; prometer build sin correrlo.
+
+NO SE REALIZARON COBROS. No compartir las claves sk_live / whsec.

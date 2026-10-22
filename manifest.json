@@ -1,92 +1,132 @@
 [
   {
     "path": "lib/ticketing/admin-access.ts",
-    "old_sha256": "cc3574d1ee51b84f679181207d86c016789908ec522079babffd2b95615bc088",
-    "new_sha256": "85264d58b2399304865e279256af17c2f7a191eefe9077e82b46edccef0f393a",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "cc3574d1ee51b84f679181207d86c016789908ec522079babffd2b95615bc088",
+      "85264d58b2399304865e279256af17c2f7a191eefe9077e82b46edccef0f393a"
+    ],
+    "target_sha256": "85264d58b2399304865e279256af17c2f7a191eefe9077e82b46edccef0f393a"
   },
   {
     "path": "lib/ticketing/mode.ts",
-    "old_sha256": "6721c398104562febc6785c16c6f7390608c784b0a4eb485b90411c8f638b3cf",
-    "new_sha256": "4ea22bf43556b1b71e4a01c9111e28e448d170438588a7ac5e5ce75b370d3d99",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "6721c398104562febc6785c16c6f7390608c784b0a4eb485b90411c8f638b3cf",
+      "4ea22bf43556b1b71e4a01c9111e28e448d170438588a7ac5e5ce75b370d3d99"
+    ],
+    "target_sha256": "4ea22bf43556b1b71e4a01c9111e28e448d170438588a7ac5e5ce75b370d3d99"
   },
   {
     "path": "lib/ticketing/server.ts",
-    "old_sha256": "e88e2a8ecb03f0e07ba6a4179cbda5cef471eee673b2f79560ecb801d7d06c1e",
-    "new_sha256": "da68243d27cf763656174f576a3ac15e16162ba51ff95ea9b9b48fe1feb4b6de",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "e88e2a8ecb03f0e07ba6a4179cbda5cef471eee673b2f79560ecb801d7d06c1e",
+      "da68243d27cf763656174f576a3ac15e16162ba51ff95ea9b9b48fe1feb4b6de"
+    ],
+    "target_sha256": "da68243d27cf763656174f576a3ac15e16162ba51ff95ea9b9b48fe1feb4b6de"
   },
   {
     "path": "app/api/boletos/config/route.ts",
-    "old_sha256": "498a5a0684fbc8131214896aa834f96a17e17bd60775e76eb4c717fdd75874c3",
-    "new_sha256": "78391ed254e06bbba4f883960470e9afd6229d7a5bc2f1507deea8bc107c7c92",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "498a5a0684fbc8131214896aa834f96a17e17bd60775e76eb4c717fdd75874c3",
+      "78391ed254e06bbba4f883960470e9afd6229d7a5bc2f1507deea8bc107c7c92"
+    ],
+    "target_sha256": "78391ed254e06bbba4f883960470e9afd6229d7a5bc2f1507deea8bc107c7c92"
   },
   {
     "path": "app/api/boletos/pin/route.ts",
-    "old_sha256": "084e21467ddf2987c42041902ff2531413a48876d4179002f36af2fc42338993",
-    "new_sha256": "7b8d42b9793007dfc7e5a00cef7abab2cb1d916edfbbea9161008f1344f2a2c7",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "084e21467ddf2987c42041902ff2531413a48876d4179002f36af2fc42338993",
+      "7b8d42b9793007dfc7e5a00cef7abab2cb1d916edfbbea9161008f1344f2a2c7"
+    ],
+    "target_sha256": "7b8d42b9793007dfc7e5a00cef7abab2cb1d916edfbbea9161008f1344f2a2c7"
   },
   {
     "path": "app/api/boletos/seats/route.ts",
-    "old_sha256": "8741dafa7b45ef664c138843950c7c4c64f32066272836236f3601878761e898",
-    "new_sha256": "edb27872c18eb58b1fc5c052b8e378d70bf459c93bc377fe985ac2f61f72f58a",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "8741dafa7b45ef664c138843950c7c4c64f32066272836236f3601878761e898",
+      "edb27872c18eb58b1fc5c052b8e378d70bf459c93bc377fe985ac2f61f72f58a"
+    ],
+    "target_sha256": "40f9a9edcbbd47e4362cebdac09cfa17b591e6091f772d8c0efb6308cfc61472"
   },
   {
     "path": "app/api/boletos/me/route.ts",
-    "old_sha256": "4bf0ba57c32a2620a85f632e0de321ff3a88e12ddfd600f94d42eeb1cb811a79",
-    "new_sha256": "2294eaf0518fa3f51ac6c1509428a674156ae3793c7118875d8f0cff729bb4ae",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "4bf0ba57c32a2620a85f632e0de321ff3a88e12ddfd600f94d42eeb1cb811a79",
+      "2294eaf0518fa3f51ac6c1509428a674156ae3793c7118875d8f0cff729bb4ae"
+    ],
+    "target_sha256": "029df089bcf8272df27738a4fc45f556a724229e1a6553849ef0d40b8eda626e"
   },
   {
     "path": "app/api/boletos/order/route.ts",
-    "old_sha256": "c79fa64922fdf09251474be58824063c1472784c9b7cbc3e9fd288007ccb8a15",
-    "new_sha256": "4e611337b6e79bd7206bda19d225b5f342cc79fe842616200ac39dbbcb70cb00",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "c79fa64922fdf09251474be58824063c1472784c9b7cbc3e9fd288007ccb8a15",
+      "4e611337b6e79bd7206bda19d225b5f342cc79fe842616200ac39dbbcb70cb00"
+    ],
+    "target_sha256": "4e611337b6e79bd7206bda19d225b5f342cc79fe842616200ac39dbbcb70cb00"
   },
   {
     "path": "app/api/boletos/families/route.ts",
-    "old_sha256": "c83b54756dd13815cdd03dedb6251edf0996c88092b55ce99e0c13a7a3538c57",
-    "new_sha256": "a6dce5a0c0a712b401ea255a2002f0bf258b1a67c019498e7228651a1c2d9d5e",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "c83b54756dd13815cdd03dedb6251edf0996c88092b55ce99e0c13a7a3538c57",
+      "a6dce5a0c0a712b401ea255a2002f0bf258b1a67c019498e7228651a1c2d9d5e"
+    ],
+    "target_sha256": "a6dce5a0c0a712b401ea255a2002f0bf258b1a67c019498e7228651a1c2d9d5e"
   },
   {
     "path": "app/api/boletos/confirmation/route.ts",
-    "old_sha256": "976caf5af5a11d4fc52a781bfb503dc2f0030eef03ca447f75ae5cac8e4cbd32",
-    "new_sha256": "6ea86a39198fc2963696db999abd4f3d8ca08c3113b3c0e1abbf3c85915aa230",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "976caf5af5a11d4fc52a781bfb503dc2f0030eef03ca447f75ae5cac8e4cbd32",
+      "6ea86a39198fc2963696db999abd4f3d8ca08c3113b3c0e1abbf3c85915aa230"
+    ],
+    "target_sha256": "6ea86a39198fc2963696db999abd4f3d8ca08c3113b3c0e1abbf3c85915aa230"
   },
   {
     "path": "app/api/boletos/release/route.ts",
-    "old_sha256": "493439c0384cee07b290ce357875bbb4f76a839b2df90d618be4b66dd8f5bb8b",
-    "new_sha256": "c62d226ff35600170b68a37b0c625b16349f8aab86ed393f261ba20fe83a7aa8",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "493439c0384cee07b290ce357875bbb4f76a839b2df90d618be4b66dd8f5bb8b",
+      "c62d226ff35600170b68a37b0c625b16349f8aab86ed393f261ba20fe83a7aa8"
+    ],
+    "target_sha256": "c62d226ff35600170b68a37b0c625b16349f8aab86ed393f261ba20fe83a7aa8"
   },
   {
     "path": "app/api/boletos/webhooks/stripe-ticketing/route.ts",
-    "old_sha256": "bbdc4aeb73a4a0030e62f11f1e141c5d42483ddc6b4dbb6ed131dc6a7d918335",
-    "new_sha256": "4194586be628e41d1ccc49ea47b10593c90fa2ec9309644632434f029c0a2ef5",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "bbdc4aeb73a4a0030e62f11f1e141c5d42483ddc6b4dbb6ed131dc6a7d918335",
+      "4194586be628e41d1ccc49ea47b10593c90fa2ec9309644632434f029c0a2ef5"
+    ],
+    "target_sha256": "4194586be628e41d1ccc49ea47b10593c90fa2ec9309644632434f029c0a2ef5"
+  },
+  {
+    "path": "app/api/boletos/reserve/route.ts",
+    "accepted_existing_sha256": [
+      "c912f53c6c619a4ba2cfd3214f49fd0ff6b9079fca7512de1e8253553ae9eb85"
+    ],
+    "target_sha256": "1d7d4abe99d4a415ed41d605b6f1bc39d75273c9662854a707961e24359c19c6"
   },
   {
     "path": "app/boletos/page.tsx",
-    "old_sha256": "b72b27b3d08eaecf5679f5e57380e5fe82a1d56f10b776ae409c34e9f8c485c9",
-    "new_sha256": "750a28d38d19b6032a297ba3f902a168480e5312aa7fb640dd863a039ffe2582",
-    "change": "modified"
+    "accepted_existing_sha256": [
+      "b72b27b3d08eaecf5679f5e57380e5fe82a1d56f10b776ae409c34e9f8c485c9",
+      "750a28d38d19b6032a297ba3f902a168480e5312aa7fb640dd863a039ffe2582"
+    ],
+    "target_sha256": "81ef962f2fe2778e4c08dd14aa60fa3d1040eb48541368fedfa64a49f17d9270"
   },
   {
     "path": "scripts/ticketing-live-preflight.mjs",
-    "old_sha256": null,
-    "new_sha256": "c8ca2d6027c6f36e9a2d05935c841bf7f2535073bd1793b683def13455aa0102",
-    "change": "new"
+    "accepted_existing_sha256": [
+      "c8ca2d6027c6f36e9a2d05935c841bf7f2535073bd1793b683def13455aa0102"
+    ],
+    "target_sha256": "c8ca2d6027c6f36e9a2d05935c841bf7f2535073bd1793b683def13455aa0102"
   },
   {
     "path": "scripts/ticketing-regression.test.mjs",
-    "old_sha256": null,
-    "new_sha256": "2b86cc0c9e7b697163d105601950a69499afd20f6c4420ec1ac0a8b64b35df34",
-    "change": "new"
+    "accepted_existing_sha256": [
+      "2b86cc0c9e7b697163d105601950a69499afd20f6c4420ec1ac0a8b64b35df34"
+    ],
+    "target_sha256": "2b86cc0c9e7b697163d105601950a69499afd20f6c4420ec1ac0a8b64b35df34"
+  },
+  {
+    "path": "scripts/ticketing-mask-regression.test.mjs",
+    "accepted_existing_sha256": [],
+    "target_sha256": "2bdf3f473e044834373e41530b6f1122da77c0f031ce3eb9874fa12eb2282537"
   }
 ]
