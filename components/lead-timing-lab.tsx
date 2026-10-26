@@ -123,6 +123,7 @@ function Relations({rows}: {rows:TimingV3Row[]}) {
 export function LeadTimingLab({rows,locale,metric:initialMetric,start,end,mode}:Props){
  const [metric,setMetric]=useState<TimingMetricKey>(initialMetric);
  const [period,setPeriod]=useState<Period>(start===end?"hour":"day");
+ const periodOptions: Period[] = start===end?["hour","day"]:["day","week","month"];
  const points=useMemo(()=>rows.flatMap(row=>intervalPoints(row,metric).map(point=>mode==="cohort"?{...point,at:row.lead_at}:point)).filter(p=>mode!=="event"||(meridaStamp(p.at).day>=start&&meridaStamp(p.at).day<=end)),[rows,metric,start,end,mode]);
  const summary=useMemo(()=>describe(points),[points]);
  const trend=useMemo(()=>buckets(points,period),[points,period]);
@@ -131,7 +132,7 @@ export function LeadTimingLab({rows,locale,metric:initialMetric,start,end,mode}:
  return <div className="timing-v3-lab">
    <section className="panel timing-v3-lab-heading"><div><p className="eyebrow">LABORATORIO ESTADÍSTICO · V3</p><h2>Distribuciones y comportamiento del embudo</h2><p className="panel-note">Misma población filtrada, independiente de las 50 filas visibles. Escala de duraciones: dd:hh:mm.</p></div><label>Métrica principal<select value={metric} onChange={e=>setMetric(e.target.value as TimingMetricKey)}>{TIMING_METRICS.map(m=><option key={m.key} value={m.key}>{locale==="en"?m.en:m.label}</option>)}</select></label></section>
    <MetricKpis summary={summary} covered={covered} total={rows.length}/>
-   <section className="panel"><div className="timing-v3-heading"><div><h2>1 · Tendencia temporal</h2><p className="panel-note">Tiempo promedio, mínimo y máximo · agrupado por {mode==="cohort"?"fecha de ingreso del lead":"fecha del evento medido"}</p></div><div className="timing-v3-segment">{(start===end?["hour","day"]:["day","week","month"] as Period[]).map(p=><button type="button" key={p} onClick={()=>setPeriod(p)} className={period===p?"active":""}>{({hour:"Hora",day:"Día",week:"Semana",month:"Mes"})[p]}</button>)}</div></div><Trend groups={trend}/></section>
+   <section className="panel"><div className="timing-v3-heading"><div><h2>1 · Tendencia temporal</h2><p className="panel-note">Tiempo promedio, mínimo y máximo · agrupado por {mode==="cohort"?"fecha de ingreso del lead":"fecha del evento medido"}</p></div><div className="timing-v3-segment">{periodOptions.map(p=><button type="button" key={p} onClick={()=>setPeriod(p)} className={period===p?"active":""}>{({hour:"Hora",day:"Día",week:"Semana",month:"Mes"})[p]}</button>)}</div></div><Trend groups={trend}/></section>
    <section className="panel"><h2>2 · Boxplots: intervalos y permanencia por stage</h2><p className="panel-note">Compara la dispersión de cada tramo del embudo y los movimientos reales registrados por stage.</p><BoxPlots rows={rows}/></section>
    <div className="timing-v3-twocol"><section className="panel"><h2>3 · Agendamiento vs asistencia</h2><WaitOutcomes rows={rows} kind="st"/><WaitOutcomes rows={rows} kind="trial"/></section><section className="panel"><h2>4 · Primer contacto vs anticipación de ST</h2><ScatterTemporal rows={rows}/></section></div>
    <div className="timing-v3-twocol"><section className="panel"><h2>5 · Embudo temporal</h2><Funnel rows={rows}/></section><section className="panel"><h2>6 · Relaciones estadísticas</h2><Relations rows={rows}/></section></div>
