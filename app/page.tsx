@@ -23,7 +23,7 @@ import {
   getAdmissionsV2Payload,
   type V2CascadeMetric,
 } from "@/lib/admissions-v2";
-import { resolveDateRange, type DateRange } from "@/lib/date-range";
+import { dateRangeQuery, resolveDateRange, type DateRange } from "@/lib/date-range";
 import { dateLabel, number } from "@/lib/format";
 import { getDashboardLocale } from "@/lib/i18n";
 import { tr } from "@/lib/locale";
@@ -221,7 +221,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
       <div className="v2-toolbar">
         <AdmissionsVersionSwitcher current="v2" />
         <DashboardRefreshButton />
-        <Link className="secondary-button" href="/analisis-leads">{tr(locale, "Lead timing analysis", "Análisis de tiempos")}</Link>
+        <Link className="secondary-button" href={`/analisis-leads?${dateRangeQuery(range)}`}>{tr(locale, "Lead timing analysis", "Análisis de tiempos")}</Link>
       </div>
 
       <div className="v2-cutover-note">

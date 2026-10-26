@@ -65,6 +65,13 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
         <Link className="secondary-button" href={`/?${dateRangeQuery(range)}`}>
           ← {tr(locale, "Back to V2", "Volver a V2")}
         </Link>
+        <Link className="secondary-button" href={`/analisis-leads?${dateRangeQuery(range)}&scope=${scope}&metric=${
+          metric === "school_tours_booked" || metric === "school_tours_attended" ? "st_wait" :
+          metric === "trial_days_booked" || metric === "trial_days_showed" ? "trial_wait" :
+          metric === "closed" ? "trial_to_close" : "first_management"
+        }`}>
+          {tr(locale,"Explore stage timings →","Analizar tiempos del hito →")}
+        </Link>
       </div>
       {showContactTiming ? <p className="panel-note">{tr(locale,"First management is the earliest observable stage change, booked appointment or manual outbound message. ≤ is an upper bound, not the exact call time. Initial imported stages are excluded.","Primera gestión = primer cambio real de stage, cita creada o mensaje manual. ≤ indica límite superior, no hora exacta de la llamada. No se cuentan stages iniciales importados.")}</p> : null}
       <section className="panel">
