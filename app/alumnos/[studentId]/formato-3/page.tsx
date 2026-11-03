@@ -18,15 +18,15 @@ export default async function StudentForm3Page({ params }: { params: Promise<{ s
   const permission = context.permissions.form_3;
 
   return (
-    <StudentModuleLayout eyebrow="Formato 3 · Confidencial" title="Evaluación Psicopedagógica Individual" subtitle={`${student.full_name} · Evaluaciones y reevaluaciones conservadas por fecha.`} statusLabel={`${records.length} evaluaciones`}>
+    <StudentModuleLayout eyebrow="Formato 3 · Confidencial" title="Documentos de Psicología" subtitle={`${student.full_name} · Fichas y documentos guardados por fecha.`} statusLabel={`${records.length} documentos`}>
       <Link className="secondary-button inline-back-link" href={`/alumnos/${studentId}`}><ArrowLeft size={15} /> Volver al expediente</Link>
       {!permission.can_view_content ? (
         <section className="panel student-confidential-block"><LockKeyhole size={24} /><div><strong>Contenido confidencial</strong><span>El estado permanece visible, pero el contenido sólo está disponible para usuarios autorizados.</span></div></section>
       ) : (
         <section className="panel">
           <div className="panel-heading student-history-heading">
-            <div><p className="eyebrow">Historial</p><h2>Evaluaciones registradas</h2><p className="panel-note student-panel-note">Títulos automáticos: evaluación inicial / reevaluación + fecha.</p></div>
-            {permission.can_edit ? <CreateRecordButton definitionCode="form_3_evaluation" hrefPrefix={`/alumnos/${studentId}/formato-3`} label="Nueva evaluación" studentId={studentId} /> : null}
+            <div><p className="eyebrow">Historial</p><h2>Documentos registrados</h2><p className="panel-note student-panel-note">Redacta y consulta fichas de texto sin archivos pesados. Las evaluaciones anteriores permanecen disponibles.</p></div>
+            {permission.can_edit ? <CreateRecordButton definitionCode="form_3_evaluation" hrefPrefix={`/alumnos/${studentId}/formato-3`} label="Nuevo documento" studentId={studentId} /> : null}
           </div>
           {records.length ? (
             <div className="student-record-list">
@@ -38,7 +38,7 @@ export default async function StudentForm3Page({ params }: { params: Promise<{ s
                 </Link>
               ))}
             </div>
-          ) : <div className="student-empty-state"><BookOpenText size={28} /><strong>Sin evaluaciones</strong><span>Crea la evaluación inicial cuando corresponda.</span></div>}
+          ) : <div className="student-empty-state"><BookOpenText size={28} /><strong>Sin documentos</strong><span>Crea una ficha de texto cuando corresponda.</span></div>}
         </section>
       )}
     </StudentModuleLayout>

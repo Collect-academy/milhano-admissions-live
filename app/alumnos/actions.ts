@@ -1,5 +1,6 @@
 "use server";
 
+import { sanitizeFormato3Html } from "@/lib/formato3-html";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -75,7 +76,7 @@ export async function createStudentFormRecord(input: {
       grade_group: [student.grade, student.group_name].filter(Boolean).join(" "),
     };
   } else if (input.definitionCode === "form_3_evaluation") {
-    payload = { evaluation_date: date, evaluation_type: "Evaluación inicial" };
+    payload = { editor_version: 1 };
   } else if (input.definitionCode === "form_4_piap") {
     payload = {
       elaboration_date: date,
@@ -115,6 +116,7 @@ export async function createStudentFormRecord(input: {
       parent_record_id: input.parentRecordId ?? null,
       sequence_no: sequenceNo,
       occurred_on: date,
+      ...(input.definitionCode === "form_3_evaluation" ? { title: `Documento de Psicología · ${date}` } : {}),
       payload,
     })
     .select("id")
@@ -171,6 +173,9 @@ export async function saveStudentFormRecord(input: {
   const formCode = definitionFormCode(input.definitionCode);
   if (!context.permissions[formCode].can_edit) throw new Error("No tienes permiso para editar este formato.");
 
+  if (input.definitionCode === "form_3_evaluation" && "editor_version" in input.payload) {
+    throw new Error("Los documentos nuevos del Formato 3 deben guardarse desde su editor de texto.");
+  }
   const supabase = await createSupabaseServerClient();
   let recordId = input.recordId;
   let sequenceNo: number | null = null;
@@ -179,11 +184,12 @@ export async function saveStudentFormRecord(input: {
   if (recordId) {
     const currentResult = await supabase
       .from("milhano_student_form_records")
-      .select("sequence_no, occurred_on")
+      .select("sequence_no, occurred_on, definition_code, is_archived")
       .eq("id", recordId)
       .eq("student_id", input.studentId)
       .maybeSingle();
     if (currentResult.error) throw new Error(currentResult.error.message);
+    if (!currentResult.data || currentResult.data.definition_code !== input.definitionCode || currentResult.data.is_archived) throw new Error("El registro no corresponde a este formato.");
     sequenceNo = currentResult.data?.sequence_no ?? null;
     currentOccurredOn = currentResult.data?.occurred_on ?? null;
   }
@@ -278,4 +284,33 @@ export async function createStudentNote(input: {
   if (result.error) throw new Error(`No se pudo guardar la nota: ${result.error.message}`);
   revalidatePath(`/alumnos/${input.studentId}`);
   return { ok: true };
+}
+
+/** Save Formato 3 as a lightweight HTML document within the existing student's record. */
+export async function saveFormato3Document(input: { studentId: string; recordId: string; title: string; contentHtml: string }) {
+  const context = await requireStudentModuleContext();
+  if (!context.permissions.form_3.can_view_content || !context.permissions.form_3.can_edit) throw new Error("No tienes permiso para editar el Formato 3.");
+  const safeHtml = sanitizeFormato3Html(input.contentHtml);
+  const documentTitle = input.title.trim().slice(0, 120);
+  const supabase = await createSupabaseServerClient();
+  const current = await supabase.from('milhano_student_form_records')
+    .select('id, payload, occurred_on, definition_code, is_archived')
+    .eq('id', input.recordId).eq('student_id', input.studentId).maybeSingle();
+  if (current.error) throw new Error(current.error.message);
+  if (!current.data || current.data.definition_code !== 'form_3_evaluation' || current.data.is_archived) throw new Error('Documento no encontrado.');
+  const previous = current.data.payload as Record<string, unknown> | null;
+  if (previous && Object.keys(previous).some(key => !['editor_version', 'document_title', 'content_html', 'content_text'].includes(key))) {
+    throw new Error('Esta ficha antigua debe editarse desde su formulario original.');
+  }
+  const payload = { editor_version: 1, document_title: documentTitle, content_html: safeHtml };
+  const title = `${documentTitle || 'Documento de Psicología'} · ${current.data.occurred_on || today()}`;
+  const result = await supabase.from('milhano_student_form_records')
+    .update({ payload, title })
+    .eq('id', input.recordId).eq('student_id', input.studentId).eq('definition_code', 'form_3_evaluation').eq('is_archived', false)
+    .select('id, updated_at, completion_status').single();
+  if (result.error) throw new Error(`No se pudo guardar el documento: ${result.error.message}`);
+  revalidatePath(`/alumnos/${input.studentId}`);
+  revalidatePath(`/alumnos/${input.studentId}/formato-3`);
+  revalidatePath(`/alumnos/${input.studentId}/formato-3/${input.recordId}`);
+  return { savedAt: result.data.updated_at, status: result.data.completion_status };
 }
