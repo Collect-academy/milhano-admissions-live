@@ -6361,3 +6361,12 @@ html[data-theme="dark"] .student-note-item {
   font-size: 0.66rem;
   line-height: 1.4;
 }
+
+/* Formato 3: row action is a sibling of the link, not nested inside it. */
+.formato3-record-item { display: flex; align-items: center; gap: 8px; }
+.formato3-record-link { flex: 1; min-width: 0; }
+.formato3-delete-area { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.formato3-delete-button { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; flex-shrink: 0; border: 1px solid #c99b9b; border-radius: 9px; color: #9a3030; background: #fff9f8; cursor: pointer; }
+.formato3-delete-button:hover { background: #fce8e6; }
+.formato3-delete-button:disabled { opacity: .55; cursor: wait; }
+.formato3-delete-error { max-width: 190px; color: #9a3030; font-size: .72rem; }

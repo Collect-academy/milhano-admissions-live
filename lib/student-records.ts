@@ -69,6 +69,7 @@ export type StudentFormRecord = {
   occurred_on: string | null;
   payload: StudentPayload;
   completion_status: "empty" | "incomplete" | "complete";
+  has_ever_content: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -260,7 +261,7 @@ export async function getStudentFormRecords(
   const supabase = await createSupabaseServerClient();
   let request = supabase
     .from("milhano_student_form_records")
-    .select("id, student_id, definition_code, parent_record_id, sequence_no, title, occurred_on, payload, completion_status, created_at, updated_at")
+    .select("id, student_id, definition_code, parent_record_id, sequence_no, title, occurred_on, payload, completion_status, has_ever_content, created_at, updated_at")
     .eq("student_id", studentId)
     .eq("definition_code", definitionCode)
     .eq("is_archived", false)
@@ -288,7 +289,7 @@ export async function getStudentFormRecord(
   const supabase = await createSupabaseServerClient();
   const result = await supabase
     .from("milhano_student_form_records")
-    .select("id, student_id, definition_code, parent_record_id, sequence_no, title, occurred_on, payload, completion_status, created_at, updated_at")
+    .select("id, student_id, definition_code, parent_record_id, sequence_no, title, occurred_on, payload, completion_status, has_ever_content, created_at, updated_at")
     .eq("id", recordId)
     .eq("student_id", studentId)
     .eq("is_archived", false)

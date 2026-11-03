@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { LoaderCircle, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -22,18 +22,26 @@ export function CreateRecordButton({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const inFlight = useRef(false);
+  const [error, setError] = useState("");
 
   return (
+    <div>
     <button
       className="primary-button"
       disabled={loading}
       onClick={async () => {
+        if (inFlight.current) return;
+        inFlight.current = true;
         setLoading(true);
+        setError("");
         try {
           const result = await createStudentFormRecord({ studentId, definitionCode, parentRecordId });
           router.push(`${hrefPrefix}/${result.id}`);
           router.refresh();
-        } finally {
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "No se pudo crear el documento.");
+          inFlight.current = false;
           setLoading(false);
         }
       }}
@@ -42,5 +50,7 @@ export function CreateRecordButton({
       {loading ? <LoaderCircle className="spin" size={15} /> : <Plus size={15} />}
       {label}
     </button>
+    {error ? <small role="alert" style={{ display: "block", color: "#a12727", maxWidth: 260 }}>{error}</small> : null}
+    </div>
   );
 }

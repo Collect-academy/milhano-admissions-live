@@ -1,6 +1,7 @@
 "use server";
 
 import { sanitizeFormato3Html } from "@/lib/formato3-html";
+import { isEmptyFormato3Draft, isFormato3DeletionAdmin } from "@/lib/formato3-removal";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -313,4 +314,46 @@ export async function saveFormato3Document(input: { studentId: string; recordId:
   revalidatePath(`/alumnos/${input.studentId}/formato-3`);
   revalidatePath(`/alumnos/${input.studentId}/formato-3/${input.recordId}`);
   return { savedAt: result.data.updated_at, status: result.data.completion_status };
+}
+
+
+/**
+ * Empty Formato 3 drafts can be deleted by an editor. Only Mona/Cinthia may
+ * remove a completed document from the history (soft archive).
+ * Database trigger repeats this authorization to protect direct API access.
+ */
+export async function removeFormato3Record(input: { studentId: string; recordId: string }) {
+  const context = await requireStudentModuleContext();
+  if (!context.permissions.form_3.can_edit || !context.permissions.form_3.can_view_content) {
+    throw new Error("No tienes permiso para eliminar documentos de Psicología.");
+  }
+  const supabase = await createSupabaseServerClient();
+  const current = await supabase.from("milhano_student_form_records")
+    .select("id, payload, completion_status, has_ever_content, is_archived")
+    .eq("id", input.recordId).eq("student_id", input.studentId)
+    .eq("definition_code", "form_3_evaluation").eq("is_archived", false).maybeSingle();
+  if (current.error) throw new Error(current.error.message);
+  if (!current.data) throw new Error("El documento no existe o ya fue eliminado.");
+
+  const isEmpty = isEmptyFormato3Draft(current.data);
+  const canRemoveContent = isFormato3DeletionAdmin(context.user);
+  if (!isEmpty && !canRemoveContent) {
+    throw new Error("Solo Mona o Cinthia pueden eliminar documentos que contienen información.");
+  }
+
+  // Physically remove empty accidental drafts; retain an audit-safe copy of
+  // populated documents by archiving them, instead of destroying clinical data.
+  const result = isEmpty
+    ? await supabase.from("milhano_student_form_records").delete()
+        .eq("id", input.recordId).eq("student_id", input.studentId)
+        .eq("definition_code", "form_3_evaluation").eq("is_archived", false)
+        .select("id").single()
+    : await supabase.from("milhano_student_form_records").update({ is_archived: true })
+        .eq("id", input.recordId).eq("student_id", input.studentId)
+        .eq("definition_code", "form_3_evaluation").eq("is_archived", false)
+        .select("id").single();
+  if (result.error) throw new Error(`No se pudo eliminar el documento: ${result.error.message}`);
+  revalidatePath(`/alumnos/${input.studentId}`);
+  revalidatePath(`/alumnos/${input.studentId}/formato-3`);
+  return { ok: true };
 }
