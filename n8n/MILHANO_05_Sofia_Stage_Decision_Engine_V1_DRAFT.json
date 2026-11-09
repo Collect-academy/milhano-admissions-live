@@ -189,7 +189,7 @@
         280
       ],
       "parameters": {
-        "jsCode": "\nconst r=$input.first().json??{},x=$('Verify | GHL Identity and Note').first().json;\nconst action=String(r.action??'review');\nconst body={\n conversation_id:x.conversation_id,ghl_contact_id:x.ghl_contact_id,\n ghl_opportunity_id:x.ghl_opportunity_id,source_pipeline_id:x.pipeline_id,source_stage_id:x.stage_id,\n target_pipeline_id:x.pipeline_id,target_stage_id:r.target_stage_id??null,\n decision:action,decision_reason:String(r.reason??'UNKNOWN'),\n evidence:{rpc:r,note_verified:true},execution_status:'proposed',ghi_note_id:x.ghl_note_id\n};\nreturn [{json:{...x,decision:r,audit:body}}];\n"
+        "jsCode": "\nconst r=$input.first().json??{},x=$('Verify | GHL Identity and Note').first().json;\nconst action=String(r.action??'review');\nconst body={\n conversation_id:x.conversation_id,ghl_contact_id:x.ghl_contact_id,\n ghl_opportunity_id:x.ghl_opportunity_id,source_pipeline_id:x.pipeline_id,source_stage_id:x.stage_id,\n target_pipeline_id:x.pipeline_id,target_stage_id:r.target_stage_id??null,\n decision:action,decision_reason:String(r.reason??'UNKNOWN'),\n evidence:{rpc:r,note_verified:true},execution_status:action==='review'?'review':action==='skip'?'skipped':'proposed',ghi_note_id:x.ghl_note_id\n};\nreturn [{json:{...x,decision:r,audit:body}}];\n"
       }
     },
     {
