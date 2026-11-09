@@ -421,6 +421,67 @@
       },
       "continueOnFail": true,
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c2c36091-f581-4b21-916d-e71a3d57e0aa",
+      "name": "Prepare | Safe Attempt Closure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        190,
+        500
+      ],
+      "parameters": {
+        "jsCode": "\nconst STAGE_WRITES_ENABLED=false; // Must match Safety Gate configuration.\nif(STAGE_WRITES_ENABLED)return [];\nconst d=$('Prepare | Stage Decision Audit').first().json;\nconst action=String(d.decision?.action??'review');\nconst next=action==='retry'?'retry':action==='skip'?'skip':'review';\nreturn [{json:{p_conversation_id:d.conversation_id,p_decision:next,p_stage_applied:false,p_target_stage_id:null}}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_finish_attempt",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        420,
+        500
+      ],
+      "id": "148eea60-4229-48d7-bf41-7fd39c3e8579",
+      "name": "Supabase | Close Attempt While Dry Run",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -508,6 +569,11 @@
             "node": "Safety Gate | Stage Writes OFF",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Prepare | Safe Attempt Closure",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -561,6 +627,17 @@
         [
           {
             "node": "Supabase | Mark Stage Applied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | Safe Attempt Closure": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Close Attempt While Dry Run",
             "type": "main",
             "index": 0
           }
