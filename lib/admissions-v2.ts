@@ -116,6 +116,7 @@ export type AdmissionsV2Lead = {
 
 const ADMISSIONS_V2_EVENT_METRICS = new Set([
   "school_tours_booked",
+  "school_tours_scheduled",
   "school_tours_attended",
   "trial_days_booked",
   "trial_days_showed",

@@ -20,6 +20,7 @@ function metricLabel(metric: string, locale: "en" | "es") {
     meaningful_conversations: ["Meaningful", "Conversación Significativa"],
     qualified_leads: ["Qualified", "Calificados"],
     school_tours_booked: ["Tour Booked", "Tour Agendado"],
+    school_tours_scheduled: ["School Tour Scheduled", "School Tour Programado"],
     school_tours_attended: ["Tour Attended", "Tour Asistido"],
     trial_days_booked: ["Pasadía Booked", "Pasadía Agendada"],
     trial_days_showed: ["Pasadía Attended", "Pasadía Asistida"],
@@ -41,7 +42,7 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
   const scope: Scope = rawScope === "setter" || rawScope === "closer" ? rawScope : "general";
   const leads = await getAdmissionsV2MetricLeads(metric, scope, range.start, range.end);
   const eventMetric = isAdmissionsV2EventMetric(metric);
-  const appointmentMetric = ["school_tours_booked", "school_tours_attended", "trial_days_booked", "trial_days_showed"].includes(metric);
+  const appointmentMetric = ["school_tours_booked", "school_tours_scheduled", "school_tours_attended", "trial_days_booked", "trial_days_showed"].includes(metric);
   const showContactTiming = ["unique_contacted_leads", "responded_leads", "no_answer"].includes(metric);
   const ids = showContactTiming ? leads.map((lead) => lead.ghl_opportunity_id) : [];
   const managementRows = showContactTiming ? await getManagementEvidenceRows(ids) : [];
