@@ -1,0 +1,488 @@
+{
+  "name": "MILHANO | Sofia | 06 Batch Scheduler | DISABLED DRAFT",
+  "nodes": [
+    {
+      "id": "fe33154b-8936-438e-bd61-5897dc201b8a",
+      "name": "Schedule | Every Minute",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1660,
+        160
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "97e6d86d-b3ba-4328-8a0f-29034bbab155",
+      "name": "Safety | Scheduler Disabled",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1460,
+        160
+      ],
+      "parameters": {
+        "jsCode": "\nconst ENABLE_BATCH_OUTBOUND=false; // Pilot gate. Do not enable until end-to-end QA and live GHL checks pass.\nif(!ENABLE_BATCH_OUTBOUND) return [];\nreturn [{json:{requested_at:new Date().toISOString()}}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_claim_one_due",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1250,
+        160
+      ],
+      "id": "db1c4d1e-2162-4963-9e23-e68f2eaf55d2",
+      "name": "Supabase | Claim One Due",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "b8943db4-4de6-4f0c-8e3d-59db25aab740",
+      "name": "Normalize | Claim",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        160
+      ],
+      "parameters": {
+        "jsCode": "\nconst v=$input.first().json??{},a=Array.isArray(v)?v[0]:v;\nif(!a?.member_id||!a?.lease_token||!a?.contact_id||!a?.opportunity_id)return [];\nreturn [{json:a}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{$('Normalize | Claim').first().json.opportunity_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -830,
+        160
+      ],
+      "id": "4dd96e63-1b9e-4e26-8f6e-b156bfb0ba42",
+      "name": "GHL | Recheck Opportunity",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Claim').first().json.contact_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -620,
+        160
+      ],
+      "id": "596d2b80-e8d9-4e19-a377-b43c2c98b28e",
+      "name": "GHL | Recheck Contact",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "2a79a0ec-0ac2-4c5d-9766-5a9601aa584d",
+      "name": "Verify | Live GHL Eligibility",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -410,
+        160
+      ],
+      "parameters": {
+        "jsCode": "\nconst c=$('Normalize | Claim').first().json;\nconst oRaw=$('GHL | Recheck Opportunity').first().json??{},o=oRaw.opportunity??oRaw;\nconst cRaw=$input.first().json??{},ct=cRaw.contact??cRaw;\nlet reason=null;\nif(String(o.id??'')!==c.opportunity_id||String(o.contactId??'')!==c.contact_id)reason='OPPORTUNITY_IDENTITY_MISMATCH';\nelse if(String(o.pipelineId??'')!=='GYqHbZyWUxxc3K03efVT')reason='PIPELINE_CHANGED';\nelse if(String(o.pipelineStageId??'')!==String(c.expected_stage_id??''))reason='STAGE_CHANGED';\nelse if(String(o.status??'').toLowerCase()!=='open')reason='OPPORTUNITY_NOT_OPEN';\nelse if(String(ct.id??'')!==c.contact_id)reason='CONTACT_IDENTITY_MISMATCH';\nelse if(ct.dnd!==false)reason='CONTACT_DND_NOT_EXPLICITLY_FALSE';\nelse if(ct.dndSettings?.Call===true||ct.dndSettings?.call===true)reason='CALL_DND';\nelse if(!String(ct.phone??'').trim())reason='PHONE_MISSING';\nreturn [{json:{...c,eligible:reason===null,reason}}];\n"
+      }
+    },
+    {
+      "id": "0ad2a1f5-d6d8-4b5d-896f-eb94b48d6703",
+      "name": "IF | Eligible",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -200,
+        160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b07605c4-47c8-4ef9-96c8-2779fcc2d57b",
+              "leftValue": "={{ $json.eligible }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://collectacademy.app.n8n.cloud/webhook/milhano-ai-feed-individual-9bf29b585b7f5ea3",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {contact_id:$('Normalize | Claim').first().json.contact_id,opportunity_id:$('Normalize | Claim').first().json.opportunity_id,source:'sofia_campaign_scheduler'} }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        20,
+        20
+      ],
+      "id": "f2600aba-b923-4c8e-b5a5-6d3e5ce16052",
+      "name": "WF03 | Existing Individual Feed",
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "id": "8dc030e2-1e73-4b99-88b4-5651d2dcbf3f",
+      "name": "Prepare | Feed Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        20
+      ],
+      "parameters": {
+        "jsCode": "\nconst c=$('Normalize | Claim').first().json,raw=$input.first().json??{};\nconst a=raw.result??raw.data??raw;\nconst id=String(a.conversation_id??a.conversationId??a.call?.conversation_id??a.outbound_call?.conversation_id??'').trim();\nconst ok=/^conv_[A-Za-z0-9]+$/.test(id)&&a.success!==false&&!raw.error;\nreturn [{json:{p_member_id:c.member_id,p_lease_token:c.lease_token,\np_status:ok?'dispatched':'review',p_conversation_id:ok?id:null,\np_error_code:ok?null:'FEED_RESULT_UNVERIFIED_DO_NOT_RETRY_AUTOMATICALLY'}}];\n"
+      }
+    },
+    {
+      "id": "ea207b5c-0627-4d4d-b86a-514bb36bdfda",
+      "name": "Prepare | Exclusion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        20,
+        310
+      ],
+      "parameters": {
+        "jsCode": "\nconst c=$('Normalize | Claim').first().json,v=$input.first().json;\nreturn [{json:{p_member_id:c.member_id,p_lease_token:c.lease_token,\np_status:'excluded',p_conversation_id:null,p_error_code:v.reason||'GHL_ELIGIBILITY_FAILED'}}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_set_claim_result",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        490,
+        160
+      ],
+      "id": "9cb908ae-a2f4-4103-8727-bb9ba6edcbe8",
+      "name": "Supabase | Close Claim",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Schedule | Every Minute": {
+      "main": [
+        [
+          {
+            "node": "Safety | Scheduler Disabled",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Safety | Scheduler Disabled": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Claim One Due",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Supabase | Claim One Due": {
+      "main": [
+        [
+          {
+            "node": "Normalize | Claim",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Normalize | Claim": {
+      "main": [
+        [
+          {
+            "node": "GHL | Recheck Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "GHL | Recheck Opportunity": {
+      "main": [
+        [
+          {
+            "node": "GHL | Recheck Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "GHL | Recheck Contact": {
+      "main": [
+        [
+          {
+            "node": "Verify | Live GHL Eligibility",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Verify | Live GHL Eligibility": {
+      "main": [
+        [
+          {
+            "node": "IF | Eligible",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "IF | Eligible": {
+      "main": [
+        [
+          {
+            "node": "WF03 | Existing Individual Feed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare | Exclusion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF03 | Existing Individual Feed": {
+      "main": [
+        [
+          {
+            "node": "Prepare | Feed Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Prepare | Feed Outcome": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Close Claim",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Prepare | Exclusion": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Close Claim",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
