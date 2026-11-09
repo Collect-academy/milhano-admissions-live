@@ -1,3 +1,4 @@
+import "../sofia.css";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { SofiaCampaignPlanner } from "@/components/sofia-campaign-planner";
