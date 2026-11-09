@@ -22,6 +22,8 @@ export default async function SofiaPerformancePage() {
   const disqualified = total("disqualified");
   const credits = data.daily.reduce((sum, row) => sum + Number(row.credits_consumed ?? 0), 0);
   const timed = data.daily.reduce((sum, row) => sum + Number(row.conversation_seconds ?? 0), 0);
+  const latencies=[...data.firstCallLatencies].sort((a,b)=>a-b);
+  const medianLag=latencies.length ? latencies[Math.floor((latencies.length-1)/2)] : null;
   const kpis = [
     { label: "Llamadas registradas", value: number(attempts), detail: "Eventos nuevos de Sofía", icon: PhoneCall },
     { label: "Contactos que respondieron", value: number(answers), detail: percent(answers, attempts) + " de llamadas", icon: Users },
@@ -31,6 +33,7 @@ export default async function SofiaPerformancePage() {
     { label: "Descalificados", value: number(disqualified), detail: "Motivos detallados abajo", icon: ShieldAlert },
     { label: "Créditos registrados", value: credits > 0 ? number(credits) : "—", detail: credits > 0 ? number(credits / Math.max(1, attempts)) + " por llamada" : "Sin consumo verificado", icon: Coins },
     { label: "Tiempo de conversación", value: timed ? number(timed / 60) + " min" : "—", detail: "Duración total registrada", icon: Clock3 },
+    { label: "Primera llamada de IA", value: medianLag===null ? "—" : number(medianLag)+" h", detail: "Mediana desde creación de oportunidad", icon: Clock3 },
   ];
   return <DashboardLayout
     eyebrow="Sofía IA · Analítica"
@@ -48,7 +51,7 @@ export default async function SofiaPerformancePage() {
         <strong>{k.value}</strong><small>{k.detail}</small>
       </article>)}
     </div>
-    <SofiaPerformanceCharts daily={data.daily} hourly={data.hourly} disqualificationReasons={data.disqualificationReasons}/>
+    <SofiaPerformanceCharts daily={data.daily} hourly={data.hourly} disqualificationReasons={data.disqualificationReasons} objections={data.objections}/>
     <div className="sofia-two-cols">
       <section className="panel">
         <div className="sofia-panel-title"><h2>Control de calidad</h2><Activity size={18}/></div>
