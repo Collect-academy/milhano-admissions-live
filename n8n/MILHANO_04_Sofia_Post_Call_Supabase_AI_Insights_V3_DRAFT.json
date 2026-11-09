@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "milhano-ai-postcall-sofia-v2-20261106",
+        "path": "milhano-ai-postcall-sofia-v3-preview-20261109",
         "responseMode": "responseNode",
         "options": {}
       },
