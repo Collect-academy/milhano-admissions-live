@@ -1,0 +1,1212 @@
+{
+  "name": "MILHANO | Sofia | 04 Post Call + Supabase AI Insights | V3 PREVIEW",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "milhano-ai-postcall-sofia-v2-20261106",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1520,
+        140
+      ],
+      "id": "926a854d-3e5c-4b7a-b570-f54b68ffe68d",
+      "name": "Webhook | ElevenLabs Post Call"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b04af9f2-79ac-44eb-8345-9a5e046d01ff",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1040,
+        140
+      ],
+      "id": "8607d928-5d0a-4ffc-a633-6583d972af6a",
+      "name": "IF | Valid Post Call Event"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {success:false,ignored:true,reason:$json.reason} }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1510,
+        510
+      ],
+      "id": "18f771d6-b36b-4039-9af8-a2ab1ed51645",
+      "name": "Respond | Ignored or Rejected"
+    },
+    {
+      "parameters": {
+        "jsCode": "const event=$('Validate | Agent and Event').first().json.payload,d=event.data??{},vars=d.conversation_initiation_client_data?.dynamic_variables??{};\n// ElevenLabs indexes data_collection_results by aitem_* ID (not by field name).\n// Build a name -> value map; also accept flat/name-keyed and list formats.\nconst rawDc=d.analysis?.data_collection_results??{};\nconst resultList=d.analysis?.data_collection_results_list??[];\nconst dc={};\nfor(const [key,item] of Object.entries(rawDc)){\n  if(item&&typeof item==='object'&&!Array.isArray(item)){\n    dc[String(item.name??key)]=item.value??item.result??null;\n  }else{\n    dc[key]=item;\n  }\n}\nif(Array.isArray(resultList)){\n  for(const item of resultList){\n    if(item&&item.name)dc[String(item.name)]=item.value??null;\n  }\n}\nconst summary=d.analysis?.transcript_summary??'';\nfunction read(name){const v=dc[name];return v==null?'':typeof v==='string'?v.trim():v;}\nfunction str(name){let v=read(name);return typeof v==='string'?v:String(v??'');}\nfunction bool(name){const v=read(name);if(v===true||v===false)return v; if(typeof v==='string'){if(v.toLowerCase()==='true')return true;if(v.toLowerCase()==='false')return false;}return null;}\nconst contact_id=String(vars.ghl_contact_id??'').trim(),opportunity_id_received=String(vars.ghl_opportunity_id??'').trim();\nconst conversation_id=String(d.conversation_id??'').trim();\nconst studentsRaw=str('students_json');let students=[];\nif(studentsRaw){try{let arr=JSON.parse(studentsRaw.replace(/^```(?:json)?\\s*/,'').replace(/\\s*```$/,''));if(Array.isArray(arr))students=arr.slice(0,10).map(v=>({name:String(v?.name??'').trim(),grade:String(v?.grade??'').trim()})).filter(v=>v.name||v.grade);}catch(e){}}\nconst countV=read('children_count');const parsedCount=countV===''?null:Number(countV);\nconst children_count=Number.isInteger(parsedCount)&&parsedCount>=1&&parsedCount<=20?parsedCount:null;\nconst transcript=Array.isArray(d.transcript)?d.transcript:[];\nconst userTurns=transcript.filter(t=>t.role==='user'&&typeof t.message==='string'&&t.message.trim()).length;\nconst calls=[];let bookVerified=false,callbackRecorded=false,humanRecorded=false,dndRecorded=false,bookingAttempted=false;\nfor(const turn of transcript){\n for(const c of (Array.isArray(turn.tool_calls)?turn.tool_calls:[]))calls.push(c);\n for(const result of (Array.isArray(turn.tool_results)?turn.tool_results:[])){\n  const name=String(result.tool_name??result.name??'');\n  let val=result.result_value??result.result??result.response??result.output??null;\n  if(typeof val==='string'){try{val=JSON.parse(val)}catch(e){}}\n  const good=result.is_error!==true&&result.is_blocked!==true&&val&&typeof val==='object'&&val.success===true;\n  if(name==='book_school_tour'&&good&&val.appointment_id&&val.start_time)bookVerified=true;\n  if(name==='record_crm_action'&&good){\n   if(val.action==='callback_request')callbackRecorded=true;\n   if(val.action==='human_follow_up')humanRecorded=true;\n   if(val.action==='do_not_contact')dndRecorded=true;\n  }\n }\n}\nbookingAttempted=calls.some(c=>c.tool_name==='book_school_tour');\nconst localDate=new Intl.DateTimeFormat('es-MX',{timeZone:'America/Merida',dateStyle:'medium',timeStyle:'short'}).format(new Date((d.metadata?.start_time_unix_secs??event.event_timestamp??Date.now()/1000)*1000));\nconst fields={tutor_first_name:str('tutor_first_name'),tutor_last_name:str('tutor_last_name'),students_json:studentsRaw,students,student_names:students.map(s=>s.name||'No indicado').join('\\n'),student_grades:students.map(s=>s.grade||'No indicado').join('\\n'),children_count,residential_area:str('residential_area'),commute_time:str('commute_time'),change_reason:str('change_reason'),previous_school:str('previous_school'),school_priorities:str('school_priorities')};\nconst evidence={bookVerified,bookingAttempted,callbackRecorded,humanRecorded,dndRecorded,userTurns,\n grade_status:str('grade_offered_status').toLowerCase(),location_status:str('location_status').toLowerCase(),\n pricing_rejected:bool('pricing_rejected'),educational_model_rejected:bool('educational_model_rejected'),information_delivered:bool('information_delivered'),\n school_tour_requested:bool('school_tour_requested'),callback_requested:bool('callback_requested'),human_follow_up_requested:bool('human_follow_up_requested'),\n explicitly_not_interested:bool('explicitly_not_interested'),non_admissions_intent:bool('non_admissions_intent'),do_not_contact:bool('do_not_contact'),\n booking_blocker:str('booking_blocker'),school_cycle_requested:str('school_cycle_requested'),llm_outcome:str('call_outcome')};\nconst report=str('summary_es')||String(summary||'Resumen automático no disponible.').trim();\nreturn [{json:{contact_id,opportunity_id_received,conversation_id,source_branch:d.branch_id??null,source_agent_id:d.agent_id,call_date:localDate,fields,evidence,report,reported_next_action:str('next_action'),valid_contact_id:/^[a-zA-Z0-9]{12,40}$/.test(contact_id)&&Boolean(conversation_id),user_turns:userTurns}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1510,
+        300
+      ],
+      "id": "882bde37-40df-48b1-bc57-082af7edb68b",
+      "name": "Normalize | Call Results"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b4b08994-c1d2-49de-a506-4e5ca59d96b0",
+              "leftValue": "={{ $json.valid_contact_id === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1750,
+        300
+      ],
+      "id": "8f7fc1c6-2bc1-42d5-9066-38b1f66d48d2",
+      "name": "IF | Has GHL Contact"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {success:true,message:\"Sin contacto GHL: llamada de preview o identificador ausente\"} }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2000,
+        500
+      ],
+      "id": "55776b8a-7862-4303-9fb8-821c4f3c399e",
+      "name": "Respond | No Contact In Preview"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Call Results').first().json.contact_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2010,
+        290
+      ],
+      "id": "d5f8ebb5-fe4d-45fb-b9d6-ef4b1d2ab6ea",
+      "name": "GHL | Verify Contact",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg=$('Normalize | Call Results').first().json,raw=$input.first().json??{},c=raw.contact??raw;\nconst valid=!raw.error&&!(Number(raw.statusCode)>=400)&&String(c.id??'')===cfg.contact_id&&String(c.locationId??'')==='ZzRtp9n8n76ARy99VzJc';\nreturn [{json:{...cfg,contact_valid:valid}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2260,
+        290
+      ],
+      "id": "41367eac-51ff-4d28-9946-7736a4bc5e61",
+      "name": "Validate | Contact Identity"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8d5927d7-24eb-4549-a936-b1185c5d603d",
+              "leftValue": "={{ $json.contact_valid === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2510,
+        290
+      ],
+      "id": "830bf14b-3f6e-4050-b829-89317fb527dd",
+      "name": "IF | Valid Contact"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {success:false,message:\"Contacto GHL no validado; no se modificaron datos\"} }}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2760,
+        500
+      ],
+      "id": "68e58422-c539-4cc0-a9a4-b074a4ce07ff",
+      "name": "Respond | Contact Mismatch"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Call Results').first().json.contact_id}}/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2770,
+        290
+      ],
+      "id": "9fcff956-4a9b-4783-bc20-de3ce87bd891",
+      "name": "GHL | Get Existing Notes",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg=$('Normalize | Call Results').first().json,res=$input.first().json??{};\nif(res.error||Number(res.statusCode)>=400||!Array.isArray(res.notes))throw new Error('GHL_NOTES_READ_FAILED: cannot safely decide whether to create duplicate note');\nconst marker='Conversation ID: '+cfg.conversation_id;\nconst existing=res.notes.find(n=>String(n.title??'').includes('Sofía AI | Resumen de llamada')&&String(n.body??'').includes(marker));\nreturn [{json:{...cfg,already_processed:Boolean(existing),existing_note_id:existing?.id??null}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3020,
+        290
+      ],
+      "id": "5383e6b7-6952-4742-badd-ab46a20a564c",
+      "name": "Check | Duplicate Summary"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "7522b2a1-7534-41a1-8064-1eca38ea9179",
+              "leftValue": "={{ $json.already_processed === false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3270,
+        290
+      ],
+      "id": "e9e578ef-c554-442e-ae24-14f4433528f3",
+      "name": "IF | New Summary"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {success:true,status:\"NOTE_EXISTS_FIELDS_ATTEMPTED\",conversation_id:$json.conversation_id,note_already_exists:true,note_id:$json.existing_note_id,contact_update_attempted:$json.do_contact_update,opportunity_update_attempted:$json.do_opportunity_update,opportunity_valid:$json.opportunity_valid,opportunity_update_failed:$json.opportunity_update_failed} }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        3520,
+        500
+      ],
+      "id": "8edb5b7b-aecd-4bb5-a107-59f30990adea",
+      "name": "Respond | Already Exists"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{$('Normalize | Call Results').first().json.opportunity_id_received}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        3520,
+        290
+      ],
+      "id": "017f7608-5dbc-4d34-b3e6-45de4f6b8afa",
+      "name": "GHL | Lookup Opportunity",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg=$('Normalize | Call Results').first().json,f=cfg.fields,res=$input.first().json??{},o=res.opportunity??res;\nconst opp_ok=Boolean(cfg.opportunity_id_received)&&!res.error&&!(Number(res.statusCode)>=400)&&String(o.id??'')===cfg.opportunity_id_received&&String(o.contactId??o.contact?.id??'')===cfg.contact_id&&String(o.locationId??'ZzRtp9n8n76ARy99VzJc')==='ZzRtp9n8n76ARy99VzJc';\nconst mapping={student_names:['IApXbJC6oqKFwGWVPwm5','ZpLIrNRsCTFYorzAdrwh'],student_grades:['Ih0Rd00wzA2qnJgsQQkk','Nf5zMrNYuyw1ZMYLFBKm'],children_count:['0hMZMrpop44clPTDLdjS','MKzD9dJy9MZ3a0Q4hkWU'],residential_area:['QrH8QrQmKq19nFpXaell','5zQLMBa79e8WJ52AQSvM'],commute_time:['vfzmbqdd843Apw6CjBUL','izPcE4YdRxGIT7buCmwW'],change_reason:['vqhueload5gMiSt5fRbR','U5yljXZWW2c1lD7aupyo'],previous_school:['LKyarzlgHV5GHhf7Ww3W','2qOxrtabnWGKm44ef7BI'],school_priorities:['cxECQqJePloWrxGvjLLN','sfukaOzYGyPA5LQ2aeWv']};\nconst contactFields=[],opportunityFields=[];\nfor(const [k,[contactFieldId,opportunityFieldId]] of Object.entries(mapping)){\n const v=f[k];if(v===null||v===undefined||v==='')continue;\n contactFields.push({id:contactFieldId,fieldValue:v});\n opportunityFields.push({id:opportunityFieldId,fieldValue:v});\n}\nconst contactPayload={};\nif(f.tutor_first_name)contactPayload.firstName=f.tutor_first_name;\nif(f.tutor_last_name)contactPayload.lastName=f.tutor_last_name;\nif(f.tutor_first_name&&f.tutor_last_name)contactPayload.name=f.tutor_first_name+' '+f.tutor_last_name;\nif(contactFields.length)contactPayload.customFields=contactFields;\nconst opportunityPayload={};\nif(opp_ok){if(opportunityFields.length)opportunityPayload.customFields=opportunityFields;\n const fullName=[f.tutor_first_name,f.tutor_last_name].filter(Boolean).join(' ');\n if(fullName)opportunityPayload.customFields=[...(opportunityPayload.customFields??[]),{id:'Kg4x86zY1jRwdPsZgDAt',fieldValue:fullName}];}\nreturn [{json:{...cfg,contact_payload:contactPayload,opportunity_payload:opportunityPayload,opportunity_valid:opp_ok,do_contact_update:Object.keys(contactPayload).length>0,do_opportunity_update:opp_ok&&Object.keys(opportunityPayload).length>0}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3770,
+        290
+      ],
+      "id": "d416aedb-8b24-42a9-a945-b06da7f96c0a",
+      "name": "Prepare | Exact Field Updates"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6c3ca6bb-954a-49f7-9446-0e90bb4c6b29",
+              "leftValue": "={{ $json.do_contact_update === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4020,
+        290
+      ],
+      "id": "6695cbe0-61cd-4efc-b112-61855c9e8334",
+      "name": "IF | Update Contact Needed"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Call Results').first().json.contact_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Prepare | Exact Field Updates').first().json.contact_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4260,
+        180
+      ],
+      "id": "35029d57-abc8-4414-95f2-f262499b5772",
+      "name": "GHL | Update Contact Fields",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base=$('Prepare | Exact Field Updates').first().json;let result=$input.first().json??{};\nreturn [{json:{...base,contact_update_failed:!!(result.error||Number(result.statusCode)>=400||result.success===false)}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4510,
+        180
+      ],
+      "id": "e9c4ea5e-8fe8-404b-ba80-b710d4fd294b",
+      "name": "Join | Contact Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base=$('Prepare | Exact Field Updates').first().json;\nreturn [{json:{...base,contact_update_failed:false}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4510,
+        420
+      ],
+      "id": "1aa0bce8-393b-4cf9-99ae-8d5d37654536",
+      "name": "Skip | No Contact Updates"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "30b462e4-28e7-4f8c-b104-5fae4b4aa7db",
+              "leftValue": "={{ $json.do_opportunity_update === true }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4770,
+        290
+      ],
+      "id": "af9ef09a-dd04-4555-bcd5-780c9450d504",
+      "name": "IF | Update Opportunity Needed"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{$('Normalize | Call Results').first().json.opportunity_id_received}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Prepare | Exact Field Updates').first().json.opportunity_payload }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5020,
+        180
+      ],
+      "id": "3c0db648-2a05-4c77-9b6c-a5ea6866ed35",
+      "name": "GHL | Update Opportunity Fields",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base=$('Prepare | Exact Field Updates').first().json,result=$input.first().json??{};\nreturn [{json:{...base,opportunity_update_failed:!!(result.error||Number(result.statusCode)>=400||result.success===false)}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5270,
+        180
+      ],
+      "id": "8ef085a0-b892-41cb-bbf3-c012738bd9e7",
+      "name": "Join | Opportunity Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base=$('Prepare | Exact Field Updates').first().json;\nreturn [{json:{...base,opportunity_update_failed:false}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5270,
+        420
+      ],
+      "id": "7dd60263-8aec-4317-8595-84bb3ce93bef",
+      "name": "Skip | No Opportunity Updates"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Call Results').first().json.contact_id}}/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {title:$('Classify | Setter Outcome').first().json.notes_title,body:$('Classify | Setter Outcome').first().json.notes_body,pinned:false} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        5520,
+        290
+      ],
+      "id": "47956078-1ef4-4be8-9d9b-446bdbbbf985",
+      "name": "GHL | Create Call Summary Note",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw=$input.first().json??{},cfg=$('Normalize | Call Results').first().json;\nconst noteSaved=Boolean(raw.note?.id)&&!raw.error&&!(Number(raw.statusCode)>=400);\nif(!noteSaved)throw new Error('GHL_NOTE_NOT_CREATED: Check GHL credential and notes permission, do not claim success.');\nconst prep=$('Prepare | Exact Field Updates').first().json;\nlet contactFailed=false,oppFailed=false;\ntry{contactFailed=Boolean($('Join | Contact Result').first().json.contact_update_failed)}catch(e){}\ntry{oppFailed=Boolean($('Join | Opportunity Result').first().json.opportunity_update_failed)}catch(e){}\nconst fieldsOk=!contactFailed&&!oppFailed;\nreturn [{json:{success:noteSaved&&fieldsOk,note_saved:noteSaved,fields_saved_without_errors:fieldsOk,contact_update_attempted:prep.do_contact_update,opportunity_update_attempted:prep.do_opportunity_update,opportunity_valid:prep.opportunity_valid,contact_update_failed:contactFailed,opportunity_update_failed:oppFailed,message:fieldsOk?'Nota creada y actualizaciones enviadas correctamente a GHL':'Nota creada, pero al menos una actualización de campos falló',conversation_id:cfg.conversation_id,ghl_contact_id:cfg.contact_id,ghl_note_id:raw.note.id,stage_suggestion:$('Classify | Setter Outcome').first().json.stage_suggestion,manual_review_required:$('Classify | Setter Outcome').first().json.manual_review_required,stage_changed_in_ghl:false}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5770,
+        290
+      ],
+      "id": "304f0aee-f0ec-4197-a8a4-a2c816bdf430",
+      "name": "Finalize | Note Result"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        6020,
+        290
+      ],
+      "id": "d9f36293-559e-46cd-89c9-2af492cfc1c5",
+      "name": "Respond | Post Call Saved"
+    },
+    {
+      "parameters": {
+        "jsCode": "const request=$input.first().json;\nconst event=request.body??request;\nconst eventOk=event?.type==='post_call_transcription';\nconst agentOk=String(event?.data?.agent_id??'')==='agent_6401m3yvs1rcfbya7hk1qb2bxp8v';\nconst conversationOk=/^conv_[A-Za-z0-9]+$/.test(String(event?.data?.conversation_id??''));\nreturn [{json:{valid:Boolean(eventOk&&agentOk&&conversationOk),reason:!eventOk?'WRONG_EVENT':!agentOk?'WRONG_AGENT':!conversationOk?'MISSING_CONVERSATION_ID':'OK',payload:eventOk&&agentOk&&conversationOk?event:null}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        140
+      ],
+      "id": "d2af053c-ff23-4c1e-9c5f-2bfb393c503d",
+      "name": "Validate | Agent and Event"
+    },
+    {
+      "parameters": {
+        "jsCode": "const x=$input.first().json,e=x.evidence,f=x.fields;\nconst L=s=>String(s??'').trim().toLowerCase();\nlet stage='Callback',reason='No fue posible categorizar con evidencia suficiente; requiere revisión interna.',review=true,callback_type='manual_review';\nconst noAnswer=e.userTurns===0;\nconst gradeNo=['unavailable_current_and_next','unavailable','not_offered','not_available_both_cycles'].includes(L(e.grade_status));\nconst locationNo=['not_viable','outside_merida_no_move','out_of_scope'].includes(L(e.location_status));\nconst explicitDisqualified= e.explicitly_not_interested===true||e.non_admissions_intent===true||e.pricing_rejected===true||e.educational_model_rejected===true||gradeNo||locationNo;\nconst askedCallback=e.callback_requested===true||e.callbackRecorded||e.human_follow_up_requested===true||e.humanRecorded||['callback_requested','human_follow_up'].includes(L(e.llm_outcome));\nconst info=e.information_delivered===true;\nconst goodGrade=L(e.grade_status)==='offered';\nconst goodLocation=['viable','ideal'].includes(L(e.location_status));\nif(e.dndRecorded||e.do_not_contact===true||L(e.llm_outcome)==='do_not_contact'){\n stage='Disqualified';reason='Solicitó no recibir más contactos; respetar DND.';review=false;callback_type=null;\n}else if(e.bookVerified){\n stage='ST booked';reason='La herramienta de booking devolvió éxito con identificador y fecha de cita.';review=false;callback_type=null;\n}else if(explicitDisqualified){\n stage='Disqualified';reason='Existe incompatibilidad o desinterés explícito.';review=false;callback_type=null;\n}else if(askedCallback){\n stage='Callback';reason='La familia solicitó seguimiento o atención humana.';review=false;callback_type='requested';\n}else if(noAnswer){\n stage='No Answer - sequence';reason='No hubo respuesta de usuario; el día D1/D2/D3/Never Answered se calcula con historial de intentos, no sólo esta llamada.';review=false;callback_type=null;\n}else if(e.bookingAttempted||e.school_tour_requested===true||['school_tour_requested_not_booked'].includes(L(e.llm_outcome))){\n stage='Callback';reason='Hubo interés en reservar, pero no existe resultado de booking verificado; requiere revisión manual.';review=true;callback_type='manual_review';\n}else if(info&&goodGrade&&goodLocation&&e.pricing_rejected!==true&&e.educational_model_rejected!==true){\n stage='Qualified';reason='Recibió información, grado ofrecido y ubicación viable; no aceptó todavía visita.';review=false;callback_type=null;\n}else if(info){\n stage='Meaningful Conversation';reason='Recibió información educativa, sin booking ni rechazo; calificación aún incompleta.';review=false;callback_type=null;\n}\nconst students=f.students.map((s,i)=>`${i+1}. ${s.name||'Nombre no indicado'} — ${s.grade||'Grado no indicado'}`).join('; ');\nconst humanStage=stage==='Callback'&&callback_type==='manual_review'?'Callback (revisión interna)':stage;\nconst body=[`Fecha: ${x.call_date}`,`Resultado propuesto: ${humanStage}`,`Criterio: ${reason}`,\n`Resumen: ${x.report.slice(0,4000)}`,`Tutor: ${[f.tutor_first_name,f.tutor_last_name].filter(Boolean).join(' ')||'No informado'}`,\n`Alumnos/grados: ${students||'No informados'}`,`Cantidad de hijos: ${f.children_count??'No indicada'}`,\n`Zona: ${f.residential_area||'No informada'}`,`Traslado declarado: ${f.commute_time||'No informado'}`,\n`Motivo de búsqueda/cambio: ${f.change_reason||'No informado'}`,\n`Escuela de procedencia: ${f.previous_school||'No informada'}`,`Prioridades: ${f.school_priorities||'No informadas'}`,\n`Ciclo solicitado: ${e.school_cycle_requested||'No informado'}`,\n`Motivo por no reservar: ${e.booking_blocker||'No especificado'}`,\n`Próxima acción informada: ${x.reported_next_action||'No acordada'}`,\n`Booking verificado en tool: ${e.bookVerified?'Sí':'No'}`,\n`Solicitud de seguimiento registrada en tool: ${(e.callbackRecorded||e.humanRecorded)?'Sí':'No'}`,\n`Conversation ID: ${x.conversation_id}`].join('\\n\\n');\nreturn [{json:{...x,stage_suggestion:stage,classification_reason:reason,manual_review_required:review,callback_type,notes_title:'Sofía AI | Resumen de llamada',notes_body:body,stages_autowrite_enabled:false}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        140
+      ],
+      "id": "ce59f78b-7148-47b8-b6f8-cd136c540c52",
+      "name": "Classify | Setter Outcome"
+    },
+    {
+      "parameters": {
+        "jsCode": "const x=$('Classify | Setter Outcome').first().json;\nconst d=$('Validate | Agent and Event').first().json.payload?.data??{};\nconst e=x.evidence??{},f=x.fields??{},meta=d.metadata??{};\nconst r=(v)=>typeof v==='number'&&Number.isFinite(v)?v:null;\nconst n=(v)=>{const v1=Number(v);return v!==undefined&&v!==null&&v!==''&&Number.isFinite(v1)&&v1>=0?v1:null;};\nconst fromEpoch=(v)=>{const t=n(v);return t===null?null:new Date(t>1e12?t:t*1000).toISOString();};\nconst starts=fromEpoch(meta.start_time_unix_secs), ends=fromEpoch(meta.end_time_unix_secs);\nconst seconds=n(meta.call_duration_secs)??n(meta.duration_seconds)??(starts&&ends?Math.max(0,(Date.parse(ends)-Date.parse(starts))/1000):null);\nconst explicitStatus=String(meta.phone_call_status??meta.call_status??d.phone_call_status??'').toLowerCase();\nconst confirmedNoAnswer=['no_answer','not_answered','unanswered','busy','no_pickup'].includes(explicitStatus);\nconst explicitFailure=['failed','error','network_error','system_failure'].includes(explicitStatus);\nconst meaningful=e.information_delivered===true&&e.userTurns>0;\nconst connection=confirmedNoAnswer?'no_answer':explicitFailure?'system_failure':meaningful?'human':'ambiguous';\nconst bookingConfirmed=Boolean(e.bookVerified&&x.opportunity_id_received);\nconst explicitDisq=(e.do_not_contact===true||e.dndRecorded===true||e.explicitly_not_interested===true||e.non_admissions_intent===true||e.pricing_rejected===true||e.educational_model_rejected===true||['unavailable_current_and_next','unavailable','not_offered','not_available_both_cycles'].includes(e.grade_status)||['not_viable','outside_merida_no_move','out_of_scope'].includes(e.location_status));\nconst reason=e.do_not_contact===true||e.dndRecorded===true?'do_not_contact':e.explicitly_not_interested===true?'not_interested':e.non_admissions_intent===true?'not_admissions':e.pricing_rejected===true?'pricing_rejected':e.educational_model_rejected===true?'model_rejected':['unavailable_current_and_next','unavailable','not_offered','not_available_both_cycles'].includes(e.grade_status)?'grade_unavailable':['not_viable','outside_merida_no_move','out_of_scope'].includes(e.location_status)?'location_not_viable':null;\nlet objections=[];\nconst rawObjections=f.objections_json??d.analysis?.objections??null;\nif(Array.isArray(rawObjections))objections=rawObjections;\nelse if(typeof rawObjections==='string'){try{const parsed=JSON.parse(rawObjections);if(Array.isArray(parsed))objections=parsed;}catch(_){}}\nconst explicitCredits=n(meta.credits_consumed)??n(meta.usage?.credits_consumed)??n(d.analysis?.credits_consumed);\nconst insight={\n conversation_id:x.conversation_id,campaign_id:null,campaign_member_id:null,\n ghl_contact_id:x.contact_id||null,ghl_opportunity_id:x.opportunity_id_received||null,\n agent_id:x.source_agent_id||null,agent_branch_id:x.source_branch||null,\n started_at:starts,ended_at:ends,duration_seconds:seconds,\n connection_outcome:connection,meaningful_conversation:meaningful,\n qualified:x.stage_suggestion==='Qualified'&&meaningful,\n school_tour_requested:e.school_tour_requested===true,\n school_tour_booked_verified:bookingConfirmed,appointment_id:null,\n disqualified:explicitDisq,disqualified_reason:explicitDisq?(reason??'requires_review'):null,\n callback_requested:e.callback_requested===true||e.callbackRecorded===true,\n do_not_contact:e.do_not_contact===true||e.dndRecorded===true,\n call_outcome:e.llm_outcome||x.stage_suggestion||null,\n termination_reason:explicitStatus||null,\n credits_consumed:explicitCredits,credits_source:explicitCredits===null?null:'elevenlabs_explicit',\n transcript_summary:x.report||null,objections,\n collected_variables:f,\n metadata:{reported_next_action:x.reported_next_action,call_date:x.call_date,call_status_raw:explicitStatus},\n evidence:{...e,stage_suggestion:x.stage_suggestion,classification_reason:x.classification_reason,manual_review_required:x.manual_review_required,postcall_verified_booking_tool:e.bookVerified===true},\n ingestion_status:'captured'\n};\nconst opp=x.opportunity_id_received||'';\nconst decision=opp?{\n conversation_id:x.conversation_id,ghl_contact_id:x.contact_id,ghl_opportunity_id:opp,\n decision:x.stage_suggestion,decision_reason:x.classification_reason||'Revisar',\n evidence:{...e,connection_outcome:connection},\n execution_status:'proposed'\n}:null;\nreturn [{json:{insight,decision}}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        -360
+      ],
+      "id": "73b7ac8c-1b35-4a74-9e81-410f329c2b13",
+      "name": "Prepare | Supabase AI Insight"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_call_insights?on_conflict=conversation_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.insight }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -600,
+        -360
+      ],
+      "id": "8d1d5434-2883-42e8-bae3-a183f17cfa5f",
+      "name": "Supabase | Upsert AI Insight",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const v=$('Prepare | Supabase AI Insight').first().json.decision;return v?[{json:v}]:[];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -360,
+        -360
+      ],
+      "id": "fac1de56-a111-4ec8-9542-f2b1b12c9bb3",
+      "name": "Prepare | AI Decision Proposal"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_stage_decisions?on_conflict=conversation_id,ghl_opportunity_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -120,
+        -360
+      ],
+      "id": "d3a24314-8582-4e73-9156-e8b7af9ccde4",
+      "name": "Supabase | Upsert AI Decision",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook | ElevenLabs Post Call": {
+      "main": [
+        [
+          {
+            "node": "Validate | Agent and Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize | Call Results": {
+      "main": [
+        [
+          {
+            "node": "Classify | Setter Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF | Has GHL Contact": {
+      "main": [
+        [
+          {
+            "node": "GHL | Verify Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond | No Contact In Preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Verify Contact": {
+      "main": [
+        [
+          {
+            "node": "Validate | Contact Identity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate | Contact Identity": {
+      "main": [
+        [
+          {
+            "node": "IF | Valid Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF | Valid Contact": {
+      "main": [
+        [
+          {
+            "node": "GHL | Get Existing Notes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond | Contact Mismatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Get Existing Notes": {
+      "main": [
+        [
+          {
+            "node": "Check | Duplicate Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check | Duplicate Summary": {
+      "main": [
+        [
+          {
+            "node": "GHL | Lookup Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF | New Summary": {
+      "main": [
+        [
+          {
+            "node": "GHL | Create Call Summary Note",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond | Already Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Lookup Opportunity": {
+      "main": [
+        [
+          {
+            "node": "Prepare | Exact Field Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | Exact Field Updates": {
+      "main": [
+        [
+          {
+            "node": "IF | Update Contact Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Update Contact Fields": {
+      "main": [
+        [
+          {
+            "node": "Join | Contact Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF | Update Opportunity Needed": {
+      "main": [
+        [
+          {
+            "node": "GHL | Update Opportunity Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip | No Opportunity Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Update Opportunity Fields": {
+      "main": [
+        [
+          {
+            "node": "Join | Opportunity Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Create Call Summary Note": {
+      "main": [
+        [
+          {
+            "node": "Finalize | Note Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize | Note Result": {
+      "main": [
+        [
+          {
+            "node": "Respond | Post Call Saved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF | Update Contact Needed": {
+      "main": [
+        [
+          {
+            "node": "GHL | Update Contact Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Skip | No Contact Updates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Join | Contact Result": {
+      "main": [
+        [
+          {
+            "node": "IF | Update Opportunity Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip | No Contact Updates": {
+      "main": [
+        [
+          {
+            "node": "IF | Update Opportunity Needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Join | Opportunity Result": {
+      "main": [
+        [
+          {
+            "node": "IF | New Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip | No Opportunity Updates": {
+      "main": [
+        [
+          {
+            "node": "IF | New Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate | Agent and Event": {
+      "main": [
+        [
+          {
+            "node": "IF | Valid Post Call Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF | Valid Post Call Event": {
+      "main": [
+        [
+          {
+            "node": "Normalize | Call Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond | Ignored or Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify | Setter Outcome": {
+      "main": [
+        [
+          {
+            "node": "IF | Has GHL Contact",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare | Supabase AI Insight",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | Supabase AI Insight": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Upsert AI Insight",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Upsert AI Insight": {
+      "main": [
+        [
+          {
+            "node": "Prepare | AI Decision Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | AI Decision Proposal": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Upsert AI Decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
