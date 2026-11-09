@@ -26,11 +26,14 @@ function groupHours(rows: Hourly[]) {
   }
   return [...map.values()].sort((a,b)=>a.orden-b.orden).map(v=>({...v,tasa:v.llamadas?v.respuestas/v.llamadas*100:0}));
 }
-export function SofiaPerformanceCharts({daily,hourly,disqualificationReasons}:{
-  daily:Daily[];hourly:Hourly[];disqualificationReasons:Reason[];
+export function SofiaPerformanceCharts({daily,hourly,disqualificationReasons,objections}:{
+  daily:Daily[];hourly:Hourly[];disqualificationReasons:Reason[];objections:{category:string;cases:number}[];
 }) {
   const trend=groupDaily(daily),hours=groupHours(hourly);
   const reasons=disqualificationReasons.slice(0,8).map(x=>({motivo:x.reason,casos:Number(x.cases)}));
+  const objectionTotals=new Map<string,number>();
+  for(const o of objections)objectionTotals.set(o.category,(objectionTotals.get(o.category)??0)+Number(o.cases));
+  const objectionRows=[...objectionTotals].map(([motivo,casos])=>({motivo,casos})).sort((a,b)=>b.casos-a.casos).slice(0,8);
   return <div className="sofia-charts">
     <section className="panel sofia-chart-panel">
       <h2>Actividad y resultados · evolución diaria</h2>
@@ -67,6 +70,16 @@ export function SofiaPerformanceCharts({daily,hourly,disqualificationReasons}:{
           <Tooltip formatter={(value)=>nf(Number(value))}/><Bar dataKey="casos" name="Casos" fill="#a64c4c" radius={[0,4,4,0]}/>
         </BarChart>
       </ResponsiveContainer>:<p className="sofia-chart-empty">Sin motivos verificados todavía.</p>}</div>
+    </section>
+    <section className="panel sofia-chart-panel">
+      <h2>Objeciones registradas</h2><p className="subtitle">Agrupaciones exploratorias; no se infieren objeciones no mencionadas.</p>
+      <div className="sofia-chart-canvas">{objectionRows.length?<ResponsiveContainer width="100%" height={270}>
+        <BarChart data={objectionRows} layout="vertical" margin={{top:10,right:14,left:10,bottom:0}}>
+          <CartesianGrid stroke="#e6ede8" strokeDasharray="3 5"/>
+          <XAxis type="number" allowDecimals={false}/><YAxis dataKey="motivo" type="category" width={175} tick={{fontSize:10}}/>
+          <Tooltip/><Bar dataKey="casos" name="Objeciones" fill="#406d91" radius={[0,4,4,0]}/>
+        </BarChart>
+      </ResponsiveContainer>:<p className="sofia-chart-empty">Todavía no hay objeciones capturadas.</p>}</div>
     </section>
     <section className="panel sofia-chart-panel">
       <h2>Embudo de Sofía</h2><p className="subtitle">Indicadores de resultados registrados; las llamadas no son leads únicos.</p>
