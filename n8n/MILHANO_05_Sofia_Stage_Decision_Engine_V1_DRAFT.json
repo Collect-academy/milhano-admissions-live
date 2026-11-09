@@ -1,0 +1,575 @@
+{
+  "name": "MILHANO | Sofia | 05 Stage Decision Engine V1 | DRY RUN",
+  "nodes": [
+    {
+      "id": "8426cc32-02ba-408a-8b58-ad85a417aa83",
+      "name": "Webhook | Sofia Stage Decision",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1600,
+        280
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "milhano-ai-stage-decision-v1",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "80db532c-46a8-4c39-b8c8-7828a94724ee",
+      "name": "Normalize | Verified Post Call Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1380,
+        280
+      ],
+      "parameters": {
+        "jsCode": "\nconst req=$input.first().json,b=req.body??req;\nconst clean=(v)=>String(v??'').trim();\nconst x={\n conversation_id:clean(b.conversation_id),\n ghl_contact_id:clean(b.ghl_contact_id),\n ghl_opportunity_id:clean(b.ghl_opportunity_id),\n ghl_note_id:clean(b.ghl_note_id),\n note_saved:b.note_saved===true\n};\nif(!/^conv_[a-zA-Z0-9]+$/.test(x.conversation_id)\n || !/^[a-zA-Z0-9_-]{8,64}$/.test(x.ghl_contact_id)\n || !/^[a-zA-Z0-9_-]{8,64}$/.test(x.ghl_opportunity_id)\n || !x.ghl_note_id || !x.note_saved)return [];\nreturn [{json:x}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{$('Normalize | Verified Post Call Request').first().json.ghl_opportunity_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1160,
+        280
+      ],
+      "id": "4cb92769-41eb-4875-a319-53e749ab0d0c",
+      "name": "GHL | Get Current Opportunity",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Verified Post Call Request').first().json.ghl_contact_id}}/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -940,
+        280
+      ],
+      "id": "03405c11-1e52-4b0c-a272-c467291eb655",
+      "name": "GHL | Verify Saved Note",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "eb2c8d14-bafc-40a3-a3bc-31b95b3f9256",
+      "name": "Verify | GHL Identity and Note",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -720,
+        280
+      ],
+      "parameters": {
+        "jsCode": "\nconst x=$('Normalize | Verified Post Call Request').first().json;\nconst obj=$('GHL | Get Current Opportunity').first().json??{};\nconst opp=obj.opportunity??obj;\nconst noteResult=$input.first().json??{};\nconst notes=Array.isArray(noteResult.notes)?noteResult.notes:Array.isArray(noteResult.data?.notes)?noteResult.data.notes:[];\nconst validOpp=String(opp.id??'')===x.ghl_opportunity_id\n && String(opp.contactId??opp.contact?.id??'')===x.ghl_contact_id\n && String(opp.pipelineId??'')==='GYqHbZyWUxxc3K03efVT'\n && String(opp.status??'').toLowerCase()==='open';\nconst validNote=notes.some(n=>String(n.id??'')===x.ghl_note_id\n && String(n.body??n.note??'').includes(x.conversation_id));\nif(!validOpp||!validNote)return [];\nreturn [{json:{...x,stage_id:String(opp.pipelineStageId??''),\n pipeline_id:String(opp.pipelineId??''),identity_verified:true,note_verified:true}}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_decide_stage_v1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_conversation_id:$('Verify | GHL Identity and Note').first().json.conversation_id,p_ghl_contact_id:$('Verify | GHL Identity and Note').first().json.ghl_contact_id,p_ghl_opportunity_id:$('Verify | GHL Identity and Note').first().json.ghl_opportunity_id,p_current_pipeline_id:$('Verify | GHL Identity and Note').first().json.pipeline_id,p_current_stage_id:$('Verify | GHL Identity and Note').first().json.stage_id,p_note_confirmed:true,p_callback_task_confirmed:false,p_booking_ghl_confirmed:false} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -500,
+        280
+      ],
+      "id": "c48de199-55bc-4a6f-9351-bb212226bac4",
+      "name": "Supabase | Evaluate Exclusive Stage",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "ad83ea2c-90ac-47f4-b7e6-c310b542d885",
+      "name": "Prepare | Stage Decision Audit",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -260,
+        280
+      ],
+      "parameters": {
+        "jsCode": "\nconst r=$input.first().json??{},x=$('Verify | GHL Identity and Note').first().json;\nconst action=String(r.action??'review');\nconst body={\n conversation_id:x.conversation_id,ghl_contact_id:x.ghl_contact_id,\n ghl_opportunity_id:x.ghl_opportunity_id,source_pipeline_id:x.pipeline_id,source_stage_id:x.stage_id,\n target_pipeline_id:x.pipeline_id,target_stage_id:r.target_stage_id??null,\n decision:action,decision_reason:String(r.reason??'UNKNOWN'),\n evidence:{rpc:r,note_verified:true},execution_status:'proposed',ghi_note_id:x.ghl_note_id\n};\nreturn [{json:{...x,decision:r,audit:body}}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_stage_decisions?on_conflict=conversation_id,ghl_opportunity_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.audit }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -40,
+        280
+      ],
+      "id": "f2ade620-87fa-4bfa-8e85-5b9a4d5081ee",
+      "name": "Supabase | Save Stage Proposal",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fbd5fdc2-bcc9-46e0-81e0-8a61db3454e2",
+      "name": "Safety Gate | Stage Writes OFF",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        180,
+        280
+      ],
+      "parameters": {
+        "jsCode": "\nconst ALLOW_STAGE_WRITES=false; // ALWAYS false until live reconciliation, retry and idempotency tests succeed.\nconst p=$('Prepare | Stage Decision Audit').first().json;\nif(!ALLOW_STAGE_WRITES || p.decision?.action!=='apply')return [];\nif(!p.identity_verified||!p.note_verified)return [];\nreturn [{json:p}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{$('Verify | GHL Identity and Note').first().json.ghl_opportunity_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        400,
+        280
+      ],
+      "id": "6b65e7ee-c47d-4cbb-8bc3-b9014c4e0e27",
+      "name": "GHL | Re-read Opportunity Before Mutation",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "77bb41d8-64de-42aa-8e7d-c99629a2078f",
+      "name": "Guard | Compare-And-Apply",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        620,
+        280
+      ],
+      "parameters": {
+        "jsCode": "\nconst p=$('Prepare | Stage Decision Audit').first().json;\nconst o=$input.first().json?.opportunity??$input.first().json??{};\nif(String(o.id??'')!==p.ghl_opportunity_id\n ||String(o.contactId??'')!==p.ghl_contact_id\n ||String(o.pipelineId??'')!==p.pipeline_id\n ||String(o.pipelineStageId??'')!==p.stage_id\n ||String(o.status??'').toLowerCase()!=='open'\n ||String(p.decision.target_stage_id??'')==='')return [];\nreturn [{json:p}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{$('Guard | Compare-And-Apply').first().json.ghl_opportunity_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { pipelineStageId: $('Guard | Compare-And-Apply').first().json.decision.target_stage_id } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        840,
+        280
+      ],
+      "id": "6bdc3771-010b-4414-adc1-d471df7cc28f",
+      "name": "GHL | Move Stage (AFTER GATE)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "23417010-7100-42d2-930b-e6ce09bf0530",
+      "name": "Verify | Stage Write Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1060,
+        280
+      ],
+      "parameters": {
+        "jsCode": "\nconst p=$('Guard | Compare-And-Apply').first().json;\nconst resp=$input.first().json??{},o=resp.opportunity??resp;\nif(String(o.id??'')!==p.ghl_opportunity_id||String(o.pipelineStageId??'')!==String(p.decision.target_stage_id))throw new Error('GHL_STAGE_CHANGE_NOT_VERIFIED');\nreturn [{json:{...p,audit:{...p.audit,execution_status:'applied',executed_at:new Date().toISOString()}}}];\n"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_stage_decisions?on_conflict=conversation_id,ghl_opportunity_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.audit }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1280,
+        280
+      ],
+      "id": "8f0910b8-d24c-427b-a8b3-71cb24104cac",
+      "name": "Supabase | Mark Stage Applied",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Webhook | Sofia Stage Decision": {
+      "main": [
+        [
+          {
+            "node": "Normalize | Verified Post Call Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize | Verified Post Call Request": {
+      "main": [
+        [
+          {
+            "node": "GHL | Get Current Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Get Current Opportunity": {
+      "main": [
+        [
+          {
+            "node": "GHL | Verify Saved Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Verify Saved Note": {
+      "main": [
+        [
+          {
+            "node": "Verify | GHL Identity and Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify | GHL Identity and Note": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Evaluate Exclusive Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Evaluate Exclusive Stage": {
+      "main": [
+        [
+          {
+            "node": "Prepare | Stage Decision Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | Stage Decision Audit": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Save Stage Proposal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Save Stage Proposal": {
+      "main": [
+        [
+          {
+            "node": "Safety Gate | Stage Writes OFF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Safety Gate | Stage Writes OFF": {
+      "main": [
+        [
+          {
+            "node": "GHL | Re-read Opportunity Before Mutation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Re-read Opportunity Before Mutation": {
+      "main": [
+        [
+          {
+            "node": "Guard | Compare-And-Apply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard | Compare-And-Apply": {
+      "main": [
+        [
+          {
+            "node": "GHL | Move Stage (AFTER GATE)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Move Stage (AFTER GATE)": {
+      "main": [
+        [
+          {
+            "node": "Verify | Stage Write Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify | Stage Write Response": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Mark Stage Applied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
