@@ -855,6 +855,37 @@
       },
       "continueOnFail": true,
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "83e98365-4c3c-4f2e-a1f6-2b3e4dd215e8",
+      "name": "Stage Engine | Dispatch Confirmed Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1780,
+        100
+      ],
+      "continueOnFail": true,
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "method": "POST",
+        "url": "https://collectacademy.app.n8n.cloud/webhook/milhano-ai-stage-decision-v1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {conversation_id:$('Finalize | Note Result').first().json.conversation_id,ghl_contact_id:$('Finalize | Note Result').first().json.ghl_contact_id,ghl_opportunity_id:$('Normalize | Call Results').first().json.opportunity_id_received,ghl_note_id:$('Finalize | Note Result').first().json.ghl_note_id,note_saved:$('Finalize | Note Result').first().json.note_saved} }}",
+        "options": {
+          "timeout": 15000
+        }
+      }
     }
   ],
   "pinData": {},
@@ -1057,6 +1088,11 @@
         [
           {
             "node": "Respond | Post Call Saved",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Stage Engine | Dispatch Confirmed Note",
             "type": "main",
             "index": 0
           }
