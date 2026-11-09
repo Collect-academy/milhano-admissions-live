@@ -1,3 +1,4 @@
+import "./sofia.css";
 import Link from "next/link";
 import { Activity, ArrowRight, Clock3, Coins, MessageCircle, PhoneCall, ShieldAlert, Target, Users, CalendarClock } from "lucide-react";
 import { DashboardLayout } from "@/components/dashboard-layout";
