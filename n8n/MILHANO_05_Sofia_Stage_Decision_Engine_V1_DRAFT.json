@@ -675,11 +675,6 @@
             "node": "Supabase | Runtime Stage Gate",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Prepare | Safe Attempt Closure",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -744,6 +739,11 @@
         [
           {
             "node": "Safety Gate | Stage Writes Controlled",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prepare | Safe Attempt Closure",
             "type": "main",
             "index": 0
           }
