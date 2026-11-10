@@ -1,0 +1,32 @@
+name: Milhano | Sofia Pilot 10 New Lead | 2026-11-09
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sofia-pilot-launch-20261109.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: milhano-sofia-pilot-20261109
+  cancel-in-progress: false
+
+jobs:
+  run-approved-pilot:
+    name: Pilot 10 · protected live GHL and ElevenLabs
+    if: github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(sofia): launch approved ten-call pilot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 42
+    steps:
+      - name: Read pinned pilot runner
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Execute one-shot sequential pilot with API key protected by Actions
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: node scripts/sofia-pilot-20261109.mjs
