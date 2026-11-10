@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/sofia-pilot-syntax.yml
+      - scripts/sofia-pilot-20261109.mjs
 
 permissions:
   contents: read
