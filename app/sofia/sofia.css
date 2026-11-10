@@ -48,3 +48,7 @@
 @media(max-width:1140px){.sofia-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sofia-filters{grid-template-columns:repeat(3,minmax(0,1fr))}.sofia-two-cols{grid-template-columns:1fr}}
 @media(max-width:760px){.sofia-charts{grid-template-columns:1fr}.sofia-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.sofia-filters{grid-template-columns:1fr 1fr}.sofia-window{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:430px){.sofia-kpis{grid-template-columns:1fr}.sofia-filters{grid-template-columns:1fr}.sofia-window{grid-template-columns:1fr}}
+
+.sofia-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:200px}
+.sofia-row-actions button{font-size:.75rem;white-space:nowrap;padding:8px 11px}
+.sofia-row-actions small{color:var(--muted);font-size:.69rem}
