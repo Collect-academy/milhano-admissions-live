@@ -1,0 +1,23 @@
+name: Milhano | Sofia conversation status audit 2026-11-09
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sofia-conversation-check-20261109.yml
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check Sofia conversation status and restore unpublished state
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node scripts/sofia-conversation-check-20261109.mjs
