@@ -197,12 +197,14 @@ async function main() {
       const credentials=eleven?.credentials;
       assert(credentials && Object.keys(credentials).length>0,
         "Existing ElevenLabs authentication not available; refusing to import poller.");
-      const newNode=target.nodes.find(n=>n.name==="ElevenLabs | Conversation Details");
-      assert(newNode,"ElevenLabs status node missing.");
-      newNode.credentials=credentials;
-      newNode.parameters.authentication=eleven.parameters.authentication;
-      if(eleven.parameters.genericAuthType)newNode.parameters.genericAuthType=eleven.parameters.genericAuthType;
-      if(eleven.parameters.nodeCredentialType)newNode.parameters.nodeCredentialType=eleven.parameters.nodeCredentialType;
+      for (const name of ["ElevenLabs | Conversation Details", "ElevenLabs | Agent Main Metadata"]) {
+        const newNode=target.nodes.find(n=>n.name===name);
+        assert(newNode,"ElevenLabs required audit node missing.");
+        newNode.credentials=credentials;
+        newNode.parameters.authentication=eleven.parameters.authentication;
+        if(eleven.parameters.genericAuthType)newNode.parameters.genericAuthType=eleven.parameters.genericAuthType;
+        if(eleven.parameters.nodeCredentialType)newNode.parameters.nodeCredentialType=eleven.parameters.nodeCredentialType;
+      }
       console.log("Reused existing ElevenLabs credential reference for conversation reconciler.");
     }
     plannedSources.push({ source, target });
