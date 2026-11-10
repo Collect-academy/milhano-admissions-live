@@ -1,0 +1,21 @@
+name: Milhano | Sofía one-shot publisher syntax
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sofia-arm-precheck.yml
+      - scripts/sofia-arm-20261110-0800.mjs
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: node --check scripts/sofia-arm-20261110-0800.mjs
