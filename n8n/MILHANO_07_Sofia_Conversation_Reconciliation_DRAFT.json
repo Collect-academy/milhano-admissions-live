@@ -1,24 +1,21 @@
 {
-  "name": "MILHANO | Sofia | 07 Conversation Reconciliation | SAFE DRAFT",
+  "name": "MILHANO | Sofia | 07 Conversation Reconciliation | POST CALL WEBHOOK",
   "nodes": [
     {
       "id": "3d93bc6d-c833-4a29-9165-7b7d9638e4e5",
-      "name": "Schedule | Reconcile Every Minute",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "name": "Webhook | Post Call Outcome",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
       "position": [
         -1500,
         160
       ],
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "minutes",
-              "minutesInterval": 1
-            }
-          ]
-        }
+        "httpMethod": "POST",
+        "path": "milhano-sofia-postcall-reconcile",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
       }
     },
     {
@@ -26,7 +23,6 @@
         "method": "GET",
         "url": "https://api.elevenlabs.io/v1/convai/agents/agent_6401m3yvs1rcfbya7hk1qb2bxp8v",
         "authentication": "genericCredentialType",
-        "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -61,7 +57,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_pending_call_reconciliation?select=conversation_id,created_at&order=created_at.desc&limit=100",
+        "url": "=https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_pending_call_reconciliation?select=conversation_id,created_at&conversation_id=eq.{{$('Webhook | Post Call Outcome').first().json.body.conversation_id}}&limit=1",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
@@ -119,7 +115,6 @@
         "method": "GET",
         "url": "=https://api.elevenlabs.io/v1/convai/conversations/{{$json.conversation_id}}",
         "authentication": "genericCredentialType",
-        "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -213,17 +208,6 @@
     }
   ],
   "connections": {
-    "Schedule | Reconcile Every Minute": {
-      "main": [
-        [
-          {
-            "node": "ElevenLabs | Check Main Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "ElevenLabs | Check Main Agent": {
       "main": [
         [
@@ -273,6 +257,17 @@
         [
           {
             "node": "Supabase | Commit Outcome and Automatic Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook | Post Call Outcome": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs | Check Main Agent",
             "type": "main",
             "index": 0
           }
