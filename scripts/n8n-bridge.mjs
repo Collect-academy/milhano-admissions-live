@@ -148,6 +148,16 @@ async function main() {
       const liveModeTrue = /test_mode:\\s*true/.test(norm);
       const stageGateCode = nodes.find(n => n.name === "Prepare | Lead + Light Gate")?.parameters?.jsCode ?? "";
       const requiresExactStage = stageGateCode.includes("24a91c8c-c38a-48f9-934a-a5a1b5cb8fa0");
+      console.log("Sofia WF03 node diagnostics:", JSON.stringify(
+        nodes.filter(n => /Normalize|Prepare.*ElevenLabs|Outbound/i.test(n.name))
+          .map(n => ({
+            name: n.name, type: n.type,
+            paramKeys: Object.keys(n.parameters ?? {}).slice(0,10),
+            codeLength: String(n.parameters?.jsCode ?? "").length,
+            testModeTextPresent: JSON.stringify(n.parameters ?? {}).includes("test_mode"),
+            branchIdTextPresent: JSON.stringify(n.parameters ?? {}).includes("branch_id")
+          }))
+      ));
       console.log("Sofia WF03 extra preflight:", JSON.stringify({
         fixedV2Branch,branchFieldPresent,liveModeFalse,liveModeTrue,requiresExactStage
       }));
