@@ -76,18 +76,24 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
   setWindows(prev=>prev.map((w,i)=>i===index?{...w,[key]:value}:w));
  }
  const schedule=useMemo(()=>{
-  try{
+  try {
    const indexed=windows.map((w,i)=>({...asUTC(w),index:i})).sort((a,b)=>a.startMs-b.startMs);
-   if(indexed.some((w,i)=>w.endMs<=w.startMs||w.startMs<=Date.now()||w.endMs>Date.now()+90*86400*1000
-    ||(i>0&&indexed[i-1].endMs>w.startMs)))return {error:"Corrige fechas, horas o ventanas solapadas.",slots:[] as {window_index:number;scheduled_at:string}[]};
-   const slots:{window_index:number;scheduled_at:string}[]=[];
-   for(const w of indexed) for(let time=w.startMs;time+7*60000<=w.endMs;time+=7*60000)
-    slots.push({window_index:w.index,scheduled_at:new Date(time).toISOString()});
-   if(slots.length<chosen.length)return {error:"No caben todos los contactos en esas ventanas a 7 minutos por intento. Añade horarios o reduce el lote.",slots};
+   if(indexed.some((w,i)=>w.endMs<=w.startMs||w.startMs<=Date.now()
+    ||w.endMs>Date.now()+90*86400*1000||(i>0&&indexed[i-1].endMs>w.startMs)))
+    return {error:"Corrige fechas, horas o ventanas solapadas.",
+      slots:[] as {window_index:number;scheduled_at:string}[]};
+   // Each window groups its permission requests at its start, without invented
+   // seven-minute slots. Approval and call timing is managed asynchronously
+   // by WhatsApp/ElevenLabs, not by this planning calendar.
+   const slots=Array.from({length:chosen.length},(_,i)=>{
+     const w=indexed[Math.min(Math.floor(i*indexed.length/chosen.length),indexed.length-1)];
+     return {window_index:w.index,scheduled_at:w.start_at};
+   });
    return {error:"",slots};
-  }catch{return {error:"Una de las fechas o ventanas no es válida.",slots:[] as {window_index:number;scheduled_at:string}[]};}
+  } catch {return {error:"Una de las fechas o ventanas no es válida.",
+    slots:[] as {window_index:number;scheduled_at:string}[]};}
  },[windows,chosen.length]);
- async function controlCampaign(c:SofiaCampaign,action:"resume"|"pause"|"cancel") {
+  async function controlCampaign(c:SofiaCampaign,action:"resume"|"pause"|"cancel") {
   if(!canPlan||busy)return;
   if(action==="cancel" && !window.confirm("¿Cancelar esta campaña? No se contactará a los pendientes."))return;
   setBusy(true);setStatus(null);
@@ -118,8 +124,8 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
  }
  return <div className="sofia-planner">
   <section className="panel">
-   <div className="sofia-panel-title"><h2>1. Selecciona oportunidades</h2><span className="sofia-count">{chosen.length} seleccionadas</span></div>
-   <p className="subtitle">Datos sincronizados desde GHL. Sólo oportunidades abiertas de Setter; la elegibilidad final se vuelve a verificar antes de llamar.</p>
+   <div className="sofia-panel-title"><h2>1. ¿A quiénes enviaremos la autorización?</h2><span className="sofia-count">{chosen.length} seleccionadas</span></div>
+   <p className="subtitle">Seleccionar contactos no envía nada. Para probar con uno, selecciónalo y usa «Enviar 1 autorización ahora». Para crear un lote mayor, continúa con la programación de abajo.</p>
    <div className="sofia-filters">
     <label>Etapa<select value={stage} onChange={e=>setStage(e.target.value)}><option value="all">Todas</option>{Object.entries(stageLabels).map(([key,v])=><option key={key} value={key}>{v}</option>)}</select></label>
     <label>Fecha desde<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label>
@@ -160,24 +166,26 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
    </div>
   </section>
   <section className="panel">
-   <div className="sofia-panel-title"><h2>2. Planifica el lote</h2><span className="sofia-count">Modo borrador seguro</span></div>
+   <div className="sofia-panel-title"><h2>2. ¿Cuándo enviamos las solicitudes del lote?</h2><span className="sofia-count">Solo borrador · no se envía todavía</span></div>
    <label className="sofia-name-label">Nombre de campaña<input value={name} maxLength={90} onChange={e=>setName(e.target.value)}/></label>
-   <div className="sofia-window-title"><strong>Ventanas horarias de Mérida</strong><span>Intervalos de 7 minutos para planificación (no reserva de línea ni duración garantizada)</span></div>
+   <div className="sofia-window-title"><strong>Horarios de envío de autorizaciones · Mérida</strong><span>No son citas ni ventanas de llamada: la persona puede aceptar más tarde y ElevenLabs la llamará entonces.</span></div>
    {windows.map((w,i)=><div className="sofia-window" key={i}>
     <label>Día<input type="date" value={w.date} onChange={e=>updateWindow(i,"date",e.target.value)}/></label>
-    <label>Desde<input type="time" value={w.start} onChange={e=>updateWindow(i,"start",e.target.value)}/></label>
-    <label>Hasta<input type="time" value={w.end} onChange={e=>updateWindow(i,"end",e.target.value)}/></label>
+    <label>Enviar desde<input type="time" value={w.start} onChange={e=>updateWindow(i,"start",e.target.value)}/></label>
+    <label>Ventana válida hasta<input type="time" value={w.end} onChange={e=>updateWindow(i,"end",e.target.value)}/></label>
     <button type="button" className="secondary-button" disabled={windows.length===1} onClick={()=>setWindows(prev=>prev.filter((_,j)=>i!==j))}>Quitar</button>
    </div>)}
    <button type="button" className="secondary-button" disabled={windows.length>=8} onClick={()=>setWindows(prev=>[...prev,{date:day(1),start:"16:00",end:"19:00"}])}>+ Añadir ventana</button>
+   <p className="subtitle">Si eliges varios horarios, repartimos los contactos entre ellos. Dentro de cada horario no agregamos retrasos: ElevenLabs espera la autorización de cada familia y gestiona la capacidad de llamadas.</p>
    <div className="sofia-preview">
     <h3>Vista previa</h3>
-    <div className="sofia-metric-line"><span>Contactos</span><strong>{chosen.length}</strong></div>
-    <div className="sofia-metric-line"><span>Espacios calculados</span><strong>{schedule.slots.length}</strong></div>
-    <div className="sofia-metric-line"><span>Concurrencia de prueba</span><strong>1 llamada</strong></div>
-    <div className="sofia-metric-line"><span>Inicio del lote</span><strong>{schedule.slots.length?fmt(schedule.slots[0].scheduled_at):"—"}</strong></div>
+    <div className="sofia-metric-line"><span>Contactos seleccionados</span><strong>{chosen.length}</strong></div>
+    <div className="sofia-metric-line"><span>Solicitudes previstas</span><strong>{schedule.slots.length}</strong></div>
+    <div className="sofia-metric-line"><span>Espera fija por contacto</span><strong>Ninguna</strong></div>
+    <div className="sofia-metric-line"><span>Concurrencia de llamadas</span><strong>La gestiona ElevenLabs</strong></div>
+    <div className="sofia-metric-line"><span>Primer envío previsto</span><strong>{schedule.slots.length?fmt(schedule.slots[0].scheduled_at):"—"}</strong></div>
     {schedule.error?<p className="sofia-error">{schedule.error}</p>:null}
-    <p>Al guardar se crea un borrador en Supabase. No dispara llamadas, no mueve oportunidades y no escribe en GHL.</p>
+    <p>Los contactos se distribuyen entre los horarios elegidos y sus solicitudes se programan al inicio de cada ventana, sin intervalos artificiales. <strong>Guardar crea solamente un borrador:</strong> todavía no envía WhatsApp ni activa el motor general.</p>
    </div>
    <button type="button" className="primary-button" disabled={!canPlan||busy||!chosen.length||Boolean(schedule.error)||name.trim().length<3} onClick={save}>
     {busy?"Guardando...":"Guardar planificación sin activar llamadas"}
