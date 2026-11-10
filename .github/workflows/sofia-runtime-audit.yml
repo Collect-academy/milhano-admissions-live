@@ -1,0 +1,19 @@
+name: Milhano | Sofía validate live workflow executions
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/sofia-runtime-audit.yml]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Audit recent errors without logging contact data
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node scripts/sofia-live-runtime-check.mjs
