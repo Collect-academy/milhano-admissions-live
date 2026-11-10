@@ -139,6 +139,18 @@ async function main() {
       const modeLiteral = text.match(new RegExp("test_mode\\\\s*:\\\\s*(true|false)", "i"));
       const callsApi = text.includes("elevenlabs.io/v1/convai/whatsapp/outbound-call");
       const hasBranchId = /agtbrch_5901m66tpzs8eqtryhadxb29zbk4/.test(text);
+      const norm = nodes.find(n => n.name === "Normalize | Feed Trigger")?.parameters?.jsCode ?? "";
+      const outboundCode = nodes.find(n => n.name === "Prepare | ElevenLabs Outbound")?.parameters?.jsCode ?? "";
+      const v2Branch = "agtbrch_5901m66tpzs8eqtryhadxb29zbk4";
+      const fixedV2Branch = outboundCode.includes(v2Branch);
+      const branchFieldPresent = outboundCode.includes("branch_id");
+      const liveModeFalse = /test_mode:\\s*false/.test(norm);
+      const liveModeTrue = /test_mode:\\s*true/.test(norm);
+      const stageGateCode = nodes.find(n => n.name === "Prepare | Lead + Light Gate")?.parameters?.jsCode ?? "";
+      const requiresExactStage = stageGateCode.includes("24a91c8c-c38a-48f9-934a-a5a1b5cb8fa0");
+      console.log("Sofia WF03 extra preflight:", JSON.stringify({
+        fixedV2Branch,branchFieldPresent,liveModeFalse,liveModeTrue,requiresExactStage
+      }));
       console.log("Sofia WF03:", JSON.stringify({
         name:feed.name, active:detail.active, archived:detail.isArchived===true,
         webhookPaths, nodeCount:nodes.length, testModeLiteral:modeLiteral?.[1]??"not-detected",
