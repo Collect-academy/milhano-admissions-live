@@ -136,7 +136,7 @@ export async function getSofiaAnalytics(): Promise<SofiaAnalytics> {
 
 export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
   const admin = createSupabaseAdmin();
-  const [opportunities, assigned, closer, allSetter] = await Promise.all([
+  const [opportunities, assigned] = await Promise.all([
     admin.from("milhano_opportunities")
       .select("ghl_opportunity_id,ghl_contact_id,opportunity_name,contact_name,phone,current_stage,pipeline_stage_id,created_at,source,status")
       .eq("pipeline_id", SETTER_PIPELINE_ID)
@@ -147,45 +147,35 @@ export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
       .select("ghl_contact_id,campaign_id,milhano_ai_campaigns!inner(status)")
       .in("status", ["queued", "claimed", "dispatched"])
       .in("milhano_ai_campaigns.status", ["draft", "scheduled", "running", "paused"])
-      .limit(5000),
-    admin.from("milhano_opportunities")
-      .select("ghl_contact_id")
-      .eq("pipeline_id", CLOSER_PIPELINE_ID)
-      .eq("status", "open").limit(5000),
-    admin.from("milhano_opportunities").select("ghl_contact_id")
-      .eq("pipeline_id", SETTER_PIPELINE_ID).eq("status","open").limit(5000),
+      .limit(5000)
   ]);
   const opportunitiesData = ensure(opportunities, "candidatos") as Record<string, unknown>[];
   const assignedData = ensure(assigned, "reservados") as Record<string, unknown>[];
-  const closerData = ensure(closer, "Closer") as Record<string, unknown>[];
-  const setterData = ensure(allSetter, "duplicados Setter") as Record<string, unknown>[];
 
   const reserved = new Set(assignedData.map(x => String(x.ghl_contact_id ?? "")));
-  const withCloser = new Set(closerData.map(x => String(x.ghl_contact_id ?? "")));
-  const contactCount = new Map<string, number>();
-  for (const o of setterData) {
-    const contact = String(o.ghl_contact_id ?? "");
-    contactCount.set(contact, (contactCount.get(contact) ?? 0) + 1);
-  }
-  return opportunitiesData.map(o => {
+  // A contact can have several Setter opportunities: use the newest eligible one
+  // as a CRM reference, but dispatch at most once to the contact.
+  const seenContacts = new Set<string>();
+  const onePerContact = [...opportunitiesData].sort((a,b) =>
+    String(b.created_at ?? "").localeCompare(String(a.created_at ?? "")))
+    .filter(o => {
+      const contact = String(o.ghl_contact_id ?? "");
+      if (seenContacts.has(contact)) return false;
+      seenContacts.add(contact);
+      return true;
+    });
+  return onePerContact.map(o => {
     const opportunityId = String(o.ghl_opportunity_id ?? "");
     const contactId = String(o.ghl_contact_id ?? "");
     const phone = String(o.phone ?? "");
     const stage = String(o.current_stage ?? "");
-    // The explicitly requested QA opportunity shares a legacy test contact with
-    // older Closer/Setter records. Do not relax duplicate checks for real leads.
-    const verifiedTest = opportunityId === "4DAoiAeCm5WBc1VtkJFD" &&
-      contactId === "FBZaamMSEDYI15g7LAjR";
-    const exclusion = verifiedTest ? null : !contactId || !opportunityId || !phone.trim()
+    const exclusion = !contactId || !opportunityId || !phone.trim()
       ? "Datos de contacto incompletos"
-      : (contactCount.get(contactId) ?? 0) > 1
-        ? "Contacto con varias oportunidades abiertas"
-        : withCloser.has(contactId) ? "Tiene oportunidad abierta en Closer"
-          : reserved.has(contactId) ? "Ya pertenece a una campaña activa" : null;
+      : reserved.has(contactId) ? "Ya pertenece a una campaña activa" : null;
     return {
       opportunityId,
       contactId,
-      name: String(verifiedTest ? o.opportunity_name : (o.contact_name ?? o.opportunity_name ?? "Sin nombre")),
+      name: String(o.contact_name ?? o.opportunity_name ?? "Sin nombre"),
       phoneLast4: phone.slice(-4),
       stage,
       stageId: o.pipeline_stage_id ? String(o.pipeline_stage_id) : null,
