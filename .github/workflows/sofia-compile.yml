@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - .github/workflows/sofia-compile.yml
+      - components/sofia-campaign-planner.tsx
+      - lib/sofia-analytics.ts
+      - app/sofia/**
+      - app/api/sofia/**
   workflow_dispatch:
 
 permissions:
@@ -17,7 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: feature/sofia-ai-setter-campaigns-20261109
+          ref: main
           persist-credentials: false
       - uses: actions/setup-node@v5
         with:
@@ -36,6 +40,4 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
         run: npm run build
 
-# Compile against current Sofía feature branch; do not merge into production on failed checks.
-
-# Type-check and build the added single-lead test route before production merge.
+# Always validate the deployed main branch.
