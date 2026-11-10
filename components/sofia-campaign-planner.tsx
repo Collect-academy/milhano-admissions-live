@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { SofiaCandidate, SofiaCampaign } from "@/lib/sofia-analytics";
 
 type WindowInput={date:string;start:string;end:string};
@@ -30,6 +30,43 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
  ).sort((a,b)=>sort==="asc"?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt)),[candidates,stage,sort,from,to,search]);
  const candidateById=new Map(candidates.map(c=>[c.opportunityId,c]));
  const chosen=selected.map(id=>candidateById.get(id)).filter((c):c is SofiaCandidate=>Boolean(c));
+ const [manualSending,setManualSending]=useState(false);
+ const [manualLoading,setManualLoading]=useState(false);
+ const [manualRecord,setManualRecord]=useState<{status:string;conversation_id:string|null}|null>(null);
+ const [manualNotice,setManualNotice]=useState<string|null>(null);
+ const selectedOne=chosen.length===1 ? chosen[0] : null;
+ const selectedOneId=selectedOne?.opportunityId??null;
+ useEffect(()=>{
+   let alive=true;
+   setManualNotice(null);setManualRecord(null);
+   if(!selectedOneId){setManualLoading(false);return;}
+   setManualLoading(true);
+   fetch("/api/sofia/dispatch-one?opportunity_id="+encodeURIComponent(selectedOneId),{cache:"no-store"})
+    .then(async r=>{const j=await r.json();if(!r.ok)throw new Error(j.error??"No se pudo comprobar el historial.");return j;})
+    .then(j=>{if(alive)setManualRecord(j.record??null);})
+    .catch(e=>{if(alive)setManualNotice(e instanceof Error?e.message:"No se pudo comprobar el historial.");})
+    .finally(()=>{if(alive)setManualLoading(false);});
+   return ()=>{alive=false;};
+ },[selectedOneId]);
+
+ async function sendSelectedNow(){
+   if(!canPlan||manualSending||manualLoading||manualRecord||!selectedOne||!selectedOne.eligible)return;
+   if(!window.confirm("¿Enviar una autorización real por WhatsApp a "+selectedOne.name+"? Se hará un solo intento, sin reenvío automático."))return;
+   setManualSending(true);setManualNotice(null);
+   try{
+     const r=await fetch("/api/sofia/dispatch-one",{
+       method:"POST",headers:{"Content-Type":"application/json"},
+       body:JSON.stringify({opportunity_id:selectedOne.opportunityId,contact_id:selectedOne.contactId,confirm:"ENVIAR_UNA_AUTORIZACION"})
+     });
+     const result=await r.json();
+     setManualNotice(result.message??result.error??"Respuesta registrada.");
+     const check=await fetch("/api/sofia/dispatch-one?opportunity_id="+encodeURIComponent(selectedOne.opportunityId),{cache:"no-store"}).then(x=>x.json());
+     if(check.record)setManualRecord(check.record);
+     if(!r.ok && !check.record)setManualNotice("Estado sin confirmar. Verifica n8n antes de intentar otra vez.");
+   }catch{setManualNotice("Resultado incierto; consulta n8n antes de volver a enviar.");}
+   finally{setManualSending(false);}
+ }
+
  function addFiltered(n:number|"all") {
   const available=filtered.filter(c=>c.eligible&&!selected.includes(c.opportunityId));
   const next=n==="all"?available:available.slice(0,n);
@@ -107,6 +144,20 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
     <td><span className={c.eligible?"sofia-ok":"sofia-blocked"}>{c.eligible?"Elegible preliminar":c.exclusion}</span></td>
    </tr>)}</tbody></table></div>
    {filtered.length>1000?<p className="subtitle">Se muestran los primeros 1,000 registros. Refina filtros para seleccionar el resto.</p>:null}
+   <div className="sofia-picker-send">
+    <div>
+     <strong>Envío individual desde la selección</strong>
+     <p className="subtitle">Elige una sola oportunidad para enviar su autorización ahora. No activa otros lotes ni reenvía solicitudes automáticamente.</p>
+    </div>
+    <button type="button" className="primary-button"
+      disabled={!canPlan||!selectedOne||!selectedOne.eligible||manualSending||manualLoading||manualRecord!==null||Boolean(manualNotice&&manualNotice.includes("comprobar"))}
+      onClick={sendSelectedNow}>
+      {manualSending?"Enviando...":manualLoading?"Verificando...":"Enviar 1 autorización ahora"}
+    </button>
+    {manualRecord?<p className="sofia-ok" role="status">Solicitud registrada: {manualRecord.status}
+      {manualRecord.conversation_id?" · "+manualRecord.conversation_id:""}. No se reenviará.</p>:null}
+    {manualNotice?<p className="sofia-caveat" role="status">{manualNotice}</p>:null}
+   </div>
   </section>
   <section className="panel">
    <div className="sofia-panel-title"><h2>2. Planifica el lote</h2><span className="sofia-count">Modo borrador seguro</span></div>
