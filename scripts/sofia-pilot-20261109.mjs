@@ -5,6 +5,10 @@
 
 import { randomBytes, randomUUID } from "node:crypto";
 
+// ARCHIVED: prior pilot forced ElevenLabs V2 branch after the user had merged to main.
+// Safety interlock: refuse all execution or reruns of this obsolete pilot.
+throw new Error("ARCHIVED_LEGACY_BRANCH_PILOT_DISABLED: ElevenLabs main only. No calls permitted.");
+
 const N8N = "https://collectacademy.app.n8n.cloud";
 const API = N8N + "/api/v1";
 const CAMPAIGN = process.env.SOFIA_PILOT_CAMPAIGN || "a3210e7c-4167-4651-be1a-75b854fae9c4";
