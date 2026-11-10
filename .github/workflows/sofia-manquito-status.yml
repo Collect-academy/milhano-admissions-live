@@ -1,0 +1,19 @@
+name: Milhano | Manquito conversation read-only status
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/sofia-manquito-status.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Inspect existing ElevenLabs conversation, no new calls
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node scripts/sofia-audit-manquito-conversation.mjs
