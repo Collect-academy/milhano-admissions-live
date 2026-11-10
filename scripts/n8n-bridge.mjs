@@ -32,7 +32,11 @@ const SOURCES = [
   },
   {
     path: "n8n/MILHANO_06_Sofia_Batch_Scheduler_V1_DISABLED.json",
-    name: "MILHANO | Sofia | 06 Batch Scheduler | DISABLED DRAFT",
+    name: "MILHANO | Sofia | 06 Campaign Scheduler | PROTECTED",
+  },
+  {
+    path: "n8n/MILHANO_07_Sofia_Conversation_Reconciliation_DRAFT.json",
+    name: "MILHANO | Sofia | 07 Conversation Reconciliation | SAFE DRAFT",
   },
 ];
 
@@ -184,6 +188,22 @@ async function main() {
   const plannedSources = [];
   for (const source of SOURCES) {
     const target = loadSource(source);
+    if (target.name.includes("07 Conversation Reconciliation")) {
+      const feed=list.filter(w=>/03 Individual Feed v1.1 International/.test(w.name??""));
+      assert(feed.length===1 && feed[0].active===true, "Live WF03 not found for ElevenLabs credential binding.");
+      const feedSource=await callApi("GET","/workflows/"+encodeURIComponent(feed[0].id));
+      const eleven=feedSource.nodes.find(n=>n.name==="ElevenLabs | Start WhatsApp Outbound");
+      const credentials=eleven?.credentials;
+      assert(credentials && Object.keys(credentials).length>0,
+        "Existing ElevenLabs authentication not available; refusing to import poller.");
+      const newNode=target.nodes.find(n=>n.name==="ElevenLabs | Conversation Details");
+      assert(newNode,"ElevenLabs status node missing.");
+      newNode.credentials=credentials;
+      newNode.parameters.authentication=eleven.parameters.authentication;
+      if(eleven.parameters.genericAuthType)newNode.parameters.genericAuthType=eleven.parameters.genericAuthType;
+      if(eleven.parameters.nodeCredentialType)newNode.parameters.nodeCredentialType=eleven.parameters.nodeCredentialType;
+      console.log("Reused existing ElevenLabs credential reference for conversation reconciler.");
+    }
     plannedSources.push({ source, target });
     const matches = list.filter((wf) => wf.name === source.name);
     assert(matches.length <= 1, "Duplicate workflow names; refusing ambiguous update: " + source.name);
@@ -212,7 +232,7 @@ async function main() {
     }
   }
   await auditSofiaDrafts(plannedSources, list, (id) => callApi("GET", "/workflows/" + encodeURIComponent(id)));
-  console.log("Planned changes:", changes.length, "/ 3 allowlisted draft workflows.");
+  console.log("Planned changes:", changes.length, "/ 4 allowlisted draft workflows.");
   if (MODE === "preview") {
     console.log("READ-ONLY preview completed. No workflow was created or edited.");
     return;
