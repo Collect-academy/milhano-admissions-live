@@ -1,5 +1,5 @@
 {
-  "name": "MILHANO | Sofia | 07 Conversation Reconciliation | POST CALL WEBHOOK",
+  "name": "MILHANO | Sofia | 07 Post Call + Initiation Failure Reconciliation | WEBHOOK",
   "nodes": [
     {
       "id": "3d93bc6d-c833-4a29-9165-7b7d9638e4e5",
@@ -57,7 +57,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_pending_call_reconciliation?select=conversation_id,created_at&conversation_id=eq.{{$('Webhook | Post Call Outcome').first().json.body.conversation_id}}&limit=1",
+        "url": "={{ 'https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_pending_call_reconciliation?select=conversation_id,created_at&conversation_id=eq.' + encodeURIComponent($('Validate | Official Event and Conversation').first().json.conversation_id) + '&limit=1' }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
@@ -156,7 +156,7 @@
         160
       ],
       "parameters": {
-        "jsCode": "const results=$input.all(),pending=$('Select | Valid Pending Conversations').all();\nif(results.length!==pending.length)throw new Error('CONVERSATION_LOOKUP_COUNT_MISMATCH');\nconst items=[],ts=x=>typeof x==='number'&&Number.isFinite(x)?new Date(x>1e12?x:x*1000).toISOString():null;\nconst number=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0?x:null;\nfor(let i=0;i<results.length;i++){\n const d=results[i]?.json??{},p=pending[i]?.json??{},m=d.metadata??{},an=d.analysis??{};\n if(d.error||String(d.conversation_id??'')!==p.conversation_id)continue;\n if(d.agent_id!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v'||!p.main_branch_id||String(d.branch_id??'')!==p.main_branch_id)continue;\n const status=String(d.status??'').toLowerCase();if(!['done','failed'].includes(status))continue;\n const reason=String(m.termination_reason??d.termination_reason??m.phone_call_status??m.call_status??'');\n const r=reason.toLowerCase(),turns=Array.isArray(d.transcript)?d.transcript.filter(t=>t.role==='user'&&String(t.message??'').trim()).length:0;\n const vars={},collected=an.data_collection_results??{};\n for(const [key,value] of Object.entries(collected)){vars[String(value?.name??key)]=value?.value??value??null;}\n const yes=k=>vars[k]===true||vars[k]==='true';\n let outcome='unknown',source='unrecognized_terminal';\n if(/declined the call permission|permission request rejected|permission denied/.test(r)){\n  outcome='permission_declined';source='permission_denied_explicit';\n }else if(/call rejected by the user|user rejected the call|declined the incoming call/.test(r)){\n  outcome='rejected';source='explicit_user_call_rejection';\n }else if(['no_answer','not_answered','unanswered','busy','no_pickup'].includes(r)||/no answer|not answered|no.pickup|unanswered|call missed|missed by the user|ringing timed out|busy/.test(r)){\n  outcome='no_answer';source='explicit_no_answer_termination';\n }else if(turns>0){outcome='answered';source='transcript_user_turns';}\n items.push({json:{p_result:{\n  conversation_id:p.conversation_id,agent_id:d.agent_id,branch_id:String(d.branch_id),main_branch_id:p.main_branch_id,\n  conversation_status:status,outcome,classification_evidence:source,termination_reason:reason||null,user_turns:turns,\n  started_at:ts(m.start_time_unix_secs),ended_at:ts(m.end_time_unix_secs),\n  duration_seconds:number(m.call_duration_secs),\n  credits_consumed:number(m.credits_consumed)??number(m.usage?.credits_consumed),\n  summary:typeof an.transcript_summary==='string'?an.transcript_summary:null,\n  meaningful:yes('information_delivered')&&turns>0,qualified:yes('qualified')&&turns>0,\n  tour_requested:yes('school_tour_requested'),callback_requested:yes('callback_requested'),\n  do_not_contact:yes('do_not_contact'),collected_variables:vars\n }}});\n}\nreturn items;"
+        "jsCode": "const results=$input.all(),pending=$('Select | Valid Pending Conversations').all();\nif(results.length!==pending.length)throw new Error('CONVERSATION_LOOKUP_COUNT_MISMATCH');\nconst items=[],ts=x=>typeof x==='number'&&Number.isFinite(x)?new Date(x>1e12?x:x*1000).toISOString():null;\nconst number=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0?x:null;\nfor(let i=0;i<results.length;i++){\n const d=results[i]?.json??{},p=pending[i]?.json??{},m=d.metadata??{},an=d.analysis??{};\n if(d.error||String(d.conversation_id??'')!==p.conversation_id)continue;\n if(d.agent_id!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v'||!p.main_branch_id||String(d.branch_id??'')!==p.main_branch_id)continue;\n const status=String(d.status??'').toLowerCase();if(!['done','failed'].includes(status))continue;\n const incoming=$('Validate | Official Event and Conversation').first().json;\n const providerFailure=incoming.kind==='call_initiation_failure'&&incoming.conversation_id===p.conversation_id?incoming.failure_reason:null;\n const reason=String(providerFailure??m.termination_reason??d.termination_reason??m.phone_call_status??m.call_status??'');\n const r=reason.toLowerCase(),turns=Array.isArray(d.transcript)?d.transcript.filter(t=>t.role==='user'&&String(t.message??'').trim()).length:0;\n const vars={},collected=an.data_collection_results??{};\n for(const [key,value] of Object.entries(collected)){vars[String(value?.name??key)]=value?.value??value??null;}\n const yes=k=>vars[k]===true||vars[k]==='true';\n let outcome='unknown',source='unrecognized_terminal';\n if(/declined the call permission|permission request rejected|permission denied/.test(r)){\n  outcome='permission_declined';source='permission_denied_explicit';\n }else if(/call rejected by the user|user rejected the call|declined the incoming call/.test(r)){\n  outcome='rejected';source='explicit_user_call_rejection';\n }else if(['no_answer','not_answered','unanswered','busy','no_pickup'].includes(r)||/no[- ]answer|not answered|no.pickup|unanswered|call missed|missed by the user|ringing timed out|busy/.test(r)){\n  outcome='no_answer';source='explicit_no_answer_termination';\n }else if(turns>0){outcome='answered';source='transcript_user_turns';}\n items.push({json:{p_result:{\n  conversation_id:p.conversation_id,agent_id:d.agent_id,branch_id:String(d.branch_id),main_branch_id:p.main_branch_id,\n  conversation_status:status,outcome,classification_evidence:source,termination_reason:reason||null,user_turns:turns,\n  started_at:ts(m.start_time_unix_secs),ended_at:ts(m.end_time_unix_secs),\n  duration_seconds:number(m.call_duration_secs),\n  credits_consumed:number(m.credits_consumed)??number(m.usage?.credits_consumed),\n  summary:typeof an.transcript_summary==='string'?an.transcript_summary:null,\n  meaningful:yes('information_delivered')&&turns>0,qualified:yes('qualified')&&turns>0,\n  tour_requested:yes('school_tour_requested'),callback_requested:yes('callback_requested'),\n  do_not_contact:yes('do_not_contact'),collected_variables:vars\n }}});\n}\nreturn items;"
       }
     },
     {
@@ -205,6 +205,19 @@
         }
       },
       "onError": "stopWorkflow"
+    },
+    {
+      "id": "ddfc5f38-e39a-4a30-b90e-c34d9b7b4f41",
+      "name": "Validate | Official Event and Conversation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1380,
+        160
+      ],
+      "parameters": {
+        "jsCode": "const b=$input.first().json?.body??{};\nconst envelope=b.event&&typeof b.event==='object'?b.event:b;\nconst cid=String(envelope.conversation_id??envelope.data?.conversation_id??'');\nconst kind=String(envelope.type??'post_call_transcription');\nconst id=String(envelope.data?.agent_id??'');\nif(!/^conv_[A-Za-z0-9]+$/.test(cid))throw new Error('INVALID_CONVERSATION_ID');\nif(!['post_call_transcription','call_initiation_failure'].includes(kind))throw new Error('UNSUPPORTED_POSTCALL_EVENT');\nif(kind==='call_initiation_failure'&&id!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v')throw new Error('AGENT_MISMATCH');\nconst failure=kind==='call_initiation_failure'?String(envelope.data?.failure_reason??'').toLowerCase():null;\nif(failure&&!['busy','no-answer','unknown'].includes(failure))throw new Error('UNSUPPORTED_FAILURE_REASON');\nreturn [{json:{conversation_id:cid,kind,failure_reason:failure}}];"
+      }
     }
   ],
   "connections": {
@@ -264,6 +277,17 @@
       ]
     },
     "Webhook | Post Call Outcome": {
+      "main": [
+        [
+          {
+            "node": "Validate | Official Event and Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate | Official Event and Conversation": {
       "main": [
         [
           {
