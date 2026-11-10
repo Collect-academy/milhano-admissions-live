@@ -93,9 +93,10 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
   } catch {return {error:"Una de las fechas o ventanas no es válida.",
     slots:[] as {window_index:number;scheduled_at:string}[]};}
  },[windows,chosen.length]);
-  async function controlCampaign(c:SofiaCampaign,action:"resume"|"pause"|"cancel") {
+  async function controlCampaign(c:SofiaCampaign,action:"start"|"resume"|"pause"|"cancel") {
   if(!canPlan||busy)return;
   if(action==="cancel" && !window.confirm("¿Cancelar esta campaña? No se contactará a los pendientes."))return;
+  if(["start","resume"].includes(action)&&!window.confirm("¿Activar el envío de solicitudes de WhatsApp para "+c.selected+" contactos? Podrían recibir llamadas cuando autoricen. Cada contacto puede recibir hasta 2 intentos."))return;
   setBusy(true);setStatus(null);
   try{
     const r=await fetch("/api/sofia/campaigns/"+encodeURIComponent(c.id)+"/control",{
@@ -107,17 +108,18 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
   }catch(e){setStatus({ok:false,message:e instanceof Error?e.message:"Error desconocido"});}
   finally{setBusy(false);}
  }
- async function save(){
+ async function save(activate=false){
   if(!canPlan||busy||schedule.error||!chosen.length||chosen.some(c=>!c.eligible))return;
+  if(activate&&!window.confirm("¿Activar "+chosen.length+" solicitudes de WhatsApp en los horarios elegidos, con un máximo de 2 intentos por contacto?"))return;
   setBusy(true);setStatus(null);
   try {
    const response=await fetch("/api/sofia/campaigns",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({name,windows:windows.map(w=>{const x=asUTC(w);return {start_at:x.start_at,end_at:x.end_at};}),
+    body:JSON.stringify({name,activate,windows:windows.map(w=>{const x=asUTC(w);return {start_at:x.start_at,end_at:x.end_at};}),
      members:chosen.map((c,i)=>({ghl_contact_id:c.contactId,ghl_opportunity_id:c.opportunityId,
        window_index:schedule.slots[i].window_index,scheduled_at:schedule.slots[i].scheduled_at}))})});
    const result=await response.json();
    if(!response.ok)throw new Error(result.error??"No se pudo guardar.");
-   setStatus({ok:true,message:"Borrador creado. ID: "+result.campaign_id+". No está autorizado para llamar; falta revisión y activación del motor."});
+   setStatus({ok:true,message:activate?"Lote activado. ID: "+result.campaign_id+". El motor enviará las solicitudes al llegar el horario.":"Borrador guardado. ID: "+result.campaign_id});
    setSelected([]);
    window.location.reload();
   } catch(e){setStatus({ok:false,message:e instanceof Error?e.message:"Error desconocido"});} finally {setBusy(false);}
@@ -166,7 +168,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
    </div>
   </section>
   <section className="panel">
-   <div className="sofia-panel-title"><h2>2. ¿Cuándo enviamos las solicitudes del lote?</h2><span className="sofia-count">Solo borrador · no se envía todavía</span></div>
+   <div className="sofia-panel-title"><h2>2. ¿Cuándo enviamos las solicitudes del lote?</h2><span className="sofia-count">{dispatchEnabled?"Listo para activar":"Envío temporalmente bloqueado"}</span></div>
    <label className="sofia-name-label">Nombre de campaña<input value={name} maxLength={90} onChange={e=>setName(e.target.value)}/></label>
    <div className="sofia-window-title"><strong>Horarios de envío de autorizaciones · Mérida</strong><span>No son citas ni ventanas de llamada: la persona puede aceptar más tarde y ElevenLabs la llamará entonces.</span></div>
    {windows.map((w,i)=><div className="sofia-window" key={i}>
@@ -185,27 +187,32 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
     <div className="sofia-metric-line"><span>Concurrencia de llamadas</span><strong>La gestiona ElevenLabs</strong></div>
     <div className="sofia-metric-line"><span>Primer envío previsto</span><strong>{schedule.slots.length?fmt(schedule.slots[0].scheduled_at):"—"}</strong></div>
     {schedule.error?<p className="sofia-error">{schedule.error}</p>:null}
-    <p>Los contactos se distribuyen entre los horarios elegidos y sus solicitudes se programan al inicio de cada ventana, sin intervalos artificiales. <strong>Guardar crea solamente un borrador:</strong> todavía no envía WhatsApp ni activa el motor general.</p>
+    <p>Las solicitudes se distribuyen entre las ventanas, sin intervalos artificiales. <strong>Guardar borrador</strong> no envía nada. <strong>Crear y activar</strong> programa el envío real para las fechas elegidas. ElevenLabs gestiona las aceptaciones y las llamadas.</p>
    </div>
-   <button type="button" className="primary-button" disabled={!canPlan||busy||!chosen.length||Boolean(schedule.error)||name.trim().length<3} onClick={save}>
-    {busy?"Guardando...":"Guardar planificación sin activar llamadas"}
-   </button>
+   <div className="sofia-selection-actions">
+    <button type="button" className="secondary-button" disabled={!canPlan||busy||!chosen.length||Boolean(schedule.error)||name.trim().length<3} onClick={()=>save(false)}>
+      Guardar borrador
+    </button>
+    <button type="button" className="primary-button" disabled={!canPlan||!dispatchEnabled||busy||!chosen.length||Boolean(schedule.error)||name.trim().length<3} onClick={()=>save(true)}>
+      {busy?"Procesando...":"Crear y activar lote"}
+    </button>
+   </div>
    {!canPlan?<p className="sofia-error">Sólo los administradores pueden crear lotes.</p>:null}
    {status?<p role="status" className={status.ok?"sofia-ok":"sofia-error"}>{status.message}</p>:null}
   </section>
   <section className="panel">
    <h2>3. Campañas creadas</h2>
-   <p className="subtitle">{dispatchEnabled?"Sistema habilitado; sólo campañas autorizadas pueden llamar.":"Envíos bloqueados hasta verificar la primera llamada en producción."}</p>
+   <p className="subtitle">{dispatchEnabled?"Envío habilitado. Solicitudes según hora programada; reintentos automáticos según resultado.":"El envío masivo está desactivado temporalmente."}</p>
    <div className="sofia-scroll"><table className="sofia-table"><thead><tr><th>Nombre</th><th>Estado</th><th>Selección</th><th>Enviados o en curso</th><th>Pendientes</th><th>Revisión</th><th>Control</th></tr></thead>
    <tbody>{campaigns.map(c=><tr key={c.id}><td><strong>{c.name}</strong><small>{c.id}</small></td>
     <td>{c.status} {c.dry_run?"· sin envío":""}<small>Liberados: {c.released??0}/{c.selected}</small></td><td>{c.selected}</td><td>{c.in_flight}</td><td>{c.queued}</td><td>{c.review_needed}</td>
     <td><div className="sofia-row-actions">
       {c.status==="running"&&canPlan?<button type="button" className="secondary-button" disabled={busy} onClick={()=>controlCampaign(c,"pause")}>Pausar</button>:null}
-      {canPlan&&dispatchEnabled&&c.pilotVerified&&["draft","paused","running","scheduled"].includes(c.status)?
-        <button type="button" className="primary-button" disabled={busy} onClick={()=>controlCampaign(c,"resume")}>Continuar pendientes</button>:null}
+      {canPlan&&dispatchEnabled&&["draft","paused","scheduled"].includes(c.status)?
+        <button type="button" className="primary-button" disabled={busy} onClick={()=>controlCampaign(c,"start")}>Activar lote</button>:null}
       {canPlan&&["draft","paused","scheduled"].includes(c.status)?
         <button type="button" className="secondary-button" disabled={busy} onClick={()=>controlCampaign(c,"cancel")}>Cancelar</button>:null}
-      {!c.pilotVerified&&["draft","paused"].includes(c.status)?<small>Falta validar prueba individual</small>:null}
+      {c.status==="running"?<small>En ejecución</small>:null}
     </div></td>
    </tr>)}</tbody></table>
    {campaigns.length===0?<p>Sin campañas configuradas todavía.</p>:null}</div>
