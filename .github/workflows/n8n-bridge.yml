@@ -46,5 +46,5 @@ jobs:
         env:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
           SYNC_CONFIRM: ${{ inputs.confirm }}
-          N8N_MODE: ${{ github.event_name == 'push' && 'check' || inputs.operation }}
+          N8N_MODE: ${{ github.event_name == 'push' && 'preview' || inputs.operation }}
         run: node scripts/n8n-bridge.mjs "$N8N_MODE"
