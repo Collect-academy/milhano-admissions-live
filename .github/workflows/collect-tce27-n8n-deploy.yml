@@ -1,0 +1,32 @@
+name: Collect TCE27 | Isolated n8n capture deployment
+on:
+  push:
+    branches:
+      - ops/tce27-n8n-collect-only-20261110
+    paths:
+      - .github/workflows/collect-tce27-n8n-deploy.yml
+permissions:
+  contents: read
+concurrency:
+  group: collect-tce27-wf02-deploy-once
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: "github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(collect): run isolated TCE27 n8n deployment'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Read isolated branch without persisting credentials
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Validate deployment script syntax
+        run: node --check ops/tce27/deploy.mjs
+      - name: Verify n8n target and webhook collisions (read only)
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node ops/tce27/deploy.mjs preflight
+      - name: Import and publish ONLY Collect TCE27 WF02
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node ops/tce27/deploy.mjs publish
