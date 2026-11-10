@@ -1,0 +1,31 @@
+name: Milhano | Sofía production batch and retry deployment
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sofia-go-live.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: milhano-sofia-production-batch-go-live
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: "${{ github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(sofia): deploy live campaign and call reconciliation workflows' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check latest n8n syntax
+        run: node --check scripts/sofia-live-deploy-20261110.mjs
+      - name: Apply protected production workflow changes
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: node scripts/sofia-live-deploy-20261110.mjs
