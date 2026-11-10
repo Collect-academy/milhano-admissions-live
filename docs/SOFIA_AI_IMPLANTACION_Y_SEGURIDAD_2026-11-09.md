@@ -84,3 +84,11 @@ No se modifican `app/page.tsx` ni los cálculos de V2 Summary. La IA alimentará
 - El planificador crea borradores, **no campañas ejecutables** desde la UI hasta cerrar y probar el despacho completo.
 - No se han verificado builds de Next.js en un CI; no desplegar antes de compilar y corregir errores.
 - Ni GHL ni ElevenLabs ni n8n se han modificado en producción.
+
+## Auditoría GitHub Actions + n8n (2026-11-09)
+- Se actualizó el puente de `actions/checkout@v4` a `actions/checkout@v6` (runtime Node.js 24). GitHub Actions ejecutó correctamente y no mostró advertencia de Node 20.
+- Se incorporó `scripts/n8n-preflight.mjs` y su ejecución automática antes de cada vista previa o sincronización.
+- Auditoría read-only real: **53 workflows visibles**, **6/6 tipos y versiones de nodos coincidentes**, **2/2 IDs de credenciales referenciados también en workflows existentes**, **0 rutas webhook duplicadas**.
+- Se validaron nombres e IDs únicos de nodos, conexiones, referencias explícitas a otros nodos y compuertas de seguridad de llamadas y movimientos de etapas.
+- Comprobación completada sin modificar workflows en n8n: [GitHub Actions run 42730131830](https://github.com/Collect-academy/milhano-admissions-live/actions/runs/42730131830).
+- **No equivale a una prueba de ejecución:** todavía hay que confirmar permisos de creación/escritura de la API, acceso a credenciales según el proyecto de destino, funcionamiento de cada nodo y entrega final de resultados de llamadas al importar los borradores. No activar producción hasta entonces.
