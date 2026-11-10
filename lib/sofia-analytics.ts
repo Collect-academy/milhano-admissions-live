@@ -38,6 +38,8 @@ export type SofiaCampaign = {
   completed: number;
   review_needed: number;
   excluded: number;
+  pilotVerified?: boolean;
+  released?: number;
 };
 
 type DailyRow = {
@@ -90,6 +92,7 @@ export type SofiaAnalytics = {
   campaigns: SofiaCampaign[];
   firstCallLatencies: number[];
   objections: { category: string; cases: number }[];
+  dispatchEnabled: boolean;
 };
 
 function ensure<T>(result: { data: T | null; error: { message: string } | null }, label: string): T {
@@ -99,7 +102,7 @@ function ensure<T>(result: { data: T | null; error: { message: string } | null }
 
 export async function getSofiaAnalytics(): Promise<SofiaAnalytics> {
   const admin = createSupabaseAdmin();
-  const [daily, hourly, calls, disqualified, campaigns, latencies, objections] = await Promise.all([
+  const [daily, hourly, calls, disqualified, campaigns, latencies, objections, campaignSettings, runtimeControl] = await Promise.all([
     admin.from("milhano_ai_dashboard_daily").select("*").order("local_date", { ascending: true }).limit(2000),
     admin.from("milhano_ai_dashboard_hourly").select("*").limit(2000),
     admin.from("milhano_ai_call_insights")
@@ -109,6 +112,8 @@ export async function getSofiaAnalytics(): Promise<SofiaAnalytics> {
     admin.from("milhano_ai_dashboard_campaigns").select("*").order("created_at", { ascending: false }).limit(100),
     admin.from("milhano_ai_dashboard_first_call_latency").select("hours_from_creation_to_first_ai_call").limit(2000),
     admin.from("milhano_ai_dashboard_objections").select("category,cases").limit(2000),
+    admin.from("milhano_ai_campaigns").select("id,settings").limit(200),
+    admin.from("milhano_ai_runtime_control").select("live_dispatch_enabled").eq("singleton",true).maybeSingle(),
   ]);
 
   return {
@@ -116,10 +121,16 @@ export async function getSofiaAnalytics(): Promise<SofiaAnalytics> {
     hourly: ensure(hourly, "indicadores por hora") as HourlyRow[],
     calls: ensure(calls, "llamadas") as SofiaCallRow[],
     disqualificationReasons: ensure(disqualified, "motivos de descalificación") as { reason: string; cases: number }[],
-    campaigns: ensure(campaigns, "campañas") as SofiaCampaign[],
+    campaigns: (ensure(campaigns, "campañas") as SofiaCampaign[]).map(c=> {
+      const setting = (ensure(campaignSettings, "configuración de campañas") as {id:string;settings:Record<string,unknown>}[])
+        .find(s=>s.id===c.id)?.settings;
+      return {...c,pilotVerified:setting?.one_call_pilot_verified===true,
+        released:Number(setting?.release_limit??0)};
+    }),
     firstCallLatencies: (ensure(latencies, "tiempos") as {hours_from_creation_to_first_ai_call: number}[])
       .map(x=>Number(x.hours_from_creation_to_first_ai_call)).filter(x=>Number.isFinite(x)),
     objections: ensure(objections, "objeciones") as {category:string;cases:number}[],
+    dispatchEnabled: (runtimeControl.data?.live_dispatch_enabled===true),
   };
 }
 
