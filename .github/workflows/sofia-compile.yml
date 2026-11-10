@@ -35,3 +35,5 @@ jobs:
           SUPABASE_SECRET_KEY: placeholder
           NEXT_TELEMETRY_DISABLED: 1
         run: npm run build
+
+# Compile against current Sofía feature branch; do not merge into production on failed checks.
