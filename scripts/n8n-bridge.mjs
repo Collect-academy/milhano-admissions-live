@@ -38,6 +38,10 @@ const SOURCES = [
     path: "n8n/MILHANO_07_Sofia_Conversation_Reconciliation_DRAFT.json",
     name: "MILHANO | Sofia | 07 Conversation Reconciliation | SAFE DRAFT",
   },
+  {
+    path: "n8n/MILHANO_08_Sofia_10_Autorizaciones_2026-11-10_0800.json",
+    name: "MILHANO | Sofia | 08 One Shot Authorizations | 10 NOV 08:00 MERIDA",
+  },
 ];
 
 function assert(condition, message) {
@@ -230,6 +234,24 @@ async function main() {
       n.parameters.headerParameters??={parameters:[]};
       n.parameters.headerParameters.parameters=n.parameters.headerParameters.parameters.filter(h=>h.name.toLowerCase()!=="x-milhano-stage-token");
       n.parameters.headerParameters.parameters.push({name:"X-Milhano-Stage-Token",value:stageToken});
+    }
+    if(target.name.includes("08 One Shot Authorizations")){
+      const trigger=target.nodes.find(n=>n.name==="Schedule | Nov 10 at 08:00 Merida");
+      assert(trigger?.parameters?.rule?.interval?.[0]?.expression==="0 8 10 11 *" && target.settings?.timezone==="America/Merida",
+        "Scheduled date/time is not 08:00 Merida.");
+      const feed=target.nodes.find(n=>n.name==="WF03 | Schedule WhatsApp Authorization And Call");
+      assert(feed && feed.parameters?.jsonBody?.includes("sofia_scheduled_authorizations_20261110_0800"),
+        "No approved feed request source.");
+      const orig=list.filter(x=>/03 Individual Feed v1.1 International/.test(x.name??""));
+      assert(orig.length===1 && orig[0].active===true,"Production WF03 missing or inactive.");
+      const live=await callApi("GET","/workflows/"+encodeURIComponent(orig[0].id));
+      const out=live.nodes.find(n=>n.name==="Prepare | ElevenLabs Outbound")?.parameters?.jsCode??"";
+      const init=live.nodes.find(n=>n.name==="Normalize | Feed Trigger")?.parameters?.jsCode??"";
+      assert(!out.includes("agtbrch_5901m66tpzs8eqtryhadxb29zbk4") && !out.includes("branch_id"),
+        "WF03 forces an old ElevenLabs branch: refuse schedule.");
+      assert(init.includes("test_mode: false") && init.includes("agent_6401m3yvs1rcfbya7hk1qb2bxp8v"),
+        "WF03 source must be Sofía main and live mode.");
+      console.log("Sofía scheduled batch: live WF03 uses main and no legacy branch.");
     }
     plannedSources.push({ source, target });
     const matches = list.filter((wf) => wf.name === source.name);
