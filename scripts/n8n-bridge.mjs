@@ -14,6 +14,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { auditSofiaDrafts } from "./n8n-preflight.mjs";
 
 const API = "https://collectacademy.app.n8n.cloud/api/v1";
 const SOURCE_BRANCH = "feature/sofia-ai-setter-campaigns-20261109";
@@ -130,8 +131,10 @@ async function main() {
     return;
   }
   const changes = [];
+  const plannedSources = [];
   for (const source of SOURCES) {
     const target = loadSource(source);
+    plannedSources.push({ source, target });
     const matches = list.filter((wf) => wf.name === source.name);
     assert(matches.length <= 1, "Duplicate workflow names; refusing ambiguous update: " + source.name);
     if (matches.length === 0) {
@@ -158,6 +161,7 @@ async function main() {
       console.log("Draft change detected:", source.name);
     }
   }
+  await auditSofiaDrafts(plannedSources, list, (id) => callApi("GET", "/workflows/" + encodeURIComponent(id)));
   console.log("Planned changes:", changes.length, "/ 3 allowlisted draft workflows.");
   if (MODE === "preview") {
     console.log("READ-ONLY preview completed. No workflow was created or edited.");
