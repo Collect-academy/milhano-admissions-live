@@ -31,13 +31,13 @@
         160
       ],
       "parameters": {
-        "jsCode": "// The ONLY dispatch authorization comes from the atomic Supabase claim RPC.\n// It returns zero members unless runtime_control.live_dispatch_enabled = true,\n// campaign.status = running, dry_run = false, and release_limit is granted.\n// This workflow does not enable those flags.\nreturn [{json:{requested_at:new Date().toISOString(),source:'milhano_sofia_scheduler'}}];"
+        "jsCode": "// Only the service-role RPC can claim. It verifies global activation, campaign\n// status, approved release limit and the due time transactionally.\nreturn [{json:{poll_at:new Date().toISOString(),operation:'up_to_twenty_whatsapp_authorizations'}}];"
       }
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_claim_one_due",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_claim_due_batch",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
         "sendHeaders": true,
@@ -55,7 +55,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {} }}",
+        "jsonBody": "={{ {p_limit:20} }}",
         "options": {
           "response": {
             "response": {
@@ -79,8 +79,7 @@
           "name": "Supabase Milhano"
         }
       },
-      "continueOnFail": true,
-      "onError": "continueRegularOutput"
+      "onError": "stopWorkflow"
     },
     {
       "id": "b8943db4-4de6-4f0c-8e3d-59db25aab740",
@@ -92,13 +91,13 @@
         160
       ],
       "parameters": {
-        "jsCode": "\nconst v=$input.first().json??{},a=Array.isArray(v)?v[0]:v;\nif(!a?.member_id||!a?.lease_token||!a?.contact_id||!a?.opportunity_id)return [];\nreturn [{json:a}];\n"
+        "jsCode": "const raw=$input.all().flatMap(x=>Array.isArray(x.json)?x.json:Array.isArray(x.json?.data)?x.json.data:[x.json]);\nreturn raw.filter(a=>a&&a.member_id&&a.lease_token&&a.contact_id&&a.opportunity_id&&a.dispatch_key)\n.map(a=>({json:a}));"
       }
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://services.leadconnectorhq.com/opportunities/{{$('Normalize | Claim').first().json.opportunity_id}}",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{$json.opportunity_id}}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -137,12 +136,13 @@
           "name": "Milhano GHL PrivInt"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Claim').first().json.contact_id}}",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Claim').item.json.contact_id}}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
@@ -181,7 +181,8 @@
           "name": "Milhano GHL PrivInt"
         }
       },
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
     },
     {
       "id": "2a79a0ec-0ac2-4c5d-9766-5a9601aa584d",
@@ -193,7 +194,8 @@
         160
       ],
       "parameters": {
-        "jsCode": "\nconst c=$('Normalize | Claim').first().json;\nconst oRaw=$('GHL | Recheck Opportunity').first().json??{},o=oRaw.opportunity??oRaw;\nconst cRaw=$input.first().json??{},ct=cRaw.contact??cRaw;\nlet reason=null;\nif(String(o.id??'')!==c.opportunity_id||String(o.contactId??'')!==c.contact_id)reason='OPPORTUNITY_IDENTITY_MISMATCH';\nelse if(String(o.pipelineId??'')!=='GYqHbZyWUxxc3K03efVT')reason='PIPELINE_CHANGED';\nelse if(String(o.pipelineStageId??'')!==String(c.expected_stage_id??''))reason='STAGE_CHANGED';\nelse if(String(o.status??'').toLowerCase()!=='open')reason='OPPORTUNITY_NOT_OPEN';\nelse if(String(ct.id??'')!==c.contact_id)reason='CONTACT_IDENTITY_MISMATCH';\nelse if(ct.dnd!==false)reason='CONTACT_DND_NOT_EXPLICITLY_FALSE';\nelse if(ct.dndSettings?.Call===true||ct.dndSettings?.call===true)reason='CALL_DND';\nelse if(!String(ct.phone??'').trim())reason='PHONE_MISSING';\nreturn [{json:{...c,eligible:reason===null,reason}}];\n"
+        "jsCode": "const claims=$('Normalize | Claim').all(),opps=$('GHL | Recheck Opportunity').all(),contacts=$input.all();\nif(claims.length!==opps.length||claims.length!==contacts.length)throw new Error('GHL_RESULT_COUNT_MISMATCH_MANUAL_REVIEW');\nreturn claims.map((item,i)=>{\n const c=item.json,or=opps[i]?.json??{},cr=contacts[i]?.json??{},o=or.opportunity??or,ct=cr.contact??cr;\n let reason=null;\n if(or.error||cr.error||Number(or.statusCode)>=400||Number(cr.statusCode)>=400)reason='GHL_READ_FAILED';\n else if(String(o.id??'')!==c.opportunity_id||String(o.contactId??'')!==c.contact_id)reason='OPPORTUNITY_CONTACT_MISMATCH';\n else if(String(o.pipelineId??'')!=='GYqHbZyWUxxc3K03efVT')reason='PIPELINE_CHANGED';\n else if(String(o.pipelineStageId??'')!==String(c.expected_stage_id??''))reason='STAGE_CHANGED';\n else if(String(o.status??'').toLowerCase()!=='open')reason='OPPORTUNITY_NOT_OPEN';\n else if(String(ct.id??'')!==c.contact_id)reason='CONTACT_MISMATCH';\n else if(ct.dnd!==false)reason='CONTACT_DND';\n else if(String(ct.dndSettings?.call?.status??'').toLowerCase()==='active'||\n         String(ct.dndSettings?.whatsApp?.status??ct.dndSettings?.whatsapp?.status??'').toLowerCase()==='active')reason='CHANNEL_DND';\n else if(!String(ct.phone??'').trim())reason='PHONE_MISSING';\n return {json:{...c,eligible:reason===null,reason}};\n});",
+        "mode": "runOnceForAllItems"
       }
     },
     {
@@ -249,11 +251,11 @@
               "responseFormat": "json"
             }
           },
-          "timeout": 30000
+          "timeout": 60000
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {contact_id:$('Normalize | Claim').first().json.contact_id,opportunity_id:$('Normalize | Claim').first().json.opportunity_id,source:'sofia_campaign_scheduler'} }}"
+        "jsonBody": "={{ {contact_id:$json.contact_id,opportunity_id:$json.opportunity_id,source:'sofia_campaign_scheduler',dispatch_key:$json.dispatch_key} }}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -276,7 +278,8 @@
         20
       ],
       "parameters": {
-        "jsCode": "const claim=$('Normalize | Claim').first().json, raw=$input.first().json??{};\nconst a=raw.webhook_response??raw.result?.webhook_response??raw.result??raw.data?.webhook_response??raw.data??raw;\nconst conversation=String(a.conversation_id??a.conversationId??'').trim();\nconst succeeded=a.success===true&&a.status==='DISPATCHED'&&/^conv_[a-zA-Z0-9]+$/.test(conversation)&&!raw.error;\nconst confirmedBlocked=(a.status==='BLOCKED'||a.status==='INVALID_TRIGGER'||a.status==='DUPLICATE')&&a.success===false;\nreturn [{json:{p_member_id:claim.member_id,p_lease_token:claim.lease_token,\n p_status:succeeded?'dispatched':confirmedBlocked?'excluded':'review',\n p_conversation_id:succeeded?conversation:null,\n p_error_code:succeeded?null:confirmedBlocked?'WF03_REJECTED_WITHOUT_CALL':'UNKNOWN_DISPATCH_RESPONSE_MANUAL_REVIEW'}}];"
+        "jsCode": "const responses=$input.all(),eligible=$('Verify | Live GHL Eligibility').all().filter(x=>x.json.eligible);\nif(responses.length!==eligible.length)throw new Error('WF03_RESULT_COUNT_MISMATCH: manual review of claimed items required');\nreturn eligible.map((item,i)=>{\n const claim=item.json,raw=responses[i]?.json??{},a=raw.webhook_response??raw.result?.webhook_response??raw.result??raw.data?.webhook_response??raw.data??raw;\n const id=String(a.conversation_id??a.conversationId??'');\n const accepted=!raw.error&&a.success===true&&String(a.status)==='DISPATCHED'&&/^conv_[A-Za-z0-9]+$/.test(id);\n const blocked=!raw.error&&a.success===false&&['BLOCKED','INVALID_TRIGGER','DUPLICATE'].includes(String(a.status));\n return {json:{p_member_id:claim.member_id,p_lease_token:claim.lease_token,\n   p_status:accepted?'dispatched':blocked?'excluded':'review',\n   p_conversation_id:accepted?id:null,p_error_code:accepted?null:blocked?'WF03_BLOCKED':'UNVERIFIED_FEED_RESULT'}};\n});",
+        "mode": "runOnceForAllItems"
       }
     },
     {
@@ -289,7 +292,8 @@
         310
       ],
       "parameters": {
-        "jsCode": "\nconst c=$('Normalize | Claim').first().json,v=$input.first().json;\nreturn [{json:{p_member_id:c.member_id,p_lease_token:c.lease_token,\np_status:'excluded',p_conversation_id:null,p_error_code:v.reason||'GHL_ELIGIBILITY_FAILED'}}];\n"
+        "jsCode": "return $input.all().map(x=>({json:{\n p_member_id:x.json.member_id,p_lease_token:x.json.lease_token,\n p_status:'excluded',p_conversation_id:null,p_error_code:x.json.reason??'GHL_ELIGIBILITY_FAILED'\n}}));",
+        "mode": "runOnceForAllItems"
       }
     },
     {
