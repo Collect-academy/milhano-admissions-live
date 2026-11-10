@@ -1,0 +1,19 @@
+name: Milhano | Sofía cancelled-batch safety audit
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/sofia-audit-cancelled-batch.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Verify n8n state and unpublish cancelled batch
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node scripts/sofia-audit-cancelled-batch.mjs
