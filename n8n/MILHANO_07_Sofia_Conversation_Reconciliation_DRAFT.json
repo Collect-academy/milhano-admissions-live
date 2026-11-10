@@ -123,7 +123,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "const raw=$input.all(),attempts=$('Expand | Attempts').all(),out=[];\nconst validNumber=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0?x:null;\nconst date=x=>typeof x==='number'&&Number.isFinite(x)?new Date(x>1e12?x:x*1000).toISOString():null;\nfor(let i=0;i<raw.length;i++){\n const d=raw[i].json??{},a=attempts[i]?.json??{},meta=d.metadata??{},analysis=d.analysis??{};\n if(!a.conversation_id||d.conversation_id!==a.conversation_id||d.agent_id!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v')continue;\n const status=String(d.status??'unknown').toLowerCase(),terminal=status==='done'||status==='failed';\n const legacy=d.branch_id==='agtbrch_5901m66tpzs8eqtryhadxb29zbk4';\n const vals={};for(const [id,v] of Object.entries(analysis.data_collection_results??{})){const name=String(v?.name??id);if(name)vals[name]=v?.value??null;}\n const yes=k=>vals[k]===true||vals[k]==='true';\n const turns=Number(d.user_message_count??(Array.isArray(d.transcript)?d.transcript.filter(t=>t.role==='user'&&String(t.message??'').trim()).length:0));\n const callStatus=String(meta.phone_call_status??meta.call_status??'').toLowerCase();\n const noAnswer=terminal&&['no_answer','not_answered','unanswered','busy','no_pickup'].includes(callStatus);\n const connection=!terminal?'unknown':turns>0?'human':noAnswer?'no_answer':status==='failed'?'system_failure':'ambiguous';\n const reason=yes('do_not_contact')?'do_not_contact':yes('explicitly_not_interested')?'not_interested':yes('pricing_rejected')?'pricing_rejected':yes('non_admissions_intent')?'not_admissions':yes('educational_model_rejected')?'model_rejected':null;\n const meaningful=terminal&&connection==='human'&&yes('information_delivered');\n const qualified=meaningful&&yes('qualified');\n const credits=validNumber(meta.credits_consumed)??validNumber(meta.usage?.credits_consumed);\n const cost=validNumber(meta.cost_fiat);\n const insight={\n  conversation_id:a.conversation_id,campaign_id:a.campaign_id,campaign_member_id:a.campaign_member_id,\n  ghl_contact_id:a.ghl_contact_id,ghl_opportunity_id:a.ghl_opportunity_id,agent_id:d.agent_id,\n  agent_branch_id:d.branch_id??null,agent_version:d.version_id??null,\n  started_at:date(meta.start_time_unix_secs),ended_at:date(meta.end_time_unix_secs),\n  duration_seconds:validNumber(meta.call_duration_secs),connection_outcome:connection,\n  meaningful_conversation:meaningful,qualified,school_tour_requested:yes('school_tour_requested'),\n  school_tour_booked_verified:false,appointment_id:null,\n  disqualified:reason!==null,disqualified_reason:reason,\n  callback_requested:yes('callback_requested'),do_not_contact:yes('do_not_contact'),\n  call_outcome:terminal?String(analysis.call_successful??status):'permission_pending',\n  termination_reason:status==='failed'?String(meta.termination_reason??callStatus??'failed'):null,\n  credits_consumed:credits,credits_source:credits===null?null:'elevenlabs_explicit',\n  estimated_cost_amount:cost,estimated_cost_currency:cost===null?null:'USD',\n  transcript_summary:typeof analysis.transcript_summary==='string'?analysis.transcript_summary:null,\n  objections:Array.isArray(vals.objections)?vals.objections:[],\n  collected_variables:vals,metadata:{status,environment:d.environment??null,branch_id:d.branch_id??null},\n  evidence:{source:'elevenlabs_get_conversation',user_message_count:turns,phone_call_status:callStatus,\n   legacy_branch_detected:legacy,booked_not_ghl_verified:true},\n  ingestion_status:terminal&&!legacy?'captured':'needs_review'\n };\n out.push({json:{...a,insight,terminal,legacy}});\n}\nreturn out;"
+        "jsCode": "const raw=$('ElevenLabs | Conversation Details').all(),mains=$input.all(),attempts=$('Expand | Attempts').all(),out=[];\nconst validNumber=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0?x:null;\nconst date=x=>typeof x==='number'&&Number.isFinite(x)?new Date(x>1e12?x:x*1000).toISOString():null;\nfor(let i=0;i<raw.length;i++){\n const d=raw[i].json??{},a=attempts[i]?.json??{},meta=d.metadata??{},analysis=d.analysis??{};\n if(!a.conversation_id||d.conversation_id!==a.conversation_id||d.agent_id!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v')continue;\n const status=String(d.status??'unknown').toLowerCase(),terminal=status==='done'||status==='failed';\n const mainBranch=String(mains[i]?.json?.main_branch_id??'');\n const legacy=!mainBranch||Boolean(d.branch_id&&d.branch_id!==mainBranch);\n const vals={};for(const [id,v] of Object.entries(analysis.data_collection_results??{})){const name=String(v?.name??id);if(name)vals[name]=v?.value??null;}\n const yes=k=>vals[k]===true||vals[k]==='true';\n const turns=Number(d.user_message_count??(Array.isArray(d.transcript)?d.transcript.filter(t=>t.role==='user'&&String(t.message??'').trim()).length:0));\n const callStatus=String(meta.phone_call_status??meta.call_status??'').toLowerCase();\n const noAnswer=terminal&&['no_answer','not_answered','unanswered','busy','no_pickup'].includes(callStatus);\n const connection=!terminal?'unknown':turns>0?'human':noAnswer?'no_answer':status==='failed'?'system_failure':'ambiguous';\n const reason=yes('do_not_contact')?'do_not_contact':yes('explicitly_not_interested')?'not_interested':yes('pricing_rejected')?'pricing_rejected':yes('non_admissions_intent')?'not_admissions':yes('educational_model_rejected')?'model_rejected':null;\n const meaningful=terminal&&connection==='human'&&yes('information_delivered');\n const qualified=meaningful&&yes('qualified');\n const credits=validNumber(meta.credits_consumed)??validNumber(meta.usage?.credits_consumed);\n const cost=validNumber(meta.cost_fiat);\n const insight={\n  conversation_id:a.conversation_id,campaign_id:a.campaign_id,campaign_member_id:a.campaign_member_id,\n  ghl_contact_id:a.ghl_contact_id,ghl_opportunity_id:a.ghl_opportunity_id,agent_id:d.agent_id,\n  agent_branch_id:d.branch_id??null,agent_version:d.version_id??null,\n  started_at:date(meta.start_time_unix_secs),ended_at:date(meta.end_time_unix_secs),\n  duration_seconds:validNumber(meta.call_duration_secs),connection_outcome:connection,\n  meaningful_conversation:meaningful,qualified,school_tour_requested:yes('school_tour_requested'),\n  school_tour_booked_verified:false,appointment_id:null,\n  disqualified:reason!==null,disqualified_reason:reason,\n  callback_requested:yes('callback_requested'),do_not_contact:yes('do_not_contact'),\n  call_outcome:terminal?String(analysis.call_successful??status):'permission_pending',\n  termination_reason:status==='failed'?String(meta.termination_reason??callStatus??'failed'):null,\n  credits_consumed:credits,credits_source:credits===null?null:'elevenlabs_explicit',\n  estimated_cost_amount:cost,estimated_cost_currency:cost===null?null:'USD',\n  transcript_summary:typeof analysis.transcript_summary==='string'?analysis.transcript_summary:null,\n  objections:Array.isArray(vals.objections)?vals.objections:[],\n  collected_variables:vals,metadata:{status,environment:d.environment??null,branch_id:d.branch_id??null,expected_main_branch_id:mainBranch||null},\n  evidence:{source:'elevenlabs_get_conversation',user_message_count:turns,phone_call_status:callStatus,\n   legacy_branch_detected:legacy,booked_not_ghl_verified:true},\n  ingestion_status:terminal&&!legacy?'captured':'needs_review'\n };\n out.push({json:{...a,insight,terminal,legacy}});\n}\nreturn out;"
       }
     },
     {
@@ -302,6 +302,43 @@
       },
       "continueOnFail": true,
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.elevenlabs.io/v1/convai/agents/agent_6401m3yvs1rcfbya7hk1qb2bxp8v",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -380,
+        110
+      ],
+      "id": "45a1bb3c-8776-4741-a36e-11cba3f5eaff",
+      "name": "ElevenLabs | Agent Main Metadata",
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
     }
   ],
   "connections": {
@@ -345,12 +382,11 @@
       "main": [
         [
           {
-            "node": "Normalize | Insights",
+            "node": "ElevenLabs | Agent Main Metadata",
             "type": "main",
             "index": 0
           }
-        ],
-        []
+        ]
       ]
     },
     "Normalize | Insights": {
@@ -411,6 +447,17 @@
           }
         ],
         []
+      ]
+    },
+    "ElevenLabs | Agent Main Metadata": {
+      "main": [
+        [
+          {
+            "node": "Normalize | Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
