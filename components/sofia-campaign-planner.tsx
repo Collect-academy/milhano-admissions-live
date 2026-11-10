@@ -28,7 +28,8 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
    (!to||c.createdAt.slice(0,10)<=to) &&
    (!search||[c.name,c.opportunityId,c.phoneLast4].join(" ").toLowerCase().includes(search.toLowerCase()))
  ).sort((a,b)=>sort==="asc"?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt)),[candidates,stage,sort,from,to,search]);
- const chosen=candidates.filter(c=>selected.includes(c.opportunityId));
+ const candidateById=new Map(candidates.map(c=>[c.opportunityId,c]));
+ const chosen=selected.map(id=>candidateById.get(id)).filter((c):c is SofiaCandidate=>Boolean(c));
  function addFiltered(n:number|"all") {
   const available=filtered.filter(c=>c.eligible&&!selected.includes(c.opportunityId));
   const next=n==="all"?available:available.slice(0,n);
