@@ -49,3 +49,5 @@ jobs:
           N8N_MODE: ${{ github.event_name == 'push' && github.event.head_commit.message == 'ops(sofia): safely import vetted draft workflows' && 'sync-drafts' || github.event_name == 'push' && 'preview' || inputs.operation }}
           GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: node scripts/n8n-bridge.mjs "$N8N_MODE"
+
+# One-shot import: only allowlisted, unpublished Sofía drafts. Production workflows untouched.
