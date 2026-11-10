@@ -126,6 +126,14 @@ async function main() {
   const active = list.filter((wf) => wf.active === true).length;
   console.log("n8n API: connection verified.");
   console.log("Workflows visible:", list.length, "| Published:", active, "| Not published:", list.length - active);
+  const pilotMatches = list.filter(w => w.name?.startsWith("MILHANO | Sofia | PILOTO"));
+  console.log("Pilot temporary workflows:", pilotMatches.length);
+  for (const wf of pilotMatches) {
+    const detail = await callApi("GET","/workflows/"+encodeURIComponent(wf.id));
+    console.log("Pilot workflow:",JSON.stringify({name:wf.name,active:detail.active,archived:detail.isArchived===true}));
+  }
+  const latestDrafts = list.filter(w => /^MILHANO \| Sofia \| 0[456] /.test(w.name ?? ""));
+  console.log("Sofia 04/05/06 present on n8n:",latestDrafts.map(w=>({name:w.name,active:w.active})));
   {
     const feedList = list.filter(w => /03 Individual Feed/i.test(w.name ?? ""));
     console.log("Sofia WF03 feed matches:", feedList.length);
