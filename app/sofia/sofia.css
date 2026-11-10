@@ -53,6 +53,9 @@
 .sofia-row-actions button{font-size:.75rem;white-space:nowrap;padding:8px 11px}
 .sofia-row-actions small{color:var(--muted);font-size:.69rem}
 
-.sofia-test-section{margin-bottom:18px}
-.sofia-test-section .primary-button{background:var(--green);color:#fff;border:0;border-radius:10px;padding:12px 18px;font-weight:750;cursor:pointer}
-.sofia-test-section .primary-button:disabled{opacity:.55;cursor:not-allowed}
+
+.sofia-picker-send{display:flex;align-items:center;flex-wrap:wrap;gap:12px;justify-content:space-between;margin-top:16px;padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft)}
+.sofia-picker-send>div{flex:1 1 260px}
+.sofia-picker-send p[role=status]{flex-basis:100%;margin:0}
+.sofia-picker-send button{white-space:nowrap;min-height:40px}
+.sofia-picker-send button:disabled{opacity:.55;cursor:not-allowed}
