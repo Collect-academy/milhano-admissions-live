@@ -7,12 +7,14 @@ import { randomBytes, randomUUID } from "node:crypto";
 
 const N8N = "https://collectacademy.app.n8n.cloud";
 const API = N8N + "/api/v1";
-const CAMPAIGN = "a3210e7c-4167-4651-be1a-75b854fae9c4";
+const CAMPAIGN = process.env.SOFIA_PILOT_CAMPAIGN || "a3210e7c-4167-4651-be1a-75b854fae9c4";
+const MAX_MEMBERS = Number(process.env.SOFIA_PILOT_CANDIDATES || 10);
+const MAX_SEND = Number(process.env.SOFIA_PILOT_TARGETS || 10);
 const EXPECTED_STAGE = "24a91c8c-c38a-48f9-934a-a5a1b5cb8fa0";
 const EXPECTED_PIPELINE = "GYqHbZyWUxxc3K03efVT";
 const EXPECTED_AGENT = "agent_6401m3yvs1rcfbya7hk1qb2bxp8v";
 const EXPECTED_BRANCH = "agtbrch_5901m66tpzs8eqtryhadxb29zbk4";
-const PILOT_NAME = "MILHANO | Sofia | PILOTO 10 New Lead 2026-11-09 | TEMP";
+const PILOT_NAME = "MILHANO | Sofia | PILOTO 2026-11-09 | TEMP " + CAMPAIGN;
 const SECRET = process.env.N8N_API_KEY;
 const TOKEN = randomBytes(25).toString("hex");
 const CALL_PATH = "milhano-sofia-pilot-20261109-" + randomBytes(16).toString("hex");
@@ -34,13 +36,16 @@ function verifyTime() {
     "Outside approved Nov 9, 19:20-19:59 Merida window. Stop before dialing.");
 }
 assert(SECRET && SECRET.length > 15, "N8N_API_KEY unavailable.");
+assert(Number.isInteger(MAX_MEMBERS) && MAX_MEMBERS >= 1 && MAX_MEMBERS <= 25, "Invalid member limit.");
+assert(Number.isInteger(MAX_SEND) && MAX_SEND >= 1 && MAX_SEND <= 10, "Invalid call limit.");
+assert(/^[0-9a-f-]{36}$/.test(CAMPAIGN), "Invalid campaign identifier.");
 assert(process.env.GITHUB_REPOSITORY === "Collect-academy/milhano-admissions-live",
   "Wrong repo.");
 assert(process.env.GITHUB_EVENT_NAME === "push",
   "One-time pilot must run on authorized push.");
 assert(process.env.GITHUB_ACTOR === "Collect-academy",
   "Only repo owner may launch.");
-assert(process.env.GITHUB_HEAD_COMMIT_MESSAGE === "ops(sofia): launch approved ten-call pilot",
+assert(["ops(sofia): launch approved ten-call pilot", "ops(sofia): complete approved ten-call pilot"].includes(process.env.GITHUB_HEAD_COMMIT_MESSAGE),
   "Wrong commit, no calls.");
 verifyTime();
 
@@ -139,7 +144,7 @@ function buildClone(original){
       'const b = $input.first().json.body ?? {};\n' +
       'if (String(b.pilot_token ?? "") !== "'+TOKEN+'" || String(b.campaign_id ?? "") !== "'+CAMPAIGN+'") throw new Error("PILOT_AUTH_REJECTED");\n' +
       'const idx=Number(b.index);\n' +
-      'if (!Number.isInteger(idx) || idx<1 || idx>10) throw new Error("PILOT_INDEX_INVALID");\n' +
+      'if (!Number.isInteger(idx) || idx<1 || idx>'+MAX_MEMBERS+') throw new Error("PILOT_INDEX_INVALID");\n' +
       'if (new Date().toISOString() >= "2026-11-10T02:00:00.000Z") throw new Error("PILOT_WINDOW_CLOSED");\n' +
       'return [{json:{campaign_id:"'+CAMPAIGN+'",index:idx}}];'
     });
@@ -261,7 +266,7 @@ async function main(){
   log("Temporary workflow published. Original WF03 untouched.");
   // Production webhook activation should register both hook paths.
   await sleep(2500);
-  for(let i=1;i<=10;i++){
+  for(let i=1;i<=MAX_MEMBERS && started<MAX_SEND;i++){
     verifyTime();
     let response;
     try{
@@ -285,7 +290,7 @@ async function main(){
       fail("Unverified dispatch response at index "+i+" ("+state+"). Stop to avoid duplicates.");
     }
     started++;dispatches.push({index:i,conversation_id:response.conversation_id});
-    log("Index "+i+" dispatched. Total accepted "+started+"/10.");
+    log("Index "+i+" dispatched. Total accepted "+started+"/"+MAX_SEND+".");
     await pollConversation(response.conversation_id);
     await sleep(8000);
   }
@@ -295,5 +300,5 @@ try{await main();}
 catch(e){log("PILOT STOPPED: "+(e?.message??"Unknown failure"));process.exitCode=1;}
 finally{
   await unpublish(tempId);
-  log("Final accepted "+started+"/10; blocked "+blocked+"; completed "+finalized+".");
+  log("Final accepted "+started+"/"+MAX_SEND+"; blocked "+blocked+"; completed "+finalized+".");
 }
