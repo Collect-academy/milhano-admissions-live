@@ -37,6 +37,10 @@ export async function auditSofiaDrafts(sources, workflows, getWorkflow) {
         "node position missing in " + wf.name);
       must(node.parameters && typeof node.parameters === "object",
         "node parameters missing in " + wf.name);
+      if(node.type==="n8n-nodes-base.code" && typeof node.parameters.jsCode==="string"){
+        try {new Function(node.parameters.jsCode);}
+        catch(error){throw new Error("Invalid n8n Code JS in "+wf.name+" / "+node.name+": "+error.message);}
+      }
       byName.add(node.name);
       byId.add(node.id);
       const version = Number(node.typeVersion);
