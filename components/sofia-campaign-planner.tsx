@@ -21,7 +21,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
  const [selected,setSelected]=useState<string[]>([]);
  const [requestedCount,setRequestedCount]=useState("20");
  const [name,setName]=useState("Lote Sofía · "+day());
- const [windows,setWindows]=useState<WindowInput[]>([{date:day(1),start:"08:00",end:"11:00"}]);
+ const [windows,setWindows]=useState<WindowInput[]>([{date:day(1),start:"08:00",end:"20:00"}]);
  const [busy,setBusy]=useState(false),[status,setStatus]=useState<{ok:boolean;message:string}|null>(null);
  const filtered=useMemo(()=>candidates.filter(c=>
    (stage==="all"||c.stage===stage) &&
@@ -189,7 +189,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
     <label>Ventana válida hasta<input type="time" value={w.end} onChange={e=>updateWindow(i,"end",e.target.value)}/></label>
     <button type="button" className="secondary-button" disabled={windows.length===1} onClick={()=>setWindows(prev=>prev.filter((_,j)=>i!==j))}>Quitar</button>
    </div>)}
-   <button type="button" className="secondary-button" disabled={windows.length>=8} onClick={()=>setWindows(prev=>[...prev,{date:day(1),start:"16:00",end:"19:00"}])}>+ Añadir ventana</button>
+   <button type="button" className="secondary-button" disabled={windows.length>=8} onClick={()=>setWindows(prev=>[...prev,{date:day(1),start:"08:00",end:"20:00"}])}>+ Añadir ventana</button>
    <p className="subtitle">Si eliges varios horarios, repartimos los contactos entre ellos. Dentro de cada horario no agregamos retrasos: ElevenLabs espera la autorización de cada familia y gestiona la capacidad de llamadas.</p>
    <div className="sofia-preview">
     <h3>Vista previa</h3>
