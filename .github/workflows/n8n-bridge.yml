@@ -1,0 +1,50 @@
+name: Milhano | n8n API bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/n8n-bridge.yml
+      - scripts/n8n-bridge.mjs
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: "Acción sobre n8n: revisión, vista previa o sincronización de borradores"
+        required: true
+        type: choice
+        default: check
+        options:
+          - check
+          - preview
+          - sync-drafts
+      confirm:
+        description: "Sólo para sync-drafts: escribe IMPORTAR_BORRADORES_IA"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: milhano-n8n-bridge
+  cancel-in-progress: false
+
+jobs:
+  api-bridge:
+    name: n8n · conexión y borradores controlados
+    if: github.repository == 'Collect-academy/milhano-admissions-live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Leer el puente del repositorio oficial
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verificar API o procesar borradores
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          SYNC_CONFIRM: ${{ inputs.confirm }}
+          N8N_MODE: ${{ github.event_name == 'push' && 'check' || inputs.operation }}
+        run: node scripts/n8n-bridge.mjs "$N8N_MODE"
