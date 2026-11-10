@@ -29,6 +29,16 @@ for(const mark of ["03 Individual Feed v1.1 International","06 Campaign Schedule
       for(const [name,entries] of Object.entries(runData)){
         const count=entries.reduce((n,r)=>n+(r.data?.main??[]).reduce((sum,group)=>sum+(group?.length??0),0),0);
         console.log("NODE_COUNTS",name,count,"error",entries.some(r=>Boolean(r.error)));
+        if(name==="Supabase | Commit Outcome and Automatic Retry"){
+         for(const event of entries)for(const group of event.data?.main??[])for(const item of group??[]){
+          const v=item.json??{},err=v.error??{};
+          console.log("RPC_OUTCOME",JSON.stringify({ok:v.ok??null,status:v.status??null,reason:v.reason??null,
+            error_code:typeof err==="object"?err.code??null:null,
+            error_status:typeof err==="object"?err.statusCode??null:null,
+            root_code:v.code??null,root_status:v.statusCode??null,
+            keys:Object.keys(v).slice(0,8)}));
+         }
+        }
       }
     }catch(error){console.log("NODE_AUDIT_UNAVAILABLE",String(error.message).slice(0,100));}
    }
