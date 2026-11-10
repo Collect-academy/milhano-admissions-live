@@ -1,5 +1,5 @@
 {
-  "name": "MILHANO | Sofia | 06 Batch Scheduler | DISABLED DRAFT",
+  "name": "MILHANO | Sofia | 06 Campaign Scheduler | PROTECTED",
   "nodes": [
     {
       "id": "fe33154b-8936-438e-bd61-5897dc201b8a",
@@ -23,7 +23,7 @@
     },
     {
       "id": "97e6d86d-b3ba-4328-8a0f-29034bbab155",
-      "name": "Safety | Scheduler Disabled",
+      "name": "Safety | Require Supabase Approval",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -31,7 +31,7 @@
         160
       ],
       "parameters": {
-        "jsCode": "\nconst ENABLE_BATCH_OUTBOUND=false; // Pilot gate. Do not enable until end-to-end QA and live GHL checks pass.\nif(!ENABLE_BATCH_OUTBOUND) return [];\nreturn [{json:{requested_at:new Date().toISOString()}}];\n"
+        "jsCode": "// The ONLY dispatch authorization comes from the atomic Supabase claim RPC.\n// It returns zero members unless runtime_control.live_dispatch_enabled = true,\n// campaign.status = running, dry_run = false, and release_limit is granted.\n// This workflow does not enable those flags.\nreturn [{json:{requested_at:new Date().toISOString(),source:'milhano_sofia_scheduler'}}];"
       }
     },
     {
@@ -276,7 +276,7 @@
         20
       ],
       "parameters": {
-        "jsCode": "\nconst c=$('Normalize | Claim').first().json,raw=$input.first().json??{};\nconst a=raw.result??raw.data??raw;\nconst id=String(a.conversation_id??a.conversationId??a.call?.conversation_id??a.outbound_call?.conversation_id??'').trim();\nconst ok=/^conv_[A-Za-z0-9]+$/.test(id)&&a.success!==false&&!raw.error;\nreturn [{json:{p_member_id:c.member_id,p_lease_token:c.lease_token,\np_status:ok?'dispatched':'review',p_conversation_id:ok?id:null,\np_error_code:ok?null:'FEED_RESULT_UNVERIFIED_DO_NOT_RETRY_AUTOMATICALLY'}}];\n"
+        "jsCode": "const claim=$('Normalize | Claim').first().json, raw=$input.first().json??{};\nconst a=raw.webhook_response??raw.result?.webhook_response??raw.result??raw.data?.webhook_response??raw.data??raw;\nconst conversation=String(a.conversation_id??a.conversationId??'').trim();\nconst succeeded=a.success===true&&a.status==='DISPATCHED'&&/^conv_[a-zA-Z0-9]+$/.test(conversation)&&!raw.error;\nconst confirmedBlocked=(a.status==='BLOCKED'||a.status==='INVALID_TRIGGER'||a.status==='DUPLICATE')&&a.success===false;\nreturn [{json:{p_member_id:claim.member_id,p_lease_token:claim.lease_token,\n p_status:succeeded?'dispatched':confirmedBlocked?'excluded':'review',\n p_conversation_id:succeeded?conversation:null,\n p_error_code:succeeded?null:confirmedBlocked?'WF03_REJECTED_WITHOUT_CALL':'UNKNOWN_DISPATCH_RESPONSE_MANUAL_REVIEW'}}];"
       }
     },
     {
@@ -347,18 +347,6 @@
         [
           {
             "node": "Safety | Scheduler Disabled",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
-    "Safety | Scheduler Disabled": {
-      "main": [
-        [
-          {
-            "node": "Supabase | Claim One Due",
             "type": "main",
             "index": 0
           }
@@ -479,10 +467,22 @@
         ],
         []
       ]
+    },
+    "Safety | Require Supabase Approval": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Claim One Due",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "timezone": "America/Merida"
   }
 }
