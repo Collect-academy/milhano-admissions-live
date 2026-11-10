@@ -209,8 +209,7 @@
           "name": "Supabase Milhano"
         }
       },
-      "continueOnFail": true,
-      "onError": "continueRegularOutput"
+      "onError": "stopWorkflow"
     }
   ],
   "connections": {
