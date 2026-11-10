@@ -126,7 +126,7 @@ async function main() {
   const active = list.filter((wf) => wf.active === true).length;
   console.log("n8n API: connection verified.");
   console.log("Workflows visible:", list.length, "| Published:", active, "| Not published:", list.length - active);
-  if (MODE === "check") {
+  {
     const feedList = list.filter(w => /03 Individual Feed/i.test(w.name ?? ""));
     console.log("Sofia WF03 feed matches:", feedList.length);
     for (const feed of feedList) {
@@ -145,6 +145,8 @@ async function main() {
         elevenLabsOutboundConfigured:callsApi, explicitV2BranchReference:hasBranchId
       }));
     }
+  }
+  if (MODE === "check") {
     console.log("READ-ONLY check completed. No workflow was created or edited.");
     return;
   }
