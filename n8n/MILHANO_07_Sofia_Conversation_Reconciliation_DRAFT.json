@@ -15,7 +15,7 @@
           "interval": [
             {
               "field": "minutes",
-              "minutesInterval": 2
+              "minutesInterval": 15
             }
           ]
         }
@@ -61,7 +61,8 @@
         }
       },
       "continueOnFail": true,
-      "onError": "continueRegularOutput"
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     },
     {
       "id": "27a97529-b9bd-4496-a935-49dd6d5c4219",
@@ -73,7 +74,7 @@
         0
       ],
       "parameters": {
-        "jsCode": "return $input.all().flatMap(i=>Array.isArray(i.json)?i.json:Array.isArray(i.json?.data)?i.json.data:[i.json]).filter(x=>x.status==='dispatched'&&/^conv_[a-zA-Z0-9]+$/.test(String(x.conversation_id??''))).map(x=>({json:x}));"
+        "jsCode": "const old=$('Supabase | Dispatched Attempts').all().flatMap(i=>Array.isArray(i.json)?i.json:Array.isArray(i.json?.data)?i.json.data:[i.json]);\nconst whatsapp=$input.all().flatMap(i=>Array.isArray(i.json)?i.json:Array.isArray(i.json?.data)?i.json.data:[i.json])\n .map(i=>({...i,campaign_id:null,campaign_member_id:null,source:'wa_one_shot'}));\nconst set=new Set();\nreturn [...old,...whatsapp].filter(x=>x.status==='dispatched'&&/^conv_[A-Za-z0-9]+$/.test(String(x.conversation_id??'')))\n .filter(x=>{if(set.has(x.conversation_id))return false;set.add(x.conversation_id);return true})\n .map(x=>({json:x}));"
       }
     },
     {
@@ -339,6 +340,49 @@
       "name": "ElevenLabs | Agent Main Metadata",
       "continueOnFail": true,
       "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_wa_scheduled_dispatches?select=id,ghl_contact_id,ghl_opportunity_id,conversation_id,status,recorded_at&status=eq.dispatched&conversation_id=not.is.null&recorded_at=gte.2026-11-10T00:00:00Z&limit=50",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -850,
+        100
+      ],
+      "id": "sofia07-wa-one-shot-dispatched",
+      "name": "Supabase | Scheduled WhatsApp Authorizations",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
     }
   ],
   "connections": {
@@ -358,12 +402,11 @@
       "main": [
         [
           {
-            "node": "Expand | Attempts",
+            "node": "Supabase | Scheduled WhatsApp Authorizations",
             "type": "main",
             "index": 0
           }
-        ],
-        []
+        ]
       ]
     },
     "Expand | Attempts": {
@@ -454,6 +497,17 @@
         [
           {
             "node": "Normalize | Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Scheduled WhatsApp Authorizations": {
+      "main": [
+        [
+          {
+            "node": "Expand | Attempts",
             "type": "main",
             "index": 0
           }
