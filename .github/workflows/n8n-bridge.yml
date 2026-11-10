@@ -55,3 +55,5 @@ jobs:
 # Safe update: 04/05/06/07 unpublished; stage token stored in n8n only.
 
 # Update current 04-07 inactive drafts only; branch main checked in agent metadata.
+
+# One-shot import: 08 scheduled WhatsApp authorizations, 07 asynchronous conversation tracking.
