@@ -45,8 +45,8 @@ jobs:
       - name: Verificar API o procesar borradores
         env:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
-          SYNC_CONFIRM: ${{ github.event_name == 'push' && github.event.head_commit.message == 'ops(sofia): safely import vetted draft workflows' && 'IMPORTAR_BORRADORES_IA' || inputs.confirm }}
-          N8N_MODE: ${{ github.event_name == 'push' && github.event.head_commit.message == 'ops(sofia): safely import vetted draft workflows' && 'sync-drafts' || github.event_name == 'push' && 'preview' || inputs.operation }}
+          SYNC_CONFIRM: "${{ github.event_name == 'push' && github.event.head_commit.message == 'ops(sofia): safely import vetted draft workflows' && 'IMPORTAR_BORRADORES_IA' || inputs.confirm }}"
+          N8N_MODE: "${{ github.event_name == 'push' && github.event.head_commit.message == 'ops(sofia): safely import vetted draft workflows' && 'sync-drafts' || github.event_name == 'push' && 'preview' || inputs.operation }}"
           GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: node scripts/n8n-bridge.mjs "$N8N_MODE"
 
