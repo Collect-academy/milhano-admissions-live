@@ -2,6 +2,7 @@ import "../sofia.css";
 import Link from "next/link";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { SofiaCampaignPlanner } from "@/components/sofia-campaign-planner";
+import { SofiaSingleTest } from "@/components/sofia-single-test";
 import { requireAdmissionsAppUser } from "@/lib/auth";
 import { getSofiaAnalytics, getSofiaCandidates } from "@/lib/sofia-analytics";
 
@@ -25,6 +26,7 @@ export default async function SofiaCampaignPage() {
       <strong>Planificación segura:</strong> las campañas se guardan como borradores con simulación activada. La automatización de n8n necesitará ser instalada y verificada antes de habilitar el envío.
       Se comprueba la elegibilidad de cada oportunidad al guardar y nuevamente antes de llamar.
     </div>
+    {user.role==="admin"?<SofiaSingleTest/>:null}
     <SofiaCampaignPlanner candidates={candidates} campaigns={analytics.campaigns} canPlan={user.role==="admin"} dispatchEnabled={analytics.dispatchEnabled}/>
   </DashboardLayout>;
 }
