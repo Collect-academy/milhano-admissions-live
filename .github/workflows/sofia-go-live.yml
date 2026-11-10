@@ -29,3 +29,5 @@ jobs:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
           GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: node scripts/sofia-live-deploy-20261110.mjs
+
+# Re-apply vetted WF06/WF07 after permission throughput and missed-call classifier fixes.
