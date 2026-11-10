@@ -22,6 +22,16 @@ for(const mark of ["03 Individual Feed v1.1 International","06 Campaign Schedule
    const recent=Date.parse(e.startedAt??e.createdAt??0);
    if(Date.now()-recent>30*60_000)continue;
    console.log("EXECUTION",mark,e.id,e.status,"started",e.startedAt??"unknown");
+   if(mark.includes("07 Conversation")&&e.status==="success"&&e.id===(executions.data??[])[0]?.id){
+    try{
+      const detail=await get("/executions/"+e.id+"?includeData=true");
+      const runData=detail.data?.resultData?.runData??{};
+      for(const [name,entries] of Object.entries(runData)){
+        const count=entries.reduce((n,r)=>n+(r.data?.main??[]).reduce((sum,group)=>sum+(group?.length??0),0),0);
+        console.log("NODE_COUNTS",name,count,"error",entries.some(r=>Boolean(r.error)));
+      }
+    }catch(error){console.log("NODE_AUDIT_UNAVAILABLE",String(error.message).slice(0,100));}
+   }
    if(e.status==="error"){
     const detail=await get("/executions/"+e.id+"?includeData=true");
     const result=detail.data?.resultData??{},failure=result.error??{};
