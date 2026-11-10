@@ -16,7 +16,7 @@ concurrency:
 jobs:
   run-approved-pilot:
     name: Pilot 10 · protected live GHL and ElevenLabs
-    if: github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(sofia): launch approved ten-call pilot'
+    if: "${{ github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(sofia): launch approved ten-call pilot' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 42
     steps:
