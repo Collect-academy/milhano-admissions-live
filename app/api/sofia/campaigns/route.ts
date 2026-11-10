@@ -18,6 +18,8 @@ export async function POST(request: Request) {
     const members:Member[]=Array.isArray(body?.members)?body.members:[];
     if(name.length<3||name.length>90||!uuid.test(user.id)||windows.length<1||windows.length>8||members.length<1||members.length>500)
       return NextResponse.json({error:"Nombre, usuario o número de registros inválido."},{status:400});
+    // Permite ventanas iniciadas hoy solo si queda más de una hora;
+    // el despacho efectivo siempre se normaliza a una hora futura.
     const now=Date.now();
     const localDay=(ms:number)=>new Date(ms-6*3600000).toISOString().slice(0,10);
     const today=localDay(now);
