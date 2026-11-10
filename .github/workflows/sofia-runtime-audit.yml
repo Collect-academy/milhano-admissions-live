@@ -2,7 +2,7 @@ name: Milhano | Sofía validate live workflow executions
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/sofia-runtime-audit.yml]
+    paths: [.github/workflows/sofia-runtime-audit.yml, scripts/sofia-live-runtime-check.mjs]
 permissions:
   contents: read
 jobs:
