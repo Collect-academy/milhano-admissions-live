@@ -90,6 +90,7 @@ export async function auditSofiaDrafts(sources, workflows, getWorkflow) {
   const installedTypes = new Map();
   const installedCredentialIds = new Set();
   const existingWebhooks = new Set();
+  const sourceNames = new Set(sources.map(s=>s.target.name));
   const workflowIds = workflows.map((w) => w.id);
   const concurrency = 4;
   let counter = 0;
@@ -103,7 +104,7 @@ export async function auditSofiaDrafts(sources, workflows, getWorkflow) {
         for (const v of Object.values(node.credentials ?? {})) {
           if (typeof v.id === "string") installedCredentialIds.add(v.id);
         }
-        if (node.type === "n8n-nodes-base.webhook" && node.parameters?.path) {
+        if (!sourceNames.has(wf.name) && node.type === "n8n-nodes-base.webhook" && node.parameters?.path) {
           existingWebhooks.add(String(node.parameters.path));
         }
       }
