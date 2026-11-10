@@ -1,0 +1,30 @@
+name: Milhano | Sofía arm tomorrow 8am
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sofia-arm-20261110.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: milhano-sofia-arm-nov10-0800
+  cancel-in-progress: false
+
+jobs:
+  arm:
+    if: "${{ github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(sofia): arm 10 WhatsApp authorizations Nov10 0800 Merida' }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Publish the one-shot Nov10 08:00 Merida scheduler (no immediate calls)
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          GITHUB_HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: node scripts/sofia-arm-20261110-0800.mjs
