@@ -74,7 +74,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan}:{candidates:
     <label>Etapa<select value={stage} onChange={e=>setStage(e.target.value)}><option value="all">Todas</option>{Object.entries(stageLabels).map(([key,v])=><option key={key} value={key}>{v}</option>)}</select></label>
     <label>Fecha desde<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label>
     <label>Fecha hasta<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
-    <label>Orden<select value={sort} onChange={e=>setSort(e.target.value)}><option value="asc">Más antiguas primero</option><option value="desc">Más recientes primero</option></select></label>
+    <label>Orden<select value={sort} onChange={e=>setSort(e.target.value==="desc"?"desc":"asc")}><option value="asc">Más antiguas primero</option><option value="desc">Más recientes primero</option></select></label>
     <label>Buscar<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nombre, ID o 4 dígitos"/></label>
    </div>
    <div className="sofia-selection-actions">
