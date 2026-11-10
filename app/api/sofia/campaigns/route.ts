@@ -55,6 +55,19 @@ export async function POST(request: Request) {
       p_windows:windows,p_members:members
     });
     if(error) return NextResponse.json({error:"No se pudo guardar el borrador: "+error.message},{status:409});
+    if(body?.activate===true){
+      const id=String(data?.campaign_id??"");
+      if(!uuid.test(id))return NextResponse.json({error:"El borrador se creó, pero no se confirmó su identificador.",draft:data},{status:503});
+      const {data:activated,error:activationError}=await admin.rpc("milhano_ai_control_campaign",{
+        p_campaign_id:id,p_action:"start",p_release_limit:members.length
+      });
+      if(activationError||activated?.ok!==true)
+        return NextResponse.json({
+          error:"El borrador quedó guardado, pero NO se activó: "+String(activated?.reason??activationError?.message??"Error de aprobación."),
+          campaign_id:id,status:"draft",dry_run:true
+        },{status:409});
+      return NextResponse.json({ok:true,...data,status:"running",dry_run:false,activation:activated});
+    }
     return NextResponse.json({ok:true,...data});
   }catch(error){
     return NextResponse.json({error:error instanceof Error?error.message:"No se pudo procesar la solicitud."},{status:500});
