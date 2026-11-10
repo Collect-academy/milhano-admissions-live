@@ -13,8 +13,9 @@ const MAX_SEND = Number(process.env.SOFIA_PILOT_TARGETS || 10);
 const EXPECTED_STAGE = "24a91c8c-c38a-48f9-934a-a5a1b5cb8fa0";
 const EXPECTED_PIPELINE = "GYqHbZyWUxxc3K03efVT";
 const EXPECTED_AGENT = "agent_6401m3yvs1rcfbya7hk1qb2bxp8v";
-const EXPECTED_BRANCH = "agtbrch_5901m66tpzs8eqtryhadxb29zbk4";
+// Main is the current ElevenLabs production configuration. Do not pin V2.
 const PILOT_NAME = "MILHANO | Sofia | PILOTO 2026-11-09 | TEMP " + CAMPAIGN;
+throw new Error("LEGACY_PILOT_DISABLED: Main is the current ElevenLabs agent and WhatsApp initiation is asynchronous. No calls may be started by this retired runner.");
 const SECRET = process.env.N8N_API_KEY;
 const TOKEN = randomBytes(25).toString("hex");
 const CALL_PATH = "milhano-sofia-pilot-20261109-" + randomBytes(16).toString("hex");
@@ -133,9 +134,8 @@ function buildClone(original){
   let outboundCode=outbound.parameters.jsCode;
   const anchor="conversation_initiation_client_data: {";
   assert(outboundCode.includes(anchor),"Missing initiation client data object");
-  outboundCode=outboundCode.replace(anchor,anchor+'\n    branch_id: "'+EXPECTED_BRANCH+'",');
-  outbound.parameters.jsCode=outboundCode;
-  assert(outboundCode.includes(EXPECTED_BRANCH),"V2 branch missing");
+  // Keep the original WF03 agent request: no explicit branch_id, so it follows Main.
+  assert(!outboundCode.includes("branch_id:"), "Unexpected branch override in the current source");
 
   // Authenticated manifest lookup is performed with the EXISTING Supabase credential,
   // before Normalize/LightGate/ElevenLabs. No contact IDs are committed to GitHub.
@@ -216,10 +216,9 @@ async function pollConversation(conversationId){
     const res=await webhook(STATUS_PATH,{pilot_token:TOKEN,conversation_id:conversationId},45000);
     const status=String(res.status??"unknown");
     if(res.conversation_id!==conversationId)fail("Status identity mismatch; stop.");
-    if(res.branch_id && res.branch_id!==EXPECTED_BRANCH)
-      fail("Conversation used wrong agent branch; abort all remaining calls.");
+    // No branch override is permitted; do not compare against historic V2.
     if(status==="done"||status==="failed"){
-      assert(res.branch_id===EXPECTED_BRANCH,"Conversation branch not verifiable; stop.");
+      // For WhatsApp, initiated may persist until call permission is granted.
       finalized++;
       log("Call "+started+" terminal status: "+status+"; correct branch confirmed.");
       return true;
