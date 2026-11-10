@@ -31,3 +31,5 @@ jobs:
         run: node scripts/sofia-live-deploy-20261110.mjs
 
 # Re-apply vetted WF06/WF07 after permission throughput and missed-call classifier fixes.
+
+# Hardening 2026-11-10: critical Supabase RPC nodes stop workflow on errors.
