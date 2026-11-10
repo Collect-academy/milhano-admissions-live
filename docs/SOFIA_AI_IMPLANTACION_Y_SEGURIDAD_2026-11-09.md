@@ -1,5 +1,19 @@
 # Sofía IA — módulo de rendimiento, campañas y workflows (11/09/2026)
 
+## Puente n8n API desde GitHub Actions — conectado y probado (9 nov 2026)
+- La conexión de GitHub Actions con `https://collectacademy.app.n8n.cloud/api/v1` está **verificada** con el secreto `N8N_API_KEY`.
+- Prueba real: 53 workflows visibles (28 publicados y 25 sin publicar). Solamente se ejecutaron `GET`; no se creó, editó ni activó ningún workflow.
+- Vista previa: los 3 borradores de Sofía definidos en esta rama **aún no existen** en n8n; la acción detectó 3 creaciones pendientes.
+- Acción disponible en `main`: `.github/workflows/n8n-bridge.yml`.
+- Código del puente protegido en `main`: `scripts/n8n-bridge.mjs`.
+- Modalidades: `check` (solo lectura), `preview` (solo lectura), `sync-drafts` (crea/actualiza sólo los 3 nombres exactos, nunca publica).
+- **Paso manual único para crear borradores en n8n:** GitHub → Actions → “Milhano | n8n API bridge” → Run workflow → `sync-drafts` → confirmación `IMPORTAR_BORRADORES_IA`. El proceso valida inactividad y no utiliza rutas `/activate`.
+- No ejecutar este paso mientras se hace una edición manual de uno de esos 3 borradores, ya que `sync-drafts` sobrescribe su definición inactiva. Los workflows productivos originales están fuera de la lista permitida.
+- La conexión directa de ChatGPT con n8n **no** está habilitada como plugin: las ediciones viajan GitHub → GitHub Actions → API n8n.
+- No se ha realizado prueba de permisos de escritura n8n; sólo de lectura. Hasta ejecutar `sync-drafts`, los borradores permanecerán exclusivamente en GitHub.
+
+
+
 ## Alcance
 Este cambio pertenece exclusivamente a `Collect-academy/milhano-admissions-live`. **No utilizar Collect Tracker.**
 No se modifican `app/page.tsx` ni los cálculos de V2 Summary. La IA alimentará V2 Summary indirectamente mediante las etapas y las citas confirmadas que ya replica GHL→Supabase.
