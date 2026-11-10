@@ -32,6 +32,7 @@ for(const mark of ["03 Individual Feed v1.1 International","06 Campaign Schedule
         if(name==="Supabase | Commit Outcome and Automatic Retry"){
          for(const event of entries)for(const group of event.data?.main??[])for(const item of group??[]){
           const v=item.json??{},err=v.error??{};
+          if(v.error || v.ok===false){console.log("RPC_BUSINESS_ERROR=true");process.exitCode=1;}
           console.log("RPC_OUTCOME",JSON.stringify({ok:v.ok??null,status:v.status??null,reason:v.reason??null,
             error_code:typeof err==="object"?err.code??null:null,
             error_status:typeof err==="object"?err.statusCode??null:null,
