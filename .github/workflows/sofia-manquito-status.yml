@@ -2,7 +2,7 @@ name: Milhano | Manquito conversation read-only status
 on:
   push:
     branches: [main]
-    paths: [.github/workflows/sofia-manquito-status.yml]
+    paths: [.github/workflows/sofia-manquito-status.yml, scripts/sofia-audit-manquito-conversation.mjs]
 permissions:
   contents: read
 jobs:
