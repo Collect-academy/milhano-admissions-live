@@ -1,0 +1,671 @@
+{
+  "name": "MILHANO | Sofia | 08 One Shot Authorizations | 10 NOV 08:00 MERIDA",
+  "nodes": [
+    {
+      "id": "sofia08-once-schedule",
+      "name": "Schedule | Nov 10 at 08:00 Merida",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2600,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 10 11 *"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_wa_claim_scheduled_job",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_key:\"sofia-2026-11-10-0800-newlead-10\"} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2150,
+        0
+      ],
+      "id": "sofia08-supabase-1",
+      "name": "Supabase | Claim One Time Authorization Batch",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sofia08-code-2",
+      "name": "Guard | Only Approved 08:00 Job",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1900,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const data=$input.first().json??{};\nif(data.ok!==true||data.job_key!=='sofia-2026-11-10-0800-newlead-10'||data.target_requests!==10)return [];\nconst hour=new Intl.DateTimeFormat('en-CA',{timeZone:'America/Merida',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23',minute:'2-digit'}).format(new Date());\nif(!hour.includes('2026')||!hour.includes('11')||!hour.includes('10'))throw new Error('UNEXPECTED_LOCAL_DATE');\nreturn [{json:{job_key:data.job_key,target:10}}];"
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_wa_eligible_new_leads?select=ghl_opportunity_id,ghl_contact_id,created_at&order=created_at.asc,ghl_opportunity_id.asc&limit=60",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1650,
+        0
+      ],
+      "id": "sofia08-supabase-3",
+      "name": "Supabase | Oldest Eligible New Leads",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sofia08-code-4",
+      "name": "Expand | Candidate Pool",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1400,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const rows=$input.all().flatMap(x=>Array.isArray(x.json)?x.json:Array.isArray(x.json?.data)?x.json.data:[x.json]);\nconst valid=rows.filter(x=>x.ghl_opportunity_id&&x.ghl_contact_id&&x.created_at)\n .sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.ghl_opportunity_id.localeCompare(b.ghl_opportunity_id));\nif(valid.length<10)throw new Error('LESS_THAN_10_PRELIMINARY_CANDIDATES');\nreturn valid.map(x=>({json:x}));"
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/opportunities/{{$json.ghl_opportunity_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1150,
+        0
+      ],
+      "id": "sofia08-ghl-5",
+      "name": "GHL | Live Opportunity",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "id": "sofia08-code-6",
+      "name": "Verify | Live New Lead Opportunity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -900,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const original=$('Expand | Candidate Pool').all(),responses=$input.all(),out=[];\nfor(let i=0;i<responses.length;i++){\n const oRaw=responses[i].json??{},o=oRaw.opportunity??oRaw,x=original[i]?.json??{};\n if(String(o.id??'')!==String(x.ghl_opportunity_id??''))continue;\n if(String(o.contactId??o.contact?.id??'')!==String(x.ghl_contact_id??''))continue;\n if(String(o.pipelineId??'')!=='GYqHbZyWUxxc3K03efVT')continue;\n if(String(o.pipelineStageId??'')!=='24a91c8c-c38a-48f9-934a-a5a1b5cb8fa0')continue;\n if(String(o.status??'').toLowerCase()!=='open')continue;\n out.push({json:x});\n}\nif(out.length<10)throw new Error('LESS_THAN_10_LIVE_OPPORTUNITIES');\nreturn out;"
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$json.ghl_contact_id}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Version",
+              "value": "v3"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -650,
+        0
+      ],
+      "id": "sofia08-ghl-7",
+      "name": "GHL | Live Contact",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iRAxNLo8UAmfnCY9",
+          "name": "Milhano GHL PrivInt"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "id": "sofia08-code-8",
+      "name": "Select | Ten Oldest Valid And DND-Free",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const found=$input.all(),eligible=$('Verify | Live New Lead Opportunity').all(),out=[],seenContacts=new Set(),seenPhones=new Set();\nfor(let i=0;i<found.length;i++){\n const raw=found[i].json??{},c=raw.contact??raw,x=eligible[i]?.json??{};\n if(String(c.id??'')!==String(x.ghl_contact_id??''))continue;\n if(c.locationId&&String(c.locationId)!=='ZzRtp9n8n76ARy99VzJc')continue;\n if(c.dnd===true)continue;\n const ds=c.dndSettings??{};\n if(ds.call?.status==='active'||ds.whatsApp?.status==='active'||ds.whatsapp?.status==='active')continue;\n const phone=String(c.phone??'').replace(/\\D/g,'');\n if(phone.length<10||phone.length>15||(!phone.startsWith('52')&&!phone.startsWith('1')))continue;\n if(seenContacts.has(x.ghl_contact_id)||seenPhones.has(phone))continue;\n seenContacts.add(x.ghl_contact_id);seenPhones.add(phone);\n out.push(x);\n}\nout.sort((a,b)=>a.created_at.localeCompare(b.created_at)||a.ghl_opportunity_id.localeCompare(b.ghl_opportunity_id));\nconst ten=out.slice(0,10);\nif(ten.length!==10)throw new Error('FEWER_THAN_10_VERIFIED_GHL_CONTACTS_NO_SEND');\nreturn ten.map(x=>({json:x}));"
+      }
+    },
+    {
+      "id": "sofia08-code-9",
+      "name": "Prepare | Reserve Exactly Ten",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -150,
+        70
+      ],
+      "parameters": {
+        "jsCode": "const rows=$input.all().map(x=>x.json);\nif(rows.length!==10)throw new Error('NOT_EXACTLY_TEN');\nreturn [{json:{p_key:'sofia-2026-11-10-0800-newlead-10',p_candidates:rows.map(x=>({ghl_contact_id:x.ghl_contact_id,ghl_opportunity_id:x.ghl_opportunity_id,created_at:x.created_at}))}}];"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_wa_reserve_scheduled_dispatches",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        100,
+        0
+      ],
+      "id": "sofia08-supabase-10",
+      "name": "Supabase | Reserve Ten Before Sending",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sofia08-code-11",
+      "name": "Expand | Ten Reserved Leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        350,
+        70
+      ],
+      "parameters": {
+        "jsCode": "const result=$input.first().json??{};\nif(result.ok!==true||Number(result.reserved)!==10)throw new Error('RESERVATION_NOT_CONFIRMED');\nconst chosen=$('Select | Ten Oldest Valid And DND-Free').all().map(x=>x.json);\nif(chosen.length!==10)throw new Error('CANDIDATE_LIST_MISMATCH');\nreturn chosen.map(x=>({json:x}));"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://collectacademy.app.n8n.cloud/webhook/milhano-ai-feed-individual-9bf29b585b7f5ea3",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 60000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {contact_id:$json.ghl_contact_id,opportunity_id:$json.ghl_opportunity_id,source:'sofia_scheduled_authorizations_20261110_0800'} }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        600,
+        0
+      ],
+      "id": "sofia08-scheduled-feed",
+      "name": "WF03 | Schedule WhatsApp Authorization And Call",
+      "onError": "continueRegularOutput",
+      "continueOnFail": true
+    },
+    {
+      "id": "sofia08-code-13",
+      "name": "Prepare | Per Lead Dispatch Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        850,
+        70
+      ],
+      "parameters": {
+        "jsCode": "const results=$input.all(),chosen=$('Expand | Ten Reserved Leads').all(),out=[];\nfor(let i=0;i<chosen.length;i++){\n const c=chosen[i]?.json??{},raw=results[i]?.json??{},v=raw.webhook_response??raw.result?.webhook_response??raw.result??raw;\n const id=String(v.conversation_id??v.conversationId??'');\n const good=v.success===true&&v.status==='DISPATCHED'&&/^conv_[A-Za-z0-9]+$/.test(id)&&!raw.error;\n const blocked=v.success===false&&['BLOCKED','INVALID_TRIGGER','DUPLICATE'].includes(String(v.status));\n out.push({json:{p_key:'sofia-2026-11-10-0800-newlead-10',p_contact_id:c.ghl_contact_id,\n p_opportunity_id:c.ghl_opportunity_id,p_state:good?'dispatched':blocked?'blocked':'review',\n p_conversation_id:good?id:null,p_error:good?null:blocked?'WF03_BLOCKED':'OUTBOUND_RESPONSE_UNVERIFIED'}});\n}\nif(out.length!==10)throw new Error('DISPATCH_RESULT_COUNT_MISMATCH');\nreturn out;"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_wa_record_dispatch_result",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1100,
+        0
+      ],
+      "id": "sofia08-supabase-14",
+      "name": "Supabase | Persist Each Dispatch Result",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "sofia08-code-15",
+      "name": "Prepare | Finish One Shot",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1350,
+        70
+      ],
+      "parameters": {
+        "jsCode": "const outcomes=$input.all();\nif(outcomes.length!==10||outcomes.some(x=>x.json?.ok!==true))throw new Error('PERSISTENCE_NOT_CONFIRMED');\nreturn [{json:{p_key:'sofia-2026-11-10-0800-newlead-10'}}];"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_wa_finish_scheduled_job",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "sofia08-supabase-16",
+      "name": "Supabase | Summarize One Shot",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "Schedule | Nov 10 at 08:00 Merida": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Claim One Time Authorization Batch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Claim One Time Authorization Batch": {
+      "main": [
+        [
+          {
+            "node": "Guard | Only Approved 08:00 Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guard | Only Approved 08:00 Job": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Oldest Eligible New Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Oldest Eligible New Leads": {
+      "main": [
+        [
+          {
+            "node": "Expand | Candidate Pool",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand | Candidate Pool": {
+      "main": [
+        [
+          {
+            "node": "GHL | Live Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Live Opportunity": {
+      "main": [
+        [
+          {
+            "node": "Verify | Live New Lead Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify | Live New Lead Opportunity": {
+      "main": [
+        [
+          {
+            "node": "GHL | Live Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GHL | Live Contact": {
+      "main": [
+        [
+          {
+            "node": "Select | Ten Oldest Valid And DND-Free",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select | Ten Oldest Valid And DND-Free": {
+      "main": [
+        [
+          {
+            "node": "Prepare | Reserve Exactly Ten",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | Reserve Exactly Ten": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Reserve Ten Before Sending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Reserve Ten Before Sending": {
+      "main": [
+        [
+          {
+            "node": "Expand | Ten Reserved Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand | Ten Reserved Leads": {
+      "main": [
+        [
+          {
+            "node": "WF03 | Schedule WhatsApp Authorization And Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF03 | Schedule WhatsApp Authorization And Call": {
+      "main": [
+        [
+          {
+            "node": "Prepare | Per Lead Dispatch Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | Per Lead Dispatch Result": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Persist Each Dispatch Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Persist Each Dispatch Result": {
+      "main": [
+        [
+          {
+            "node": "Prepare | Finish One Shot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | Finish One Shot": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Summarize One Shot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Merida"
+  }
+}

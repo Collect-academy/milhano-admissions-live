@@ -1,0 +1,523 @@
+{
+  "name": "MILHANO | Sofia | 07 Conversation Reconciliation | SAFE DRAFT",
+  "nodes": [
+    {
+      "id": "3d93bc6d-c833-4a29-9165-7b7d9638e4e5",
+      "name": "Schedule | Check Conversations",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1250,
+        0
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_dispatch_attempts?select=id,campaign_id,campaign_member_id,ghl_contact_id,ghl_opportunity_id,conversation_id,dispatched_at,status&status=eq.dispatched&conversation_id=not.is.null&order=dispatched_at.asc&limit=30",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1030,
+        0
+      ],
+      "id": "2a83bf36-45fb-49d6-88c8-69c483a4b281",
+      "name": "Supabase | Dispatched Attempts",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "27a97529-b9bd-4496-a935-49dd6d5c4219",
+      "name": "Expand | Attempts",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -810,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const old=$('Supabase | Dispatched Attempts').all().flatMap(i=>Array.isArray(i.json)?i.json:Array.isArray(i.json?.data)?i.json.data:[i.json]);\nconst whatsapp=$input.all().flatMap(i=>Array.isArray(i.json)?i.json:Array.isArray(i.json?.data)?i.json.data:[i.json])\n .map(i=>({...i,campaign_id:null,campaign_member_id:null,source:'wa_one_shot'}));\nconst set=new Set();\nreturn [...old,...whatsapp].filter(x=>x.status==='dispatched'&&/^conv_[A-Za-z0-9]+$/.test(String(x.conversation_id??'')))\n .filter(x=>{if(set.has(x.conversation_id))return false;set.add(x.conversation_id);return true})\n .map(x=>({json:x}));"
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.elevenlabs.io/v1/convai/conversations/{{$json.conversation_id}}",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -590,
+        0
+      ],
+      "id": "e34604a7-72e9-4c2d-ab23-33ab27f33e3a",
+      "name": "ElevenLabs | Conversation Details",
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c5d4ed4d-a38b-49af-a1e3-6b4b2ac492b5",
+      "name": "Normalize | Insights",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -370,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const raw=$('ElevenLabs | Conversation Details').all(),mains=$input.all(),attempts=$('Expand | Attempts').all(),out=[];\nconst validNumber=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0?x:null;\nconst date=x=>typeof x==='number'&&Number.isFinite(x)?new Date(x>1e12?x:x*1000).toISOString():null;\nfor(let i=0;i<raw.length;i++){\n const d=raw[i].json??{},a=attempts[i]?.json??{},meta=d.metadata??{},analysis=d.analysis??{};\n if(!a.conversation_id||d.conversation_id!==a.conversation_id||d.agent_id!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v')continue;\n const status=String(d.status??'unknown').toLowerCase(),terminal=status==='done'||status==='failed';\n const mainBranch=String(mains[i]?.json?.main_branch_id??'');\n const legacy=!mainBranch||Boolean(d.branch_id&&d.branch_id!==mainBranch);\n const vals={};for(const [id,v] of Object.entries(analysis.data_collection_results??{})){const name=String(v?.name??id);if(name)vals[name]=v?.value??null;}\n const yes=k=>vals[k]===true||vals[k]==='true';\n const turns=Number(d.user_message_count??(Array.isArray(d.transcript)?d.transcript.filter(t=>t.role==='user'&&String(t.message??'').trim()).length:0));\n const callStatus=String(meta.phone_call_status??meta.call_status??'').toLowerCase();\n const noAnswer=terminal&&['no_answer','not_answered','unanswered','busy','no_pickup'].includes(callStatus);\n const connection=!terminal?'unknown':turns>0?'human':noAnswer?'no_answer':status==='failed'?'system_failure':'ambiguous';\n const reason=yes('do_not_contact')?'do_not_contact':yes('explicitly_not_interested')?'not_interested':yes('pricing_rejected')?'pricing_rejected':yes('non_admissions_intent')?'not_admissions':yes('educational_model_rejected')?'model_rejected':null;\n const meaningful=terminal&&connection==='human'&&yes('information_delivered');\n const qualified=meaningful&&yes('qualified');\n const credits=validNumber(meta.credits_consumed)??validNumber(meta.usage?.credits_consumed);\n const cost=validNumber(meta.cost_fiat);\n const insight={\n  conversation_id:a.conversation_id,campaign_id:a.campaign_id,campaign_member_id:a.campaign_member_id,\n  ghl_contact_id:a.ghl_contact_id,ghl_opportunity_id:a.ghl_opportunity_id,agent_id:d.agent_id,\n  agent_branch_id:d.branch_id??null,agent_version:d.version_id??null,\n  started_at:date(meta.start_time_unix_secs),ended_at:date(meta.end_time_unix_secs),\n  duration_seconds:validNumber(meta.call_duration_secs),connection_outcome:connection,\n  meaningful_conversation:meaningful,qualified,school_tour_requested:yes('school_tour_requested'),\n  school_tour_booked_verified:false,appointment_id:null,\n  disqualified:reason!==null,disqualified_reason:reason,\n  callback_requested:yes('callback_requested'),do_not_contact:yes('do_not_contact'),\n  call_outcome:terminal?String(analysis.call_successful??status):'permission_pending',\n  termination_reason:status==='failed'?String(meta.termination_reason??callStatus??'failed'):null,\n  credits_consumed:credits,credits_source:credits===null?null:'elevenlabs_explicit',\n  estimated_cost_amount:cost,estimated_cost_currency:cost===null?null:'USD',\n  transcript_summary:typeof analysis.transcript_summary==='string'?analysis.transcript_summary:null,\n  objections:Array.isArray(vals.objections)?vals.objections:[],\n  collected_variables:vals,metadata:{status,environment:d.environment??null,branch_id:d.branch_id??null,expected_main_branch_id:mainBranch||null},\n  evidence:{source:'elevenlabs_get_conversation',user_message_count:turns,phone_call_status:callStatus,\n   legacy_branch_detected:legacy,booked_not_ghl_verified:true},\n  ingestion_status:terminal&&!legacy?'captured':'needs_review'\n };\n out.push({json:{...a,insight,terminal,legacy}});\n}\nreturn out;"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_call_insights?on_conflict=conversation_id",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.insight }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -150,
+        0
+      ],
+      "id": "c29170d5-0656-4198-a0d2-93dce03fbca6",
+      "name": "Supabase | Save Insights",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "492b7544-681b-4126-9d9c-e4f377b1b6bc",
+      "name": "Restore | Poll Outcome",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        70,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const rows=$('Normalize | Insights').all();return $input.all().map((_,i)=>({json:rows[i]?.json??{}})).filter(x=>x.json.conversation_id);"
+      }
+    },
+    {
+      "id": "e8ac06a5-bf9f-4d8f-8125-8f544dbb0f03",
+      "name": "IF | Terminal Main Conversation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        290,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "46df9c3b-0112-4e72-af03-9815881c7db7",
+              "leftValue": "={{ $json.terminal && !$json.legacy }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://collectacademy.app.n8n.cloud/webhook/milhano-ai-stage-decision-v1",
+        "authentication": "none",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {conversation_id:$json.conversation_id,ghl_contact_id:$json.ghl_contact_id,ghl_opportunity_id:$json.ghl_opportunity_id,note_saved:true} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        510,
+        70
+      ],
+      "id": "6717cd0b-a1f2-455e-95ca-83fe52aee1da",
+      "name": "WF05 | Evaluate Terminal Call",
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_finish_attempt",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {p_conversation_id:$('IF | Terminal Main Conversation').item.json.conversation_id,p_decision:'review',p_stage_applied:false,p_target_stage_id:null} }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        730,
+        70
+      ],
+      "id": "e7d42298-982f-46b9-8d9e-f3d1da871120",
+      "name": "Supabase | Mark Attempt For Review",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.elevenlabs.io/v1/convai/agents/agent_6401m3yvs1rcfbya7hk1qb2bxp8v",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -380,
+        110
+      ],
+      "id": "45a1bb3c-8776-4741-a36e-11cba3f5eaff",
+      "name": "ElevenLabs | Agent Main Metadata",
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_wa_scheduled_dispatches?select=id,ghl_contact_id,ghl_opportunity_id,conversation_id,status,recorded_at&status=eq.dispatched&conversation_id=not.is.null&recorded_at=gte.2026-11-10T00:00:00Z&limit=50",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -850,
+        100
+      ],
+      "id": "sofia07-wa-one-shot-dispatched",
+      "name": "Supabase | Scheduled WhatsApp Authorizations",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    }
+  ],
+  "connections": {
+    "Schedule | Check Conversations": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Dispatched Attempts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Supabase | Dispatched Attempts": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Scheduled WhatsApp Authorizations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Expand | Attempts": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs | Conversation Details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "ElevenLabs | Conversation Details": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs | Agent Main Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize | Insights": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Save Insights",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Supabase | Save Insights": {
+      "main": [
+        [
+          {
+            "node": "Restore | Poll Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Restore | Poll Outcome": {
+      "main": [
+        [
+          {
+            "node": "IF | Terminal Main Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "IF | Terminal Main Conversation": {
+      "main": [
+        [
+          {
+            "node": "WF05 | Evaluate Terminal Call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "WF05 | Evaluate Terminal Call": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Mark Attempt For Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "ElevenLabs | Agent Main Metadata": {
+      "main": [
+        [
+          {
+            "node": "Normalize | Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Scheduled WhatsApp Authorizations": {
+      "main": [
+        [
+          {
+            "node": "Expand | Attempts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Merida"
+  }
+}
