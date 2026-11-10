@@ -15,11 +15,11 @@ function asUTC(w:WindowInput) {
 }
 const fmt=(v:string)=>new Date(v).toLocaleString("es-MX",{timeZone:"America/Merida",dateStyle:"short",timeStyle:"short"});
 const stageLabels:Record<string,string>={"New Lead":"Nuevo lead","No answer - Day 1":"Sin respuesta D1","No answer - Day 2":"Sin respuesta D2","No answer - Day 3":"Sin respuesta D3","Never Answered / Nurturing A":"Sin respuesta / nutrición"};
-export function SofiaCampaignPlanner({candidates,campaigns,canPlan}:{candidates:SofiaCandidate[];campaigns:SofiaCampaign[];canPlan:boolean}) {
+export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabled}:{candidates:SofiaCandidate[];campaigns:SofiaCampaign[];canPlan:boolean;dispatchEnabled:boolean}) {
  const [stage,setStage]=useState("all"),[sort,setSort]=useState<"asc"|"desc">("asc");
  const [from,setFrom]=useState(""),[to,setTo]=useState(""),[search,setSearch]=useState("");
  const [selected,setSelected]=useState<string[]>([]);
- const [count,setCount]=useState(10),[name,setName]=useState("Lote Sofía · "+day());
+ const [name,setName]=useState("Lote Sofía · "+day());
  const [windows,setWindows]=useState<WindowInput[]>([{date:day(1),start:"08:00",end:"11:00"}]);
  const [busy,setBusy]=useState(false),[status,setStatus]=useState<{ok:boolean;message:string}|null>(null);
  const filtered=useMemo(()=>candidates.filter(c=>
@@ -28,9 +28,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan}:{candidates:
    (!to||c.createdAt.slice(0,10)<=to) &&
    (!search||[c.name,c.opportunityId,c.phoneLast4].join(" ").toLowerCase().includes(search.toLowerCase()))
  ).sort((a,b)=>sort==="asc"?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt)),[candidates,stage,sort,from,to,search]);
- const visibleSelected=filtered.filter(c=>selected.includes(c.opportunityId));
  const chosen=candidates.filter(c=>selected.includes(c.opportunityId));
- const valid=chosen.filter(c=>c.eligible);
  function addFiltered(n:number|"all") {
   const available=filtered.filter(c=>c.eligible&&!selected.includes(c.opportunityId));
   const next=n==="all"?available:available.slice(0,n);
@@ -51,6 +49,20 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan}:{candidates:
    return {error:"",slots};
   }catch{return {error:"Una de las fechas o ventanas no es válida.",slots:[] as {window_index:number;scheduled_at:string}[]};}
  },[windows,chosen.length]);
+ async function controlCampaign(c:SofiaCampaign,action:"resume"|"pause"|"cancel") {
+  if(!canPlan||busy)return;
+  if(action==="cancel" && !window.confirm("¿Cancelar esta campaña? No se contactará a los pendientes."))return;
+  setBusy(true);setStatus(null);
+  try{
+    const r=await fetch("/api/sofia/campaigns/"+encodeURIComponent(c.id)+"/control",{
+      method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action})});
+    const x=await r.json();
+    if(!r.ok)throw new Error(x.error??"No se pudo actualizar.");
+    setStatus({ok:true,message:"Campaña actualizada: "+String(x.status??action)});
+    window.location.reload();
+  }catch(e){setStatus({ok:false,message:e instanceof Error?e.message:"Error desconocido"});}
+  finally{setBusy(false);}
+ }
  async function save(){
   if(!canPlan||busy||schedule.error||!chosen.length||chosen.some(c=>!c.eligible))return;
   setBusy(true);setStatus(null);
@@ -123,9 +135,19 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan}:{candidates:
   </section>
   <section className="panel">
    <h2>3. Campañas creadas</h2>
-   <div className="sofia-scroll"><table className="sofia-table"><thead><tr><th>Nombre</th><th>Estado</th><th>Selección</th><th>Pendientes</th><th>En progreso</th><th>Revisión</th><th>Creada</th></tr></thead>
+   <p className="subtitle">{dispatchEnabled?"Sistema habilitado; sólo campañas autorizadas pueden llamar.":"Envíos bloqueados hasta verificar la primera llamada en producción."}</p>
+   <div className="sofia-scroll"><table className="sofia-table"><thead><tr><th>Nombre</th><th>Estado</th><th>Selección</th><th>Enviados o en curso</th><th>Pendientes</th><th>Revisión</th><th>Control</th></tr></thead>
    <tbody>{campaigns.map(c=><tr key={c.id}><td><strong>{c.name}</strong><small>{c.id}</small></td>
-    <td>{c.status} {c.dry_run?"· simulación":""}</td><td>{c.selected}</td><td>{c.queued}</td><td>{c.in_flight}</td><td>{c.review_needed}</td><td>{fmt(c.created_at)}</td></tr>)}</tbody></table>
+    <td>{c.status} {c.dry_run?"· sin envío":""}<small>Liberados: {c.released??0}/{c.selected}</small></td><td>{c.selected}</td><td>{c.in_flight}</td><td>{c.queued}</td><td>{c.review_needed}</td>
+    <td><div className="sofia-row-actions">
+      {c.status==="running"&&canPlan?<button type="button" className="secondary-button" disabled={busy} onClick={()=>controlCampaign(c,"pause")}>Pausar</button>:null}
+      {canPlan&&dispatchEnabled&&c.pilotVerified&&["draft","paused","running","scheduled"].includes(c.status)?
+        <button type="button" className="primary-button" disabled={busy} onClick={()=>controlCampaign(c,"resume")}>Continuar pendientes</button>:null}
+      {canPlan&&["draft","paused","scheduled"].includes(c.status)?
+        <button type="button" className="secondary-button" disabled={busy} onClick={()=>controlCampaign(c,"cancel")}>Cancelar</button>:null}
+      {!c.pilotVerified&&["draft","paused"].includes(c.status)?<small>Falta validar prueba individual</small>:null}
+    </div></td>
+   </tr>)}</tbody></table>
    {campaigns.length===0?<p>Sin campañas configuradas todavía.</p>:null}</div>
   </section>
  </div>;
