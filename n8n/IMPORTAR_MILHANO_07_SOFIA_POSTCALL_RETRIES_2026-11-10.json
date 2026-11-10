@@ -1,0 +1,307 @@
+{
+  "name": "MILHANO | Sofia | 07 Post Call + Initiation Failure Reconciliation | WEBHOOK",
+  "nodes": [
+    {
+      "id": "3d93bc6d-c833-4a29-9165-7b7d9638e4e5",
+      "name": "Webhook | Post Call Outcome",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1500,
+        160
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "milhano-sofia-postcall-reconcile",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.elevenlabs.io/v1/convai/agents/agent_6401m3yvs1rcfbya7hk1qb2bxp8v",
+        "authentication": "genericCredentialType",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1280,
+        160
+      ],
+      "id": "45a1bb3c-8776-4741-a36e-11cba3f5eaff",
+      "name": "ElevenLabs | Check Main Agent",
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ 'https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_pending_call_reconciliation?select=conversation_id,created_at&conversation_id=eq.' + encodeURIComponent($('Validate | Official Event and Conversation').first().json.conversation_id) + '&limit=1' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1060,
+        160
+      ],
+      "id": "2a83bf36-45fb-49d6-88c8-69c483a4b281",
+      "name": "Supabase | Pending Conversations",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput",
+      "alwaysOutputData": true
+    },
+    {
+      "id": "27a97529-b9bd-4496-a935-49dd6d5c4219",
+      "name": "Select | Valid Pending Conversations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -840,
+        160
+      ],
+      "parameters": {
+        "jsCode": "const agent=$('ElevenLabs | Check Main Agent').first().json??{};\nconst main=String(agent.main_branch_id??'');\nif(!main||String(agent.agent_id??'')!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v')throw new Error('AGENT_MAIN_UNVERIFIED');\nconst rows=$input.all().flatMap(x=>Array.isArray(x.json)?x.json:Array.isArray(x.json?.data)?x.json.data:[x.json]),seen=new Set();\nreturn rows.filter(x=>/^conv_[A-Za-z0-9]+$/.test(String(x.conversation_id??'')))\n.filter(x=>{if(seen.has(x.conversation_id))return false;seen.add(x.conversation_id);return true;})\n.map(x=>({json:{...x,main_branch_id:main}}));"
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.elevenlabs.io/v1/convai/conversations/{{$json.conversation_id}}",
+        "authentication": "genericCredentialType",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        },
+        "genericAuthType": "httpHeaderAuth"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -620,
+        160
+      ],
+      "id": "e34604a7-72e9-4c2d-ab23-33ab27f33e3a",
+      "name": "ElevenLabs | Fetch Pending Conversation",
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "c5d4ed4d-a38b-49af-a1e3-6b4b2ac492b5",
+      "name": "Classify | Confirmed Final Call",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        160
+      ],
+      "parameters": {
+        "jsCode": "const results=$input.all(),pending=$('Select | Valid Pending Conversations').all();\nif(results.length!==pending.length)throw new Error('CONVERSATION_LOOKUP_COUNT_MISMATCH');\nconst items=[],ts=x=>typeof x==='number'&&Number.isFinite(x)?new Date(x>1e12?x:x*1000).toISOString():null;\nconst number=x=>typeof x==='number'&&Number.isFinite(x)&&x>=0?x:null;\nfor(let i=0;i<results.length;i++){\n const d=results[i]?.json??{},p=pending[i]?.json??{},m=d.metadata??{},an=d.analysis??{};\n if(d.error||String(d.conversation_id??'')!==p.conversation_id)continue;\n if(d.agent_id!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v'||!p.main_branch_id||String(d.branch_id??'')!==p.main_branch_id)continue;\n const status=String(d.status??'').toLowerCase();if(!['done','failed'].includes(status))continue;\n const incoming=$('Validate | Official Event and Conversation').first().json;\n const providerFailure=incoming.kind==='call_initiation_failure'&&incoming.conversation_id===p.conversation_id?incoming.failure_reason:null;\n const reason=String(providerFailure??m.termination_reason??d.termination_reason??m.phone_call_status??m.call_status??'');\n const r=reason.toLowerCase(),turns=Array.isArray(d.transcript)?d.transcript.filter(t=>t.role==='user'&&String(t.message??'').trim()).length:0;\n const vars={},collected=an.data_collection_results??{};\n for(const [key,value] of Object.entries(collected)){vars[String(value?.name??key)]=value?.value??value??null;}\n const yes=k=>vars[k]===true||vars[k]==='true';\n let outcome='unknown',source='unrecognized_terminal';\n if(/declined the call permission|permission request rejected|permission denied/.test(r)){\n  outcome='permission_declined';source='permission_denied_explicit';\n }else if(/call rejected by the user|user rejected the call|declined the incoming call/.test(r)){\n  outcome='rejected';source='explicit_user_call_rejection';\n }else if(['no_answer','not_answered','unanswered','busy','no_pickup'].includes(r)||/no[- ]answer|not answered|no.pickup|unanswered|call missed|missed by the user|ringing timed out|busy/.test(r)){\n  outcome='no_answer';source='explicit_no_answer_termination';\n }else if(turns>0){outcome='answered';source='transcript_user_turns';}\n items.push({json:{p_result:{\n  conversation_id:p.conversation_id,agent_id:d.agent_id,branch_id:String(d.branch_id),main_branch_id:p.main_branch_id,\n  conversation_status:status,outcome,classification_evidence:source,termination_reason:reason||null,user_turns:turns,\n  started_at:ts(m.start_time_unix_secs),ended_at:ts(m.end_time_unix_secs),\n  duration_seconds:number(m.call_duration_secs),\n  credits_consumed:number(m.credits_consumed)??number(m.usage?.credits_consumed),\n  summary:typeof an.transcript_summary==='string'?an.transcript_summary:null,\n  meaningful:yes('information_delivered')&&turns>0,qualified:yes('qualified')&&turns>0,\n  tour_requested:yes('school_tour_requested'),callback_requested:yes('callback_requested'),\n  do_not_contact:yes('do_not_contact'),collected_variables:vars\n }}});\n}\nreturn items;"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_record_final_call",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -180,
+        160
+      ],
+      "id": "c29170d5-0656-4198-a0d2-93dce03fbca6",
+      "name": "Supabase | Commit Outcome and Automatic Retry",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "ddfc5f38-e39a-4a30-b90e-c34d9b7b4f41",
+      "name": "Validate | Official Event and Conversation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1380,
+        160
+      ],
+      "parameters": {
+        "jsCode": "const b=$input.first().json?.body??{};\nconst envelope=b.event&&typeof b.event==='object'?b.event:b;\nconst cid=String(envelope.conversation_id??envelope.data?.conversation_id??'');\nconst kind=String(envelope.type??'post_call_transcription');\nconst id=String(envelope.data?.agent_id??'');\nif(!/^conv_[A-Za-z0-9]+$/.test(cid))throw new Error('INVALID_CONVERSATION_ID');\nif(!['post_call_transcription','call_initiation_failure'].includes(kind))throw new Error('UNSUPPORTED_POSTCALL_EVENT');\nif(kind==='call_initiation_failure'&&id!=='agent_6401m3yvs1rcfbya7hk1qb2bxp8v')throw new Error('AGENT_MISMATCH');\nconst failure=kind==='call_initiation_failure'?String(envelope.data?.failure_reason??'').toLowerCase():null;\nif(failure&&!['busy','no-answer','unknown'].includes(failure))throw new Error('UNSUPPORTED_FAILURE_REASON');\nreturn [{json:{conversation_id:cid,kind,failure_reason:failure}}];"
+      }
+    }
+  ],
+  "connections": {
+    "ElevenLabs | Check Main Agent": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Pending Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Pending Conversations": {
+      "main": [
+        [
+          {
+            "node": "Select | Valid Pending Conversations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select | Valid Pending Conversations": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs | Fetch Pending Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ElevenLabs | Fetch Pending Conversation": {
+      "main": [
+        [
+          {
+            "node": "Classify | Confirmed Final Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify | Confirmed Final Call": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Commit Outcome and Automatic Retry",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook | Post Call Outcome": {
+      "main": [
+        [
+          {
+            "node": "Validate | Official Event and Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate | Official Event and Conversation": {
+      "main": [
+        [
+          {
+            "node": "ElevenLabs | Check Main Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Merida"
+  },
+  "active": false
+}
