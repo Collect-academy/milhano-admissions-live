@@ -136,7 +136,7 @@ export async function getSofiaAnalytics(): Promise<SofiaAnalytics> {
 
 export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
   const admin = createSupabaseAdmin();
-  const [opportunities, assigned, closer] = await Promise.all([
+  const [opportunities, assigned, closer, allSetter] = await Promise.all([
     admin.from("milhano_opportunities")
       .select("ghl_opportunity_id,ghl_contact_id,opportunity_name,contact_name,phone,current_stage,pipeline_stage_id,created_at,source,status")
       .eq("pipeline_id", SETTER_PIPELINE_ID)
@@ -152,15 +152,18 @@ export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
       .select("ghl_contact_id")
       .eq("pipeline_id", CLOSER_PIPELINE_ID)
       .eq("status", "open").limit(5000),
+    admin.from("milhano_opportunities").select("ghl_contact_id")
+      .eq("pipeline_id", SETTER_PIPELINE_ID).eq("status","open").limit(5000),
   ]);
   const opportunitiesData = ensure(opportunities, "candidatos") as Record<string, unknown>[];
   const assignedData = ensure(assigned, "reservados") as Record<string, unknown>[];
   const closerData = ensure(closer, "Closer") as Record<string, unknown>[];
+  const setterData = ensure(allSetter, "duplicados Setter") as Record<string, unknown>[];
 
   const reserved = new Set(assignedData.map(x => String(x.ghl_contact_id ?? "")));
   const withCloser = new Set(closerData.map(x => String(x.ghl_contact_id ?? "")));
   const contactCount = new Map<string, number>();
-  for (const o of opportunitiesData) {
+  for (const o of setterData) {
     const contact = String(o.ghl_contact_id ?? "");
     contactCount.set(contact, (contactCount.get(contact) ?? 0) + 1);
   }
