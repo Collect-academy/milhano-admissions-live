@@ -43,7 +43,8 @@ export default async function SofiaPerformancePage() {
   >
     <div className="sofia-top-actions">
       <Link className="secondary-button" href="/">← V2 Summary</Link>
-      <Link className="primary-button" href="/sofia/campanas">Planificar campañas <ArrowRight size={15}/></Link>
+      <Link className="primary-button" href="/sofia/campanas">Preparar campañas <ArrowRight size={15}/></Link>
+      <Link className="secondary-button" href="/sofia/seguimiento">Autorizaciones y reintentos</Link>
     </div>
     <div className="sofia-kpis">
       {kpis.map(k => <article className="sofia-kpi" key={k.label}>
