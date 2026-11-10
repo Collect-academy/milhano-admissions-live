@@ -19,21 +19,31 @@ export async function POST(request: Request) {
     if(name.length<3||name.length>90||!uuid.test(user.id)||windows.length<1||windows.length>8||members.length<1||members.length>500)
       return NextResponse.json({error:"Nombre, usuario o número de registros inválido."},{status:400});
     const now=Date.now();
+    const localDay=(ms:number)=>new Date(ms-6*3600000).toISOString().slice(0,10);
+    const today=localDay(now);
     const orderedWindows=windows.map(w=>({start_at:w?.start_at,end_at:w?.end_at,a:Date.parse(w?.start_at),b:Date.parse(w?.end_at)}));
-    if(orderedWindows.some(w=>!Number.isFinite(w.a)||!Number.isFinite(w.b)||w.a<now-60000||w.b<=w.a||w.b>now+90*86400*1000))
-      return NextResponse.json({error:"Ventanas inválidas o fuera de los próximos 90 días."},{status:400});
+    if(orderedWindows.some(w=>!Number.isFinite(w.a)||!Number.isFinite(w.b)
+      ||w.b<=w.a||w.b>now+90*86400*1000
+      ||(w.a<now&&(localDay(w.a)!==today||w.b-now<=3600000))))
+      return NextResponse.json({error:"Ventana inválida. Si comenzó hoy, debe quedar más de una hora hasta su finalización."},{status:400});
     if(orderedWindows.some((w,i)=>orderedWindows.some((v,j)=>j!==i&&w.a<v.b&&v.a<w.b)))
       return NextResponse.json({error:"Las ventanas no pueden solaparse."},{status:400});
     const dedupContact=new Set<string>(),dedupOpp=new Set<string>();
+    const normalizedMembers:Member[]=[];
     for(const m of members) {
       const index=m?.window_index;
       const slot=Date.parse(m?.scheduled_at);
+      const win=Number.isInteger(index)&&index>=0&&index<orderedWindows.length?orderedWindows[index]:null;
+      // Sólo para una ventana iniciada hoy: ajustar el despacho al momento actual.
+      // Se conserva una hora futura elegida explícitamente.
+      const effectiveSlot=win&&win.a<now?Math.max(slot,now+15000):slot;
       if(!gid.test(m?.ghl_contact_id)||!gid.test(m?.ghl_opportunity_id)
-         ||!Number.isInteger(index)||index<0||index>=windows.length
-         ||!Number.isFinite(slot)||slot<orderedWindows[index].a||slot>=orderedWindows[index].b||slot<now-60000
+         ||!win||!Number.isFinite(slot)
+         ||slot<win.a||effectiveSlot>=win.b||effectiveSlot<now-60000
          ||dedupContact.has(m.ghl_contact_id)||dedupOpp.has(m.ghl_opportunity_id))
         return NextResponse.json({error:"Selección duplicada, programación inválida o contacto incompleto."},{status:400});
       dedupContact.add(m.ghl_contact_id);dedupOpp.add(m.ghl_opportunity_id);
+      normalizedMembers.push({...m,scheduled_at:new Date(effectiveSlot).toISOString()});
     }
     const admin=createSupabaseAdmin();
     // Revalidate live Supabase snapshot; n8n must additionally verify GHL at dispatch time.
@@ -48,7 +58,7 @@ export async function POST(request: Request) {
       return NextResponse.json({error:"Una oportunidad cambió de etapa o perdió elegibilidad."},{status:409});
     const {data,error}=await admin.rpc("milhano_ai_create_campaign_draft",{
       p_name:name,p_creator:user.id,
-      p_windows:windows,p_members:members
+      p_windows:windows,p_members:normalizedMembers
     });
     if(error) return NextResponse.json({error:"No se pudo guardar el borrador: "+error.message},{status:409});
     if(body?.activate===true){
