@@ -37,3 +37,5 @@ jobs:
         run: npm run build
 
 # Compile against current Sofía feature branch; do not merge into production on failed checks.
+
+# Type-check and build the added single-lead test route before production merge.
