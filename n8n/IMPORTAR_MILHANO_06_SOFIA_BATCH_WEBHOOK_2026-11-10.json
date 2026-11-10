@@ -139,7 +139,7 @@
     {
       "parameters": {
         "method": "GET",
-        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Claim').item.json.contact_id}}",
+        "url": "=https://services.leadconnectorhq.com/contacts/{{$('Normalize | Claim').all()[$itemIndex].json.contact_id}}",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
