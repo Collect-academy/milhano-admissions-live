@@ -13,6 +13,33 @@ function asUTC(w:WindowInput) {
   const start=new Date(w.date+"T"+w.start+":00"+TZ),end=new Date(w.date+"T"+w.end+":00"+TZ);
   return {start_at:start.toISOString(),end_at:end.toISOString(),startMs:start.getTime(),endMs:end.getTime()};
 }
+// Si todavía queda más de una hora de la jornada, sugerir hoy.
+const defaultCampaignDay=()=>{
+  const now=Date.now();
+  const todayWindowEnd=new Date(day()+"T20:00:00"+TZ).getTime();
+  return todayWindowEnd-now>3600000?day():day(1);
+};
+function buildSchedule(windows:WindowInput[],count:number) {
+  try {
+    const now=Date.now(),today=day();
+    const indexed=windows.map((w,i)=>({...asUTC(w),index:i,date:w.date})).sort((a,b)=>a.startMs-b.startMs);
+    if(indexed.some((w,i)=>!Number.isFinite(w.startMs)||!Number.isFinite(w.endMs)
+      ||w.endMs<=w.startMs||w.endMs>now+90*86400*1000
+      ||(w.startMs<now&&(w.date!==today||w.endMs-now<=3600000))
+      ||(i>0&&indexed[i-1].endMs>w.startMs)))
+      return {error:"Ventana inválida: si ya comenzó hoy, debe quedar más de una hora antes del cierre. Revisa también posibles solapamientos.",
+        slots:[] as {window_index:number;scheduled_at:string}[]};
+    const slots=Array.from({length:count},(_,i)=>{
+      const w=indexed[Math.min(Math.floor(i*indexed.length/count),indexed.length-1)];
+      // Inicio pasado hoy: despachar desde ahora; no asignar una hora ya transcurrida.
+      const scheduledMs=w.startMs<now?now+30000:w.startMs;
+      return {window_index:w.index,scheduled_at:new Date(scheduledMs).toISOString()};
+    });
+    return {error:"",slots};
+  }catch{
+    return {error:"Corrige fechas u horas de las ventanas.",slots:[] as {window_index:number;scheduled_at:string}[]};
+  }
+}
 const fmt=(v:string)=>new Date(v).toLocaleString("es-MX",{timeZone:"America/Merida",dateStyle:"short",timeStyle:"short"});
 const stageLabels:Record<string,string>={"New Lead":"Nuevo lead","No answer - Day 1":"Sin respuesta D1","No answer - Day 2":"Sin respuesta D2","No answer - Day 3":"Sin respuesta D3","Never Answered / Nurturing A":"Sin respuesta / nutrición"};
 export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabled}:{candidates:SofiaCandidate[];campaigns:SofiaCampaign[];canPlan:boolean;dispatchEnabled:boolean}) {
@@ -21,7 +48,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
  const [selected,setSelected]=useState<string[]>([]);
  const [requestedCount,setRequestedCount]=useState("20");
  const [name,setName]=useState("Lote Sofía · "+day());
- const [windows,setWindows]=useState<WindowInput[]>([{date:day(1),start:"08:00",end:"20:00"}]);
+ const [windows,setWindows]=useState<WindowInput[]>([{date:defaultCampaignDay(),start:"08:00",end:"20:00"}]);
  const [busy,setBusy]=useState(false),[status,setStatus]=useState<{ok:boolean;message:string}|null>(null);
  const filtered=useMemo(()=>candidates.filter(c=>
    (stage==="all"||c.stage===stage) &&
@@ -84,24 +111,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
  function updateWindow(index:number,key:keyof WindowInput,value:string) {
   setWindows(prev=>prev.map((w,i)=>i===index?{...w,[key]:value}:w));
  }
- const schedule=useMemo(()=>{
-  try {
-   const indexed=windows.map((w,i)=>({...asUTC(w),index:i})).sort((a,b)=>a.startMs-b.startMs);
-   if(indexed.some((w,i)=>w.endMs<=w.startMs||w.startMs<=Date.now()
-    ||w.endMs>Date.now()+90*86400*1000||(i>0&&indexed[i-1].endMs>w.startMs)))
-    return {error:"Corrige fechas, horas o ventanas solapadas.",
-      slots:[] as {window_index:number;scheduled_at:string}[]};
-   // Each window groups its permission requests at its start, without invented
-   // seven-minute slots. Approval and call timing is managed asynchronously
-   // by WhatsApp/ElevenLabs, not by this planning calendar.
-   const slots=Array.from({length:chosen.length},(_,i)=>{
-     const w=indexed[Math.min(Math.floor(i*indexed.length/chosen.length),indexed.length-1)];
-     return {window_index:w.index,scheduled_at:w.start_at};
-   });
-   return {error:"",slots};
-  } catch {return {error:"Una de las fechas o ventanas no es válida.",
-    slots:[] as {window_index:number;scheduled_at:string}[]};}
- },[windows,chosen.length]);
+ const schedule=useMemo(()=>buildSchedule(windows,chosen.length),[windows,chosen.length]);
   async function controlCampaign(c:SofiaCampaign,action:"start"|"resume"|"pause"|"cancel") {
   if(!canPlan||busy)return;
   if(action==="cancel" && !window.confirm("¿Cancelar esta campaña? No se contactará a los pendientes."))return;
@@ -118,14 +128,15 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
   finally{setBusy(false);}
  }
  async function save(activate=false){
-  if(!canPlan||busy||schedule.error||!chosen.length||chosen.some(c=>!c.eligible))return;
+  const currentSchedule=buildSchedule(windows,chosen.length);
+  if(!canPlan||busy||currentSchedule.error||!chosen.length||chosen.some(c=>!c.eligible)){if(currentSchedule.error)setStatus({ok:false,message:currentSchedule.error});return;}
   if(activate&&!window.confirm("¿Activar "+chosen.length+" solicitudes de WhatsApp en los horarios elegidos, con un máximo de 2 intentos por contacto?"))return;
   setBusy(true);setStatus(null);
   try {
    const response=await fetch("/api/sofia/campaigns",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({name,activate,windows:windows.map(w=>{const x=asUTC(w);return {start_at:x.start_at,end_at:x.end_at};}),
      members:chosen.map((c,i)=>({ghl_contact_id:c.contactId,ghl_opportunity_id:c.opportunityId,
-       window_index:schedule.slots[i].window_index,scheduled_at:schedule.slots[i].scheduled_at}))})});
+       window_index:currentSchedule.slots[i].window_index,scheduled_at:currentSchedule.slots[i].scheduled_at}))})});
    const result=await response.json();
    if(!response.ok)throw new Error(result.error??"No se pudo guardar.");
    setStatus({ok:true,message:activate?"Lote activado. ID: "+result.campaign_id+". El motor enviará las solicitudes al llegar el horario.":"Borrador guardado. ID: "+result.campaign_id});
@@ -182,14 +193,14 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
   <section className="panel">
    <div className="sofia-panel-title"><h2>2. ¿Cuándo enviamos las solicitudes del lote?</h2><span className="sofia-count">{dispatchEnabled?"Listo para activar":"Envío temporalmente bloqueado"}</span></div>
    <label className="sofia-name-label">Nombre de campaña<input value={name} maxLength={90} onChange={e=>setName(e.target.value)}/></label>
-   <div className="sofia-window-title"><strong>Horarios de envío de autorizaciones · Mérida</strong><span>No son citas ni ventanas de llamada: la persona puede aceptar más tarde y ElevenLabs la llamará entonces.</span></div>
+   <div className="sofia-window-title"><strong>Horarios de envío de autorizaciones · Mérida</strong><span>Puedes usar una ventana iniciada hoy si quedan más de 60 minutos; en ese caso el envío se inicia al activar el lote, no a la hora pasada.</span></div>
    {windows.map((w,i)=><div className="sofia-window" key={i}>
     <label>Día<input type="date" value={w.date} onChange={e=>updateWindow(i,"date",e.target.value)}/></label>
     <label>Enviar desde<input type="time" value={w.start} onChange={e=>updateWindow(i,"start",e.target.value)}/></label>
     <label>Ventana válida hasta<input type="time" value={w.end} onChange={e=>updateWindow(i,"end",e.target.value)}/></label>
     <button type="button" className="secondary-button" disabled={windows.length===1} onClick={()=>setWindows(prev=>prev.filter((_,j)=>i!==j))}>Quitar</button>
    </div>)}
-   <button type="button" className="secondary-button" disabled={windows.length>=8} onClick={()=>setWindows(prev=>[...prev,{date:day(1),start:"08:00",end:"20:00"}])}>+ Añadir ventana</button>
+   <button type="button" className="secondary-button" disabled={windows.length>=8} onClick={()=>setWindows(prev=>[...prev,{date:defaultCampaignDay(),start:"08:00",end:"20:00"}])}>+ Añadir ventana</button>
    <p className="subtitle">Si eliges varios horarios, repartimos los contactos entre ellos. Dentro de cada horario no agregamos retrasos: ElevenLabs espera la autorización de cada familia y gestiona la capacidad de llamadas.</p>
    <div className="sofia-preview">
     <h3>Vista previa</h3>
