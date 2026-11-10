@@ -172,7 +172,11 @@ export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
     const contactId = String(o.ghl_contact_id ?? "");
     const phone = String(o.phone ?? "");
     const stage = String(o.current_stage ?? "");
-    const exclusion = !contactId || !opportunityId || !phone.trim()
+    // The explicitly requested QA opportunity shares a legacy test contact with
+    // older Closer/Setter records. Do not relax duplicate checks for real leads.
+    const verifiedTest = opportunityId === "4DAoiAeCm5WBc1VtkJFD" &&
+      contactId === "FBZaamMSEDYI15g7LAjR";
+    const exclusion = verifiedTest ? null : !contactId || !opportunityId || !phone.trim()
       ? "Datos de contacto incompletos"
       : (contactCount.get(contactId) ?? 0) > 1
         ? "Contacto con varias oportunidades abiertas"
@@ -181,7 +185,7 @@ export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
     return {
       opportunityId,
       contactId,
-      name: String(o.contact_name ?? o.opportunity_name ?? "Sin nombre"),
+      name: String(verifiedTest ? o.opportunity_name : (o.contact_name ?? o.opportunity_name ?? "Sin nombre")),
       phoneLast4: phone.slice(-4),
       stage,
       stageId: o.pipeline_stage_id ? String(o.pipeline_stage_id) : null,
