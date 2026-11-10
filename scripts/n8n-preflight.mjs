@@ -72,15 +72,16 @@ export async function auditSofiaDrafts(sources, workflows, getWorkflow) {
         must(byName.has(ref), "expression references unknown node '" + ref + "' in " + wf.name);
       }
     }
-    const schedule = wf.nodes.find((n) => n.name === "Safety | Scheduler Disabled");
+    const schedule = wf.nodes.find((n) => n.name === "Safety | Require Supabase Approval");
     if (schedule) {
-      must(schedule.parameters.jsCode.includes("const ENABLE_BATCH_OUTBOUND=false;"),
-        "outbound scheduler safety switch was modified");
+      must(schedule.parameters.jsCode.includes("milhano_sofia_scheduler") &&
+          wf.nodes.some(n=>n.parameters?.url?.includes("milhano_ai_claim_one_due")),
+        "outbound scheduler must use the protected Supabase claim RPC");
     }
-    const stage = wf.nodes.find((n) => n.name === "Safety Gate | Stage Writes OFF");
+    const stage = wf.nodes.find((n) => n.name === "Safety Gate | Stage Writes Controlled");
     if (stage) {
-      must(stage.parameters.jsCode.includes("const ALLOW_STAGE_WRITES=false;"),
-        "stage write safety switch was modified");
+      must(stage.parameters.jsCode.includes("Supabase | Runtime Stage Gate"),
+        "stage writes must require the Supabase runtime flag");
     }
     diagnostics.push(wf.name + ": " + wf.nodes.length + " nodes, valid IDs and internal links");
   }
