@@ -281,7 +281,7 @@ async function main() {
     }
   }
   await auditSofiaDrafts(plannedSources, list, (id) => callApi("GET", "/workflows/" + encodeURIComponent(id)));
-  console.log("Planned changes:", changes.length, "/ 4 allowlisted draft workflows.");
+  console.log("Planned changes:", changes.length, "/ 5 allowlisted draft workflows.");
   if (MODE === "preview") {
     console.log("READ-ONLY preview completed. No workflow was created or edited.");
     return;
