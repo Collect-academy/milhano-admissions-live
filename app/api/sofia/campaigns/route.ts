@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmissionsAppUser } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
-import { ELIGIBLE_STAGES, SETTER_PIPELINE_ID } from "@/lib/sofia-analytics";
+import { SETTER_PIPELINE_ID } from "@/lib/sofia-analytics";
 
 type Member = { ghl_contact_id: string; ghl_opportunity_id: string; window_index:number; scheduled_at:string };
 type Window = {start_at:string; end_at:string};
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     if(lookupError)throw new Error(lookupError.message);
     if(opportunities?.length!==members.length) return NextResponse.json({error:"Algunas oportunidades ya no existen."},{status:409});
     if(opportunities.some(o=>o.pipeline_id!==SETTER_PIPELINE_ID||o.status!=="open"
-      ||!(ELIGIBLE_STAGES as readonly string[]).includes(o.current_stage)||!o.phone
+      ||!o.phone
       ||!dedupContact.has(o.ghl_contact_id)))
       return NextResponse.json({error:"Una oportunidad cambió de etapa o perdió elegibilidad."},{status:409});
     const {data,error}=await admin.rpc("milhano_ai_create_campaign_draft",{
