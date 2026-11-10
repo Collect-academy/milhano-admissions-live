@@ -37,6 +37,12 @@ for(const mark of ["03 Individual Feed v1.1 International","06 Campaign Schedule
             error_status:typeof err==="object"?err.statusCode??null:null,
             root_code:v.code??null,root_status:v.statusCode??null,
             keys:Object.keys(v).slice(0,8)}));
+          const safeError=String(typeof err==="string"?err:JSON.stringify(err))
+           .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi,"[email]")
+           .replace(/conv_[a-zA-Z0-9]+/g,"[conversation]")
+           .replace(/\\+?\\d{9,}/g,"[number]")
+           .replace(/Bearer\\s+[A-Za-z0-9._-]+/g,"Bearer [redacted]");
+          console.log("RPC_ERROR_SANITIZED",safeError.slice(0,250));
          }
         }
       }
