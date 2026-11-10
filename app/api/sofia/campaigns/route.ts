@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdmissionsAppUser } from "@/lib/auth";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
-import { ELIGIBLE_STAGES, SETTER_PIPELINE_ID, CLOSER_PIPELINE_ID } from "@/lib/sofia-analytics";
+import { ELIGIBLE_STAGES, SETTER_PIPELINE_ID } from "@/lib/sofia-analytics";
 
 type Member = { ghl_contact_id: string; ghl_opportunity_id: string; window_index:number; scheduled_at:string };
 type Window = {start_at:string; end_at:string};
@@ -46,10 +46,6 @@ export async function POST(request: Request) {
       ||!(ELIGIBLE_STAGES as readonly string[]).includes(o.current_stage)||!o.phone
       ||!dedupContact.has(o.ghl_contact_id)))
       return NextResponse.json({error:"Una oportunidad cambió de etapa o perdió elegibilidad."},{status:409});
-    const {data:closer,error:closerError}=await admin.from("milhano_opportunities")
-      .select("ghl_contact_id").eq("pipeline_id",CLOSER_PIPELINE_ID).eq("status","open").in("ghl_contact_id",[...dedupContact]);
-    if(closerError)throw new Error(closerError.message);
-    if(closer?.length) return NextResponse.json({error:"Un contacto tiene oportunidad abierta en Closer."},{status:409});
     const {data,error}=await admin.rpc("milhano_ai_create_campaign_draft",{
       p_name:name,p_creator:user.id,
       p_windows:windows,p_members:members
