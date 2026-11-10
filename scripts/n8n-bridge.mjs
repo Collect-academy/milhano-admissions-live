@@ -127,6 +127,24 @@ async function main() {
   console.log("n8n API: connection verified.");
   console.log("Workflows visible:", list.length, "| Published:", active, "| Not published:", list.length - active);
   if (MODE === "check") {
+    const feedList = list.filter(w => /03 Individual Feed/i.test(w.name ?? ""));
+    console.log("Sofia WF03 feed matches:", feedList.length);
+    for (const feed of feedList) {
+      const detail = await callApi("GET", "/workflows/" + encodeURIComponent(feed.id));
+      const nodes = detail.nodes ?? [];
+      const webhookPaths = nodes.filter(n => n.type === "n8n-nodes-base.webhook").map(n => n.parameters?.path);
+      const source = nodes.map(n => typeof n.parameters?.jsCode === "string" ? n.parameters.jsCode : "").join("\n");
+      const allParameters = JSON.stringify(nodes.map(n=>n.parameters??{}));
+      const text = source + allParameters;
+      const modeLiteral = text.match(/test_mode\\s*:\\s*(true|false)/i);
+      const callsApi = /elevenlabs\\.io\\/v1\\/convai\\/whatsapp\\/outbound-call/i.test(text);
+      const hasBranchId = /agtbrch_5901m66tpzs8eqtryhadxb29zbk4/.test(text);
+      console.log("Sofia WF03:", JSON.stringify({
+        name:feed.name, active:detail.active, archived:detail.isArchived===true,
+        webhookPaths, nodeCount:nodes.length, testModeLiteral:modeLiteral?.[1]??"not-detected",
+        elevenLabsOutboundConfigured:callsApi, explicitV2BranchReference:hasBranchId
+      }));
+    }
     console.log("READ-ONLY check completed. No workflow was created or edited.");
     return;
   }
