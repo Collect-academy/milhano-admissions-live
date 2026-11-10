@@ -136,8 +136,8 @@ async function main() {
       const source = nodes.map(n => typeof n.parameters?.jsCode === "string" ? n.parameters.jsCode : "").join("\n");
       const allParameters = JSON.stringify(nodes.map(n=>n.parameters??{}));
       const text = source + allParameters;
-      const modeLiteral = text.match(/test_mode\\s*:\\s*(true|false)/i);
-      const callsApi = /elevenlabs\\.io\\/v1\\/convai\\/whatsapp\\/outbound-call/i.test(text);
+      const modeLiteral = text.match(new RegExp("test_mode\\\\s*:\\\\s*(true|false)", "i"));
+      const callsApi = text.includes("elevenlabs.io/v1/convai/whatsapp/outbound-call");
       const hasBranchId = /agtbrch_5901m66tpzs8eqtryhadxb29zbk4/.test(text);
       console.log("Sofia WF03:", JSON.stringify({
         name:feed.name, active:detail.active, archived:detail.isArchived===true,
