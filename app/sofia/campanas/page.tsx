@@ -15,7 +15,7 @@ export default async function SofiaCampaignPage() {
     eyebrow="Sofía IA · Operaciones"
     title="Campañas y programación de llamadas"
     subtitle="Filtra oportunidades, selecciona lotes y crea ventanas horarias sin modificar los pipelines originales."
-    statusLabel="Borradores · Marcación desactivada"
+    statusLabel={analytics.dispatchEnabled ? "Planificador disponible" : "Preparado · envío protegido"}
   >
     <div className="sofia-top-actions">
       <Link href="/sofia" className="secondary-button">← Rendimiento IA</Link>
@@ -25,6 +25,6 @@ export default async function SofiaCampaignPage() {
       <strong>Planificación segura:</strong> las campañas se guardan como borradores con simulación activada. La automatización de n8n necesitará ser instalada y verificada antes de habilitar el envío.
       Se comprueba la elegibilidad de cada oportunidad al guardar y nuevamente antes de llamar.
     </div>
-    <SofiaCampaignPlanner candidates={candidates} campaigns={analytics.campaigns} canPlan={user.role==="admin"}/>
+    <SofiaCampaignPlanner candidates={candidates} campaigns={analytics.campaigns} canPlan={user.role==="admin"} dispatchEnabled={analytics.dispatchEnabled}/>
   </DashboardLayout>;
 }
