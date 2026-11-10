@@ -19,6 +19,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
  const [stage,setStage]=useState("all"),[sort,setSort]=useState<"asc"|"desc">("asc");
  const [from,setFrom]=useState(""),[to,setTo]=useState(""),[search,setSearch]=useState("");
  const [selected,setSelected]=useState<string[]>([]);
+ const [requestedCount,setRequestedCount]=useState("20");
  const [name,setName]=useState("Lote Sofía · "+day());
  const [windows,setWindows]=useState<WindowInput[]>([{date:day(1),start:"08:00",end:"11:00"}]);
  const [busy,setBusy]=useState(false),[status,setStatus]=useState<{ok:boolean;message:string}|null>(null);
@@ -71,6 +72,14 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
   const available=filtered.filter(c=>c.eligible&&!selected.includes(c.opportunityId));
   const next=n==="all"?available:available.slice(0,n);
   setSelected(prev=>[...prev,...next.map(c=>c.opportunityId)]);
+ }
+ function addExactCount() {
+  const count=Number(requestedCount);
+  if(!Number.isSafeInteger(count)||count<1){setStatus({ok:false,message:"Escribe una cantidad entera mayor a cero."});return;}
+  const remaining=filtered.filter(c=>c.eligible&&!selected.includes(c.opportunityId));
+  if(count>remaining.length){setStatus({ok:false,message:`Solo quedan ${remaining.length} contactos elegibles sin seleccionar con estos filtros.`});return;}
+  setStatus(null);
+  addFiltered(count);
  }
  function updateWindow(index:number,key:keyof WindowInput,value:string) {
   setWindows(prev=>prev.map((w,i)=>i===index?{...w,[key]:value}:w));
@@ -136,6 +145,8 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
     <label>Buscar<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Nombre, ID o 4 dígitos"/></label>
    </div>
    <div className="sofia-selection-actions">
+    <label>Cantidad a añadir <input type="number" min="1" step="1" value={requestedCount} onChange={e=>setRequestedCount(e.target.value)} style={{width:100}} /></label>
+    <button type="button" className="secondary-button" onClick={addExactCount}>Añadir cantidad</button>
     <button type="button" className="secondary-button" onClick={()=>addFiltered(10)}>+10</button>
     <button type="button" className="secondary-button" onClick={()=>addFiltered(50)}>+50</button>
     <button type="button" className="secondary-button" onClick={()=>addFiltered("all")}>Seleccionar elegibles filtrados</button>
@@ -164,6 +175,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
     </button>
     {manualRecord?<p className="sofia-ok" role="status">Solicitud registrada: {manualRecord.status}
       {manualRecord.conversation_id?" · "+manualRecord.conversation_id:""}. No se reenviará.</p>:null}
+    {chosen.length>1?<p className="subtitle">Tienes {chosen.length} contactos seleccionados. Para enviarlos como lote utiliza «Crear y activar lote» en la sección 2; este botón es exclusivamente individual.</p>:null}
     {manualNotice?<p className="sofia-caveat" role="status">{manualNotice}</p>:null}
    </div>
   </section>
