@@ -1,24 +1,21 @@
 {
-  "name": "MILHANO | Sofia | 06 Campaign Scheduler | PROTECTED",
+  "name": "MILHANO | Sofia | 06 Campaign Scheduler | WEBHOOK ONLY",
   "nodes": [
     {
       "id": "fe33154b-8936-438e-bd61-5897dc201b8a",
-      "name": "Schedule | Every Minute",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "name": "Webhook | Due Campaigns from Supabase",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
       "position": [
         -1660,
         160
       ],
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "minutes",
-              "minutesInterval": 1
-            }
-          ]
-        }
+        "httpMethod": "POST",
+        "path": "milhano-sofia-due-campaigns",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
       }
     },
     {
@@ -31,7 +28,7 @@
         160
       ],
       "parameters": {
-        "jsCode": "// Only the service-role RPC can claim. It verifies global activation, campaign\n// status, approved release limit and the due time transactionally.\nreturn [{json:{poll_at:new Date().toISOString(),operation:'up_to_twenty_whatsapp_authorizations'}}];"
+        "jsCode": "const body=$input.first().json?.body??{};\nif(body.source!=='sofia_supabase_cron')throw new Error('SCHEDULER_SOURCE_INVALID');\nconst limit=Number(body.limit??0);\nif(!Number.isInteger(limit)||limit<1||limit>200)throw new Error('SCHEDULER_LIMIT_INVALID');\nreturn [{json:{p_limit:limit}}];"
       }
     },
     {
@@ -55,7 +52,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ {p_limit:200} }}",
+        "jsonBody": "={{ {p_limit:$json.p_limit} }}",
         "options": {
           "response": {
             "response": {
@@ -345,18 +342,6 @@
     }
   ],
   "connections": {
-    "Schedule | Every Minute": {
-      "main": [
-        [
-          {
-            "node": "Safety | Require Supabase Approval",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        []
-      ]
-    },
     "Supabase | Claim One Due": {
       "main": [
         [
@@ -480,6 +465,18 @@
             "index": 0
           }
         ]
+      ]
+    },
+    "Webhook | Due Campaigns from Supabase": {
+      "main": [
+        [
+          {
+            "node": "Safety | Require Supabase Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
       ]
     }
   },
