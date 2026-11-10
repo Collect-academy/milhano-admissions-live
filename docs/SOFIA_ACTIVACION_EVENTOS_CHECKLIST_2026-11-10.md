@@ -38,3 +38,12 @@ La compuerta `public.milhano_ai_runtime_control.live_dispatch_enabled` controla 
 
 ## Actualización de clasificación (10 nov)
 El archivo WF07 ahora admite un evento de inicio fallido (`call_initiation_failure`) y reconoce `no-answer`, además de `busy`. El evento debe llegar autenticado desde el Post Call que ya recibe ElevenLabs, y el RPC solo debe ejecutarse si se comprueba la conversación asociada al despacho. La configuración de ElevenLabs y del WF04 productivo **aún no está auditada en vivo**. Documentación oficial: https://elevenlabs.io/docs/eleven-agents/workflows/post-call-webhooks
+
+## Auditoría final de seguridad y estabilidad (10 nov, después de conectar WF04-WF07)
+- Webhooks WF06 y WF07: autenticación verificada con HTTP 200 usando credencial interna, no implica cierre correcto de n8n.
+- WF04 -> WF07: webhook `call_initiation_failure` de prueba recibido por WF04 y aceptado por WF07. Sin escrituras falsas.
+- Conversación anterior `conv_4701m6rve6a0eafag652a3x4xqaj`: receptor WF07 devolvió HTTP 200; no se produjo fila `milhano_ai_call_insights` final. No considerar validado el cierre hasta inspeccionar la ejecución interna: podría ser estado no terminal.
+- Recuperación segura: Supabase Cron `milhano-sofia-expired-claims-safe-review` cada 5 min. Si un claim vence, pasa a review, nunca reenvía automáticamente un envío cuyo éxito se desconoce. Prueba con estado actual: 0 filas alteradas.
+- Waker SQL `sofia_internal.wake_due_campaigns()` ahora comprueba cupo diario y límite de ventana, además de horario y release_limit, antes de invocar n8n. Se mantiene `scheduler_control.enabled=false`.
+- WF06: corregida referencia por índice en `GHL | Recheck Contact` para lotes múltiples: `$('Normalize | Claim').all()[$itemIndex].json.contact_id`. El WF06 importado en n8n debe actualizarse con esta expresión y republicarse antes de habilitar campaña.
+- No se ha validado aún una llamada no contestada de WhatsApp real ni el resultado de `milhano_ai_record_final_call` para un intento del sistema nuevo. No lanzar 20 contactos hasta verificar al menos un caso.
