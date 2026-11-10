@@ -141,7 +141,6 @@ export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
       .select("ghl_opportunity_id,ghl_contact_id,opportunity_name,contact_name,phone,current_stage,pipeline_stage_id,created_at,source,status")
       .eq("pipeline_id", SETTER_PIPELINE_ID)
       .eq("status", "open")
-      .in("current_stage", [...ELIGIBLE_STAGES])
       .order("created_at", { ascending: true }).limit(2000),
     admin.from("milhano_ai_campaign_members")
       .select("ghl_contact_id,campaign_id,milhano_ai_campaigns!inner(status)")
