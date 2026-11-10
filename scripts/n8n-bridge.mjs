@@ -220,9 +220,7 @@ async function main() {
     if(target.name.includes("05 Stage Decision Engine")){
       const n=target.nodes.find(x=>x.name==="Normalize | Verified Post Call Request");
       assert(n,"Stage decision request validator missing");
-      n.parameters.jsCode='const STAGE_TOKEN="'+stageToken+'";\\n'+
-        'if(String($input.first().json.headers?.["x-milhano-stage-token"]??"")!==STAGE_TOKEN)return [];\\n'+n.parameters.jsCode;
-      n.parameters.jsCode=n.parameters.jsCode.replaceAll("\\\\n","\\n");
+      n.parameters.jsCode=`const STAGE_TOKEN="${stageToken}";\nif(String($input.first().json.headers?.["x-milhano-stage-token"]??"")!==STAGE_TOKEN)return [];\n${n.parameters.jsCode}`;
     }
     if(target.name.includes("04 Post Call")||target.name.includes("07 Conversation Reconciliation")){
       const name=target.name.includes("04 Post Call")?"Stage Engine | Dispatch Confirmed Note":"WF05 | Evaluate Terminal Call";
