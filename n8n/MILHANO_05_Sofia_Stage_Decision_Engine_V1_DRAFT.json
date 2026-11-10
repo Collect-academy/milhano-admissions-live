@@ -27,7 +27,7 @@
         280
       ],
       "parameters": {
-        "jsCode": "\nconst req=$input.first().json,b=req.body??req;\nconst clean=(v)=>String(v??'').trim();\nconst x={\n conversation_id:clean(b.conversation_id),\n ghl_contact_id:clean(b.ghl_contact_id),\n ghl_opportunity_id:clean(b.ghl_opportunity_id),\n ghl_note_id:clean(b.ghl_note_id),\n note_saved:b.note_saved===true\n};\nif(!/^conv_[a-zA-Z0-9]+$/.test(x.conversation_id)\n || !/^[a-zA-Z0-9_-]{8,64}$/.test(x.ghl_contact_id)\n || !/^[a-zA-Z0-9_-]{8,64}$/.test(x.ghl_opportunity_id)\n || !x.ghl_note_id || !x.note_saved)return [];\nreturn [{json:x}];\n"
+        "jsCode": "\nconst req=$input.first().json,b=req.body??req;\nconst clean=(v)=>String(v??'').trim();\nconst x={\n conversation_id:clean(b.conversation_id),\n ghl_contact_id:clean(b.ghl_contact_id),\n ghl_opportunity_id:clean(b.ghl_opportunity_id),\n ghl_note_id:clean(b.ghl_note_id),\n note_saved:b.note_saved===true\n};\nif(!/^conv_[a-zA-Z0-9]+$/.test(x.conversation_id)\n || !/^[a-zA-Z0-9_-]{8,64}$/.test(x.ghl_contact_id)\n || !/^[a-zA-Z0-9_-]{8,64}$/.test(x.ghl_opportunity_id)\n || !x.note_saved)return [];\nreturn [{json:x}];\n"
       }
     },
     {
@@ -128,7 +128,7 @@
         280
       ],
       "parameters": {
-        "jsCode": "\nconst x=$('Normalize | Verified Post Call Request').first().json;\nconst obj=$('GHL | Get Current Opportunity').first().json??{};\nconst opp=obj.opportunity??obj;\nconst noteResult=$input.first().json??{};\nconst notes=Array.isArray(noteResult.notes)?noteResult.notes:Array.isArray(noteResult.data?.notes)?noteResult.data.notes:[];\nconst validOpp=String(opp.id??'')===x.ghl_opportunity_id\n && String(opp.contactId??opp.contact?.id??'')===x.ghl_contact_id\n && String(opp.pipelineId??'')==='GYqHbZyWUxxc3K03efVT'\n && String(opp.status??'').toLowerCase()==='open';\nconst validNote=notes.some(n=>String(n.id??'')===x.ghl_note_id\n && String(n.body??n.note??'').includes(x.conversation_id));\nif(!validOpp||!validNote)return [];\nreturn [{json:{...x,stage_id:String(opp.pipelineStageId??''),\n pipeline_id:String(opp.pipelineId??''),identity_verified:true,note_verified:true}}];\n"
+        "jsCode": "\nconst x=$('Normalize | Verified Post Call Request').first().json;\nconst obj=$('GHL | Get Current Opportunity').first().json??{};\nconst opp=obj.opportunity??obj;\nconst noteResult=$input.first().json??{};\nconst notes=Array.isArray(noteResult.notes)?noteResult.notes:Array.isArray(noteResult.data?.notes)?noteResult.data.notes:[];\nconst validOpp=String(opp.id??'')===x.ghl_opportunity_id\n && String(opp.contactId??opp.contact?.id??'')===x.ghl_contact_id\n && String(opp.pipelineId??'')==='GYqHbZyWUxxc3K03efVT'\n && String(opp.status??'').toLowerCase()==='open';\nconst validNote=notes.some(n=>(!x.ghl_note_id||String(n.id??'')===x.ghl_note_id)\n && String(n.body??n.note??'').includes(x.conversation_id));\nif(!validOpp||!validNote)return [];\nreturn [{json:{...x,stage_id:String(opp.pipelineStageId??''),\n pipeline_id:String(opp.pipelineId??''),identity_verified:true,note_verified:true}}];\n"
       }
     },
     {
@@ -242,7 +242,7 @@
     },
     {
       "id": "fbd5fdc2-bcc9-46e0-81e0-8a61db3454e2",
-      "name": "Safety Gate | Stage Writes OFF",
+      "name": "Safety Gate | Stage Writes Controlled",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
@@ -250,7 +250,7 @@
         280
       ],
       "parameters": {
-        "jsCode": "\nconst ALLOW_STAGE_WRITES=false; // ALWAYS false until live reconciliation, retry and idempotency tests succeed.\nconst p=$('Prepare | Stage Decision Audit').first().json;\nif(!ALLOW_STAGE_WRITES || p.decision?.action!=='apply')return [];\nif(!p.identity_verified||!p.note_verified)return [];\nreturn [{json:p}];\n"
+        "jsCode": "\nconst ALLOW_STAGE_WRITES=$('Supabase | Runtime Stage Gate').first().json?.stage_writes_enabled===true;\nconst p=$('Prepare | Stage Decision Audit').first().json;\nif(!ALLOW_STAGE_WRITES || p.decision?.action!=='apply')return [];\nif(!p.identity_verified||!p.note_verified)return [];\nreturn [{json:p}];\n"
       }
     },
     {
@@ -432,7 +432,7 @@
         500
       ],
       "parameters": {
-        "jsCode": "\nconst STAGE_WRITES_ENABLED=false; // Must match Safety Gate configuration.\nif(STAGE_WRITES_ENABLED)return [];\nconst d=$('Prepare | Stage Decision Audit').first().json;\nconst action=String(d.decision?.action??'review');\nconst next=action==='retry'?'retry':action==='skip'?'skip':'review';\nreturn [{json:{p_conversation_id:d.conversation_id,p_decision:next,p_stage_applied:false,p_target_stage_id:null}}];\n"
+        "jsCode": "\nconst STAGE_WRITES_ENABLED=$('Supabase | Runtime Stage Gate').first().json?.stage_writes_enabled===true;\nif(STAGE_WRITES_ENABLED)return [];\nconst d=$('Prepare | Stage Decision Audit').first().json;\nconst action=String(d.decision?.action??'review');\nconst next=action==='retry'?'retry':action==='skip'?'skip':'review';\nreturn [{json:{p_conversation_id:d.conversation_id,p_decision:next,p_stage_applied:false,p_target_stage_id:null}}];\n"
       }
     },
     {
@@ -474,6 +474,112 @@
       ],
       "id": "148eea60-4229-48d7-bf41-7fd39c3e8579",
       "name": "Supabase | Close Attempt While Dry Run",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_runtime_control?select=stage_writes_enabled&singleton=eq.true&limit=1",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        70,
+        560
+      ],
+      "id": "6b508eaf-455d-40d0-844c-ecc89ce2f8ca",
+      "name": "Supabase | Runtime Stage Gate",
+      "credentials": {
+        "supabaseApi": {
+          "id": "4gwlvJl9Z9mEVzk4",
+          "name": "Supabase Milhano"
+        }
+      },
+      "continueOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "fcb930da-d8c6-40dd-89e7-7e5875ff768d",
+      "name": "Prepare | Applied Stage Closure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        330
+      ],
+      "parameters": {
+        "jsCode": "const p=$('Guard | Compare-And-Apply').first().json,r=p.decision??{};\nconst key=String(r.target_stage_key??'');\nconst action=key.includes('no_answer')||key.includes('never_answered')?'no_answer_advance':\n key==='setter_qualified'?'qualified':key==='setter_meaningful_conversation'?'meaningful':\n key==='setter_disqualified'?'disqualified':key==='setter_callback'?'callback':'review';\nreturn [{json:{p_conversation_id:p.conversation_id,p_decision:action,p_stage_applied:true,p_target_stage_id:r.target_stage_id??null}}];"
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/rpc/milhano_ai_finish_attempt",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=representation"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1820,
+        330
+      ],
+      "id": "de52fe0d-0ebc-4ff3-af91-95000aff65df",
+      "name": "Supabase | Close Applied Attempt",
       "credentials": {
         "supabaseApi": {
           "id": "4gwlvJl9Z9mEVzk4",
@@ -566,23 +672,12 @@
       "main": [
         [
           {
-            "node": "Safety Gate | Stage Writes OFF",
+            "node": "Supabase | Runtime Stage Gate",
             "type": "main",
             "index": 0
           },
           {
             "node": "Prepare | Safe Attempt Closure",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Safety Gate | Stage Writes OFF": {
-      "main": [
-        [
-          {
-            "node": "GHL | Re-read Opportunity Before Mutation",
             "type": "main",
             "index": 0
           }
@@ -638,6 +733,50 @@
         [
           {
             "node": "Supabase | Close Attempt While Dry Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Runtime Stage Gate": {
+      "main": [
+        [
+          {
+            "node": "Safety Gate | Stage Writes Controlled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Safety Gate | Stage Writes Controlled": {
+      "main": [
+        [
+          {
+            "node": "GHL | Re-read Opportunity Before Mutation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase | Mark Stage Applied": {
+      "main": [
+        [
+          {
+            "node": "Prepare | Applied Stage Closure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare | Applied Stage Closure": {
+      "main": [
+        [
+          {
+            "node": "Supabase | Close Applied Attempt",
             "type": "main",
             "index": 0
           }
