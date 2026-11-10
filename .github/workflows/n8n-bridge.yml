@@ -51,3 +51,5 @@ jobs:
         run: node scripts/n8n-bridge.mjs "$N8N_MODE"
 
 # One-shot import: only allowlisted, unpublished Sofía drafts. Production workflows untouched.
+
+# Safe update: 04/05/06/07 unpublished; stage token stored in n8n only.
