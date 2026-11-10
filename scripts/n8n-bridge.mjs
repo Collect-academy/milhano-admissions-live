@@ -13,7 +13,7 @@
  * Run only from the protected main branch GitHub Actions workflow.
  */
 import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { auditSofiaDrafts } from "./n8n-preflight.mjs";
 
 const API = "https://collectacademy.app.n8n.cloud/api/v1";
@@ -185,6 +185,16 @@ async function main() {
     console.log("READ-ONLY check completed. No workflow was created or edited.");
     return;
   }
+  const stage05Name="MILHANO | Sofia | 05 Stage Decision Engine V1 | DRY RUN";
+  const existing05=list.filter(w=>w.name===stage05Name);
+  assert(existing05.length<=1,"Ambiguous stage engine target");
+  let stageToken=randomBytes(32).toString("hex");
+  if(existing05.length===1){
+    const old=await callApi("GET","/workflows/"+encodeURIComponent(existing05[0].id));
+    const code=old.nodes.find(n=>n.name==="Normalize | Verified Post Call Request")?.parameters?.jsCode??"";
+    const found=code.match(/const STAGE_TOKEN="([a-f0-9]{64})";/);
+    if(found)stageToken=found[1];
+  }
   const changes = [];
   const plannedSources = [];
   for (const source of SOURCES) {
@@ -206,6 +216,22 @@ async function main() {
         if(eleven.parameters.nodeCredentialType)newNode.parameters.nodeCredentialType=eleven.parameters.nodeCredentialType;
       }
       console.log("Reused existing ElevenLabs credential reference for conversation reconciler.");
+    }
+    if(target.name.includes("05 Stage Decision Engine")){
+      const n=target.nodes.find(x=>x.name==="Normalize | Verified Post Call Request");
+      assert(n,"Stage decision request validator missing");
+      n.parameters.jsCode='const STAGE_TOKEN="'+stageToken+'";\\n'+
+        'if(String($input.first().json.headers?.["x-milhano-stage-token"]??"")!==STAGE_TOKEN)return [];\\n'+n.parameters.jsCode;
+      n.parameters.jsCode=n.parameters.jsCode.replaceAll("\\\\n","\\n");
+    }
+    if(target.name.includes("04 Post Call")||target.name.includes("07 Conversation Reconciliation")){
+      const name=target.name.includes("04 Post Call")?"Stage Engine | Dispatch Confirmed Note":"WF05 | Evaluate Terminal Call";
+      const n=target.nodes.find(x=>x.name===name);
+      assert(n,"Stage decision sender missing");
+      n.parameters.sendHeaders=true;
+      n.parameters.headerParameters??={parameters:[]};
+      n.parameters.headerParameters.parameters=n.parameters.headerParameters.parameters.filter(h=>h.name.toLowerCase()!=="x-milhano-stage-token");
+      n.parameters.headerParameters.parameters.push({name:"X-Milhano-Stage-Token",value:stageToken});
     }
     plannedSources.push({ source, target });
     const matches = list.filter((wf) => wf.name === source.name);
