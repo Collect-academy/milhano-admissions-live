@@ -346,7 +346,7 @@
       "main": [
         [
           {
-            "node": "Safety | Scheduler Disabled",
+            "node": "Safety | Require Supabase Approval",
             "type": "main",
             "index": 0
           }
