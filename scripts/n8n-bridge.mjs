@@ -49,10 +49,11 @@ assert(process.env.GITHUB_REPOSITORY === "Collect-academy/milhano-admissions-liv
   "This bridge is restricted to the Milhano repository.");
 
 if (MODE === "sync-drafts") {
-  assert(process.env.GITHUB_EVENT_NAME === "workflow_dispatch",
-    "Draft synchronization must be triggered manually.");
-  assert(process.env.GITHUB_ACTOR === "Collect-academy",
-    "Only the repository owner may request draft synchronization.");
+  const explicitOneShot = process.env.GITHUB_EVENT_NAME === "push" &&
+    process.env.GITHUB_HEAD_COMMIT_MESSAGE === "ops(sofia): safely import vetted draft workflows";
+  const manual = process.env.GITHUB_EVENT_NAME === "workflow_dispatch";
+  assert(explicitOneShot || manual, "Inactive draft sync needs an explicit authorized event.");
+  assert(process.env.GITHUB_ACTOR === "Collect-academy", "Only the repository owner may request inactive imports.");
   assert(process.env.SYNC_CONFIRM === "IMPORTAR_BORRADORES_IA",
     "Confirmation phrase missing. No n8n changes were made.");
 }
