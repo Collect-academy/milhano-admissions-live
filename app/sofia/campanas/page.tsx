@@ -14,16 +14,16 @@ export default async function SofiaCampaignPage() {
   return <DashboardLayout
     eyebrow="Sofía IA · Operaciones"
     title="Campañas y programación de llamadas"
-    subtitle="Filtra oportunidades, selecciona lotes y crea ventanas horarias sin modificar los pipelines originales."
+    subtitle="Selecciona contactos, programa solicitudes de WhatsApp y activa lotes. ElevenLabs gestiona hasta la concurrencia disponible."
     statusLabel={analytics.dispatchEnabled ? "Planificador disponible" : "Preparado · envío protegido"}
   >
     <div className="sofia-top-actions">
       <Link href="/sofia" className="secondary-button">← Rendimiento IA</Link>
+      <Link href="/sofia/seguimiento" className="primary-button">Ver llamadas y reintentos</Link>
       <Link href="/" className="secondary-button">V2 Summary</Link>
     </div>
     <div className="sofia-safe-message">
-      <strong>Planificación segura:</strong> las campañas se guardan como borradores con simulación activada. La automatización de n8n necesitará ser instalada y verificada antes de habilitar el envío.
-      Se comprueba la elegibilidad de cada oportunidad al guardar y nuevamente antes de llamar.
+      <strong>Envíos reales:</strong> puedes guardar un borrador o activar el batch. Las solicitudes de autorización se envían a la hora elegida y se verifica la elegibilidad en GHL antes de contactar. Los reintentos dependen del resultado confirmado de ElevenLabs.
     </div>
     <SofiaCampaignPlanner candidates={candidates} campaigns={analytics.campaigns} canPlan={user.role==="admin"} dispatchEnabled={analytics.dispatchEnabled}/>
   </DashboardLayout>;
