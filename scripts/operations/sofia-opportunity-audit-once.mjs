@@ -44,3 +44,19 @@ if(process.env.N8N_SAFE_PARAMS_07==="1"){
   console.log("WF07_LIVE_SAFE_PARAMS",JSON.stringify({name:n.name,parameters:params,credentials:n.credentials??{}}));
  }
 }
+
+if(process.env.N8N_VERIFY_IMPORT_TOKENS==="1"){
+ const {createHash}=await import("node:crypto");
+ for(const name of ["MILHANO | Sofia | 04 Post Call V2 + WF07 + WF05 Handoff Sequential","MILHANO | Sofia | 06 Campaign Scheduler | WEBHOOK ONLY"]){
+  const found=(list.data??[]).find(w=>w.name===name&&w.active);if(!found)throw Error("Missing live workflow "+name);
+  const live=await read("/workflows/"+found.id);
+  const wanted=name.includes("04 Post Call")?"x-milhano-stage-token":"x-milhano-batch-secret";
+  const nodes=name.includes("04 Post Call")?["WF05 | Handoff After Saved Note","WF05 | Handoff Existing Note"]:["WF03 | Existing Individual Feed"];
+  const hashes=[];
+  for(const nodeName of nodes){const node=live.nodes.find(n=>n.name===nodeName);
+  const h=(node?.parameters?.headerParameters?.parameters??[]).find(i=>i.name?.toLowerCase()===wanted);
+  if(!h?.value)throw Error("Required live secret missing "+nodeName);
+  hashes.push({node:nodeName,hash:createHash("sha256").update(h.value).digest("hex").slice(0,16)});}
+  console.log("IMPORT_TOKEN_HASHES",JSON.stringify({name,hashes}));
+ }
+}
