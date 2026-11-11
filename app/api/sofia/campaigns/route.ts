@@ -58,6 +58,18 @@ export async function POST(request: Request) {
       ||!o.phone
       ||!dedupContact.has(o.ghl_contact_id)))
       return NextResponse.json({error:"Una oportunidad cambió de etapa o perdió elegibilidad."},{status:409});
+    // Friendly preflight; the SQL RPC also enforces this atomically under a lock.
+    const {data:history,error:historyError}=await admin
+      .from("milhano_ai_contact_authorization_status")
+      .select("ghl_contact_id,authorization_status")
+      .in("ghl_contact_id",[...dedupContact])
+      .neq("authorization_status","not_sent")
+      .limit(500);
+    if(historyError)throw new Error(historyError.message);
+    if((history?.length??0)>0)
+      return NextResponse.json({error:
+        "Hay "+history!.length+" contactos con autorización ya enviada, reservada o por verificar. Actualiza la lista y selecciona solo «Sin enviar».",
+        blocked_contacts:history!.length},{status:409});
     const {data,error}=await admin.rpc("milhano_ai_create_campaign_draft",{
       p_name:name,p_creator:user.id,
       p_windows:windows,p_members:normalizedMembers
