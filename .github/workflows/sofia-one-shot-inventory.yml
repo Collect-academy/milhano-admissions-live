@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/sofia-one-shot-inventory.yml
+      - scripts/operations/sofia-opportunity-audit-once.mjs
 permissions:
   contents: read
 jobs:
