@@ -1,0 +1,24 @@
+name: Milhano | WF06 fix missing DND flag
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sofia-wf06-dnd-fix-20261111.yml
+permissions:
+  contents: read
+concurrency:
+  group: milhano-wf06-dnd-hotfix
+  cancel-in-progress: false
+jobs:
+  fix:
+    if: github.repository == 'Collect-academy/milhano-admissions-live' && github.actor == 'Collect-academy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Patch only DND check in existing active WF06
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node scripts/operations/sofia-wf06-dnd-fix-20261111.mjs
