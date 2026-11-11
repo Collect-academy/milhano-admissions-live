@@ -1,0 +1,17 @@
+name: Milhano | Booking tool read-only QA
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/sofia-booking-qa.yml]
+permissions: {contents: read}
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Investigate recent booking executions
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node scripts/operations/sofia-booking-qa-readonly-20261111.mjs
