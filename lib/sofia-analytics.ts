@@ -23,6 +23,8 @@ export type SofiaCandidate = {
   origin: string | null;
   eligible: boolean;
   exclusion: string | null;
+  authorizationStatus: "not_sent" | "reserved" | "sent" | "needs_review";
+  authorizationSentAt: string | null;
 };
 
 export type SofiaCampaign = {
@@ -136,22 +138,22 @@ export async function getSofiaAnalytics(): Promise<SofiaAnalytics> {
 
 export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
   const admin = createSupabaseAdmin();
-  const [opportunities, assigned] = await Promise.all([
+  const [opportunities, authorization] = await Promise.all([
     admin.from("milhano_opportunities")
       .select("ghl_opportunity_id,ghl_contact_id,opportunity_name,contact_name,phone,current_stage,pipeline_stage_id,created_at,source,status")
       .eq("pipeline_id", SETTER_PIPELINE_ID)
       .eq("status", "open")
       .order("created_at", { ascending: true }).limit(2000),
-    admin.from("milhano_ai_campaign_members")
-      .select("ghl_contact_id,campaign_id,milhano_ai_campaigns!inner(status)")
-      .in("status", ["queued", "claimed", "dispatched"])
-      .in("milhano_ai_campaigns.status", ["draft", "scheduled", "running", "paused"])
+    admin.from("milhano_ai_contact_authorization_status")
+      .select("ghl_contact_id,authorization_status,first_sent_at")
+      .neq("authorization_status","not_sent")
       .limit(5000)
   ]);
   const opportunitiesData = ensure(opportunities, "candidatos") as Record<string, unknown>[];
-  const assignedData = ensure(assigned, "reservados") as Record<string, unknown>[];
-
-  const reserved = new Set(assignedData.map(x => String(x.ghl_contact_id ?? "")));
+  const authorizationData = ensure(authorization, "historial de autorizaciones") as Record<string, unknown>[];
+  const authorizationByContact = new Map(authorizationData.map(x=>[
+    String(x.ghl_contact_id ?? ""), x
+  ]));
   // A contact can have several Setter opportunities: use the newest eligible one
   // as a CRM reference, but dispatch at most once to the contact.
   const seenContacts = new Set<string>();
@@ -168,9 +170,14 @@ export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
     const contactId = String(o.ghl_contact_id ?? "");
     const phone = String(o.phone ?? "");
     const stage = String(o.current_stage ?? "");
+    const auth = authorizationByContact.get(contactId);
+    const authStatus = String(auth?.authorization_status ?? "not_sent") as SofiaCandidate["authorizationStatus"];
     const exclusion = !contactId || !opportunityId || !phone.trim()
       ? "Datos de contacto incompletos"
-      : reserved.has(contactId) ? "Ya pertenece a una campaña activa" : null;
+      : authStatus==="sent" ? "Autorización ya enviada · no reenviar"
+      : authStatus==="reserved" ? "Reservado en otro lote"
+      : authStatus==="needs_review" ? "Envío anterior por verificar · no reenviar"
+      : null;
     return {
       opportunityId,
       contactId,
@@ -182,6 +189,8 @@ export async function getSofiaCandidates(): Promise<SofiaCandidate[]> {
       origin: o.source == null ? null : String(o.source),
       eligible: exclusion === null,
       exclusion,
+      authorizationStatus: authStatus,
+      authorizationSentAt: auth?.first_sent_at ? String(auth.first_sent_at) : null,
     };
   });
 }
