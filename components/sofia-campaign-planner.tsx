@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { SofiaCandidate, SofiaCampaign } from "@/lib/sofia-analytics";
+import { SofiaCampaignMonitor } from "@/components/sofia-campaign-monitor";
 
 type WindowInput={date:string;start:string;end:string};
 const TZ="-06:00"; // America/Merida in 2026; explicit offset avoids browser-local timezone drift.
@@ -42,7 +43,7 @@ function buildSchedule(windows:WindowInput[],count:number) {
 }
 const fmt=(v:string)=>new Date(v).toLocaleString("es-MX",{timeZone:"America/Merida",dateStyle:"short",timeStyle:"short"});
 const stageLabels:Record<string,string>={"New Lead":"Nuevo lead","No answer - Day 1":"Sin respuesta D1","No answer - Day 2":"Sin respuesta D2","No answer - Day 3":"Sin respuesta D3","Never Answered / Nurturing A":"Sin respuesta / nutrición"};
-export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabled}:{candidates:SofiaCandidate[];campaigns:SofiaCampaign[];canPlan:boolean;dispatchEnabled:boolean}) {
+export function SofiaCampaignPlanner({candidates,canPlan,dispatchEnabled}:{candidates:SofiaCandidate[];campaigns:SofiaCampaign[];canPlan:boolean;dispatchEnabled:boolean}) {
  const [stage,setStage]=useState("all"),[sort,setSort]=useState<"asc"|"desc">("asc");
  const [from,setFrom]=useState(""),[to,setTo]=useState(""),[search,setSearch]=useState("");
  const [selected,setSelected]=useState<string[]>([]);
@@ -223,22 +224,7 @@ export function SofiaCampaignPlanner({candidates,campaigns,canPlan,dispatchEnabl
    {!canPlan?<p className="sofia-error">Sólo los administradores pueden crear lotes.</p>:null}
    {status?<p role="status" className={status.ok?"sofia-ok":"sofia-error"}>{status.message}</p>:null}
   </section>
-  <section className="panel">
-   <h2>3. Campañas creadas</h2>
-   <p className="subtitle">{dispatchEnabled?"Envío habilitado. Solicitudes según hora programada; reintentos automáticos según resultado.":"El envío masivo está desactivado temporalmente."}</p>
-   <div className="sofia-scroll"><table className="sofia-table"><thead><tr><th>Nombre</th><th>Estado</th><th>Selección</th><th>Enviados o en curso</th><th>Pendientes</th><th>Revisión</th><th>Control</th></tr></thead>
-   <tbody>{campaigns.map(c=><tr key={c.id}><td><strong>{c.name}</strong><small>{c.id}</small></td>
-    <td>{c.status} {c.dry_run?"· sin envío":""}<small>Liberados: {c.released??0}/{c.selected}</small></td><td>{c.selected}</td><td>{c.in_flight}</td><td>{c.queued}</td><td>{c.review_needed}</td>
-    <td><div className="sofia-row-actions">
-      {c.status==="running"&&canPlan?<button type="button" className="secondary-button" disabled={busy} onClick={()=>controlCampaign(c,"pause")}>Pausar</button>:null}
-      {canPlan&&dispatchEnabled&&["draft","paused","scheduled"].includes(c.status)?
-        <button type="button" className="primary-button" disabled={busy} onClick={()=>controlCampaign(c,"start")}>Activar lote</button>:null}
-      {canPlan&&["draft","paused","scheduled"].includes(c.status)?
-        <button type="button" className="secondary-button" disabled={busy} onClick={()=>controlCampaign(c,"cancel")}>Cancelar</button>:null}
-      {c.status==="running"?<small>En ejecución</small>:null}
-    </div></td>
-   </tr>)}</tbody></table>
-   {campaigns.length===0?<p>Sin campañas configuradas todavía.</p>:null}</div>
-  </section>
+  <SofiaCampaignMonitor canPlan={canPlan} dispatchEnabled={dispatchEnabled}
+    busy={busy} onControl={controlCampaign}/>
  </div>;
 }
