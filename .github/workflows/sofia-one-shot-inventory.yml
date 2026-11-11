@@ -20,4 +20,5 @@ jobs:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
           N8N_COMPARE_07: "1"
           N8N_SAFE_PARAMS_07: "1"
+          N8N_VERIFY_IMPORT_TOKENS: "1"
         run: node scripts/operations/sofia-opportunity-audit-once.mjs
