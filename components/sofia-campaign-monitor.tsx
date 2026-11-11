@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SofiaRecordingPlayer } from "@/components/sofia-recording-player";
 import { useEffect, useMemo, useState } from "react";
 import type { SofiaCampaign } from "@/lib/sofia-analytics";
 
@@ -280,6 +281,7 @@ export function SofiaCampaignMonitor({
                       <p><strong>Motivo:</strong> {str(m.collected_variables?.change_reason)}</p>
                       <p><strong>Acción siguiente:</strong> {str(m.collected_variables?.next_action)}</p>
                       {m.conversation_id?<p><strong>Conversación:</strong> {m.conversation_id}</p>:null}
+                      {canPlan&&m.conversation_id&&m.call_finished_at?<SofiaRecordingPlayer conversationId={m.conversation_id}/>:null}
                       {m.last_attempt_error?<p><strong>Error:</strong> {m.last_attempt_error}</p>:null}
                     </details>
                   </td>
