@@ -169,7 +169,7 @@ begin
  end loop;
  return jsonb_build_object('campaign_id',v_id,'selected',v_created_count,'status','draft','dry_run',true);
 end
-$function$
+$function$;
 
 -- Before dispatch, recheck history even if a stale campaign draft predated this change.
 CREATE OR REPLACE FUNCTION public.milhano_ai_claim_one_due()
@@ -256,7 +256,7 @@ BEGIN
  return query select v_member.id,v_member.campaign_id,v_member.ghl_contact_id,
  v_member.ghl_opportunity_id,v_member.last_dispatch_key,v_member.original_stage_id,
  v_member.original_pipeline_id,v_token;
-end $function$
+end $function$;
 
 
 -- A manual send cannot bypass the contact-level authorization history.
