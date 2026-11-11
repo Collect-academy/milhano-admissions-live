@@ -1,0 +1,14 @@
+name: Milhano | WF05 import JSON tests
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/sofia-wf05-import-test.yml]
+permissions: {contents: read}
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - run: node scripts/operations/sofia-wf05-import-test-20261111.mjs
