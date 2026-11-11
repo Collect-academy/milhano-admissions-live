@@ -18,4 +18,5 @@ jobs:
       - name: Verify active n8n workflow structures (read-only)
         env:
           N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          N8N_COMPARE_07: "1"
         run: node scripts/operations/sofia-opportunity-audit-once.mjs
