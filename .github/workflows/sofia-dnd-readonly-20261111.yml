@@ -1,0 +1,22 @@
+name: Milhano | Read-only diagnosis Sofía DND
+on:
+  push:
+    branches: [audit/sofia-dnd-20261111]
+    paths:
+      - scripts/audits/sofia-dnd-readonly-20261111.mjs
+      - .github/workflows/sofia-dnd-readonly-20261111.yml
+permissions:
+  contents: read
+jobs:
+  audit:
+    if: github.repository == 'Collect-academy/milhano-admissions-live'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Inspect WF06 executions and DND flags (read only)
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node scripts/audits/sofia-dnd-readonly-20261111.mjs
