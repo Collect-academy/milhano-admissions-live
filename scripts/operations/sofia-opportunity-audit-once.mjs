@@ -11,5 +11,7 @@ for(const wf of list.data??[]){if(!/^MILHANO \| Sofia \| (0[34567]|BACKUP)/.test
  const signature=nodes.filter(n=>/GHL \| Update Opportunity Fields|WF07 \| Forward|WF05 \| Handoff|Supabase \| Close Claim|Commit Outcome|Verify \| Live GHL|Create Call Summary/.test(n.name)).map(n=>n.name);
  const dnd=nodes.find(n=>n.name==="Verify | Live GHL Eligibility")?.parameters?.jsCode??"";
  const tokenOnFeed=nodes.find(n=>n.name==="WF03 | Existing Individual Feed")?.parameters?.headerParameters?.parameters?.some(h=>String(h.name??"").toLowerCase()==="x-milhano-batch-secret");
+ const authNodes=nodes.filter(n=>n.name==="ElevenLabs | Check Main Agent"||n.name==="ElevenLabs | Fetch Pending Conversation").map(n=>({name:n.name,creds:n.credentials??{},authentication:n.parameters?.authentication??null,genericAuthType:n.parameters?.genericAuthType??null}));
+ console.log("ELEVENLABS_BINDINGS",JSON.stringify({workflow:wf.name,nodes:authNodes}));
  console.log("ACTIVE_WORKFLOW",JSON.stringify({id:wf.id,name:wf.name,active:wf.active,nodes:nodes.length,signature,hasStrictDndFix:dnd.includes("ct.dnd===true"),feedHasBatchKey:Boolean(tokenOnFeed)}));
 }
