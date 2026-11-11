@@ -15,3 +15,19 @@ for(const wf of list.data??[]){if(!/^MILHANO \| Sofia \| (0[34567]|BACKUP)/.test
  console.log("ELEVENLABS_BINDINGS",JSON.stringify({workflow:wf.name,nodes:authNodes}));
  console.log("ACTIVE_WORKFLOW",JSON.stringify({id:wf.id,name:wf.name,active:wf.active,nodes:nodes.length,signature,hasStrictDndFix:dnd.includes("ct.dnd===true"),feedHasBatchKey:Boolean(tokenOnFeed)}));
 }
+
+
+if(process.env.N8N_COMPARE_07==="1"){
+ const {readFileSync}=await import("node:fs");
+ const wf= (list.data??[]).find(w=>w.name==="MILHANO | Sofia | 07 Post Call + Initiation Failure Reconciliation | WEBHOOK"&&w.active);
+ if(!wf)throw Error("Live WF07 unavailable");
+ const live=await read("/workflows/"+wf.id);
+ const stored=JSON.parse(readFileSync("n8n/IMPORTAR_MILHANO_07_SOFIA_POSTCALL_RETRIES_2026-11-10.json","utf8"));
+ const diff=live.nodes.map(n=>{
+ const x=stored.nodes.find(i=>i.name===n.name);
+ if(!x)return {name:n.name,change:"missing_source"};
+ const key=(v)=>JSON.stringify(v??{});return {name:n.name,paramSame:key(n.parameters)===key(x.parameters),typeSame:n.type===x.type,credsLive:Object.keys(n.credentials??{}),credsStored:Object.keys(x.credentials??{})};
+ });
+ console.log("WF07_SOURCE_COMPARISON",JSON.stringify(diff));
+ console.log("WF07_CONNECTION_EQUAL",JSON.stringify(live.connections)===JSON.stringify(stored.connections));
+}
