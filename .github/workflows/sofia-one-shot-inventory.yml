@@ -1,0 +1,20 @@
+name: Milhano | One-shot Sofía workflow inventory
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sofia-one-shot-inventory.yml
+permissions:
+  contents: read
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify active n8n workflow structures (read-only)
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node scripts/operations/sofia-opportunity-audit-once.mjs
