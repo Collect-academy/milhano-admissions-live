@@ -23,6 +23,10 @@ type Campaign = SofiaCampaign & {
   meaningful_contacts: number;
   approval_signal: "unavailable" | "partial" | "observed";
   approval_rate_pct: number | null;
+  opted_in: number;
+  not_opted_in: number;
+  pending_opt_in: number;
+  not_sent_opt_in: number;
   next_scheduled_at: string | null;
   last_member_update_at: string | null;
 };
@@ -54,7 +58,9 @@ type Member = {
   permission_state: string | null;
   permission_requested_at: string | null;
   permission_approved_at: string | null;
-  approval_evidence: "unavailable" | "not_confirmed" | "confirmed";
+  approval_evidence: "unavailable" | "not_confirmed" | "confirmed" | "declined";
+  opt_in_status: "opted_in" | "not_opted_in" | "pending" | "not_sent";
+  opt_in_evidence: "explicit_event" | "call_event" | "explicit_decline" | null;
 };
 const STATUS: Record<string,string> = {
   in_progress: "En progreso",
@@ -140,8 +146,10 @@ export function SofiaCampaignMonitor({
   },[opened,refresh]);
 
   const filteredMembers=useMemo(()=>members?.filter(m=>{
-    if(approvalFilter==="confirmed"&&m.approval_evidence!=="confirmed")return false;
-    if(approvalFilter==="missing"&&m.approval_evidence==="confirmed")return false;
+    if(approvalFilter==="confirmed"&&m.opt_in_status!=="opted_in")return false;
+    if(approvalFilter==="missing"&&m.opt_in_status==="opted_in")return false;
+    if(approvalFilter==="declined"&&m.opt_in_status!=="not_opted_in")return false;
+    if(approvalFilter==="pending"&&m.opt_in_status!=="pending")return false;
     return !search||[m.contact_name,m.opportunity_name,m.ghl_opportunity_id,m.conversation_id??""]
       .join(" ").toLocaleLowerCase("es-MX").includes(search.toLocaleLowerCase("es-MX"));
   })??[],[members,search,approvalFilter]);
@@ -170,8 +178,8 @@ export function SofiaCampaignMonitor({
       <table className="sofia-table">
         <thead><tr>
           <th>Campaña</th><th>Estado real</th><th>Leads</th><th>Solicitudes</th>
-          <th>Sin resultado final</th><th>Contestaron</th><th>Aceptaron WhatsApp</th>
-          <th>Finalizados</th><th>Revisión</th><th>Control</th>
+          <th>Sin resultado final</th><th>Contestaron</th>
+          <th>Opted in</th><th>Not opted in</th><th>Pendientes de opt-in</th><th>Finalizados</th><th>Revisión</th><th>Control</th>
         </tr></thead>
         <tbody>{rows.map(c=><tr key={c.id}>
           <td>
@@ -191,12 +199,9 @@ export function SofiaCampaignMonitor({
           <td>{c.requests_sent}<small>{percent(c.requests_sent,c.selected)} enviados</small></td>
           <td>{c.awaiting_authorization_or_result}</td>
           <td>{c.answered_contacts}<small>{percent(c.answered_contacts,c.requests_sent)} de solicitudes</small></td>
-          <td>
-            {c.approval_signal==="unavailable"?"—":c.approvals_confirmed}
-            <small>{c.approval_signal==="observed"
-              ?(c.approval_rate_pct===null?"Sin base":String(c.approval_rate_pct)+"%")
-              :c.approval_signal==="partial"?"Registro parcial":"Sin evento de aceptación"}</small>
-          </td>
+          <td>{c.opted_in}<small>{percent(c.opted_in,c.requests_sent)} de solicitudes</small></td>
+          <td>{c.not_opted_in}</td>
+          <td>{c.pending_opt_in}</td>
           <td>{c.completed+c.excluded+c.cancelled_members}<small>{c.selected>0?percent(c.completed+c.excluded+c.cancelled_members,c.selected):"—"}</small></td>
           <td>{c.review_needed}</td>
           <td>
@@ -217,7 +222,7 @@ export function SofiaCampaignMonitor({
         </tr>).flatMap((row,i)=>{
           const c=rows[i];
           if(opened!==c.id)return [row];
-          return [row,<tr key={c.id+"-details"}><td colSpan={10}>
+          return [row,<tr key={c.id+"-details"}><td colSpan={12}>
             <div style={{padding:"12px 4px"}}>
               <strong>Contactos · {c.name}</strong>
               <p className="subtitle">
@@ -225,23 +230,21 @@ export function SofiaCampaignMonitor({
                 Conversaciones útiles: {c.meaningful_contacts} ·
                 Reintentos pendientes: {c.queued} · Finalizados: {c.completed}
               </p>
-              {c.approval_signal==="unavailable"
-                ?<p className="subtitle">ElevenLabs no ha entregado eventos explícitos de aceptación al registro de autorizaciones.
-                  No podemos afirmar quién pulsó «Aceptar» ni calcular un porcentaje real de clics.
-                  Las llamadas contestadas sí están verificadas por separado.</p>
-                :c.approval_signal==="partial"
-                  ?<p className="subtitle">Hay autorizaciones registradas, pero la cobertura es parcial:
-                    {c.requests_with_permission_event}/{c.requests_sent} solicitudes con evento.
-                    No se publica una tasa general todavía.</p>
-                  :null}
+              <p className="subtitle">
+                Opted in = aceptación explícita registrada o llamada real iniciada (la llamada requiere autorización).
+                Not opted in = rechazo explícito del permiso. Sin respuesta permanece pendiente, no se considera rechazo.
+                La hora exacta del clic solo se conoce cuando hay evento del proveedor.
+              </p>
               <div className="sofia-tracking-filters">
                 <input aria-label="Buscar contacto del lote" value={search} onChange={e=>setSearch(e.target.value)}
                   placeholder="Buscar contacto o conversación"/>
                 <select aria-label="Filtrar autorizaciones" value={approvalFilter}
                   onChange={e=>setApprovalFilter(e.target.value)}>
                   <option value="all">Todos</option>
-                  <option value="confirmed">Aceptación confirmada por evento</option>
-                  <option value="missing">Sin aceptación confirmada</option>
+                  <option value="confirmed">Opted in</option>
+                  <option value="declined">Not opted in (rechazo)</option>
+                  <option value="pending">Pendiente de opt-in</option>
+                  <option value="missing">Sin opt-in confirmado</option>
                 </select>
                 <span>{filteredMembers.length} contactos visibles</span>
               </div>
@@ -258,8 +261,9 @@ export function SofiaCampaignMonitor({
                   <td>{MEMBER_STATUS[m.display_status]??m.member_status}
                     {m.excluded_reason?<small>{m.excluded_reason}</small>:null}</td>
                   <td>{m.attempts_total}</td>
-                  <td>{m.approval_evidence==="confirmed"?"Confirmada por evento"
-                    :m.approval_evidence==="unavailable"?"Sin dato explícito":"No confirmada por evento"}</td>
+                  <td>{m.opt_in_status==="opted_in"?(m.opt_in_evidence==="explicit_event"?"Opted in · evento":"Opted in · llamada")
+                    :m.opt_in_status==="not_opted_in"?"Not opted in · rechazó"
+                    :m.opt_in_status==="pending"?"Pendiente de aceptar":"Sin solicitud"}</td>
                   <td>{m.connection_outcome==="human"?"Respondió"
                     :m.connection_outcome==="no_answer"?"No contestó"
                     :m.connection_outcome==="rejected"?"Rechazó"
