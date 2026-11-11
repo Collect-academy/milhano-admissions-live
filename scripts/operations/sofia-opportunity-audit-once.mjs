@@ -31,3 +31,16 @@ if(process.env.N8N_COMPARE_07==="1"){
  console.log("WF07_SOURCE_COMPARISON",JSON.stringify(diff));
  console.log("WF07_CONNECTION_EQUAL",JSON.stringify(live.connections)===JSON.stringify(stored.connections));
 }
+
+if(process.env.N8N_SAFE_PARAMS_07==="1"){
+ const wf=(list.data??[]).find(w=>w.name==="MILHANO | Sofia | 07 Post Call + Initiation Failure Reconciliation | WEBHOOK"&&w.active);
+ const active=await read("/workflows/"+wf.id);
+ const wanted=new Set(["Webhook | Post Call Outcome","ElevenLabs | Check Main Agent","Supabase | Pending Conversations","ElevenLabs | Fetch Pending Conversation"]);
+ for(const n of active.nodes??[]){
+  if(!wanted.has(n.name))continue;
+  const params=structuredClone(n.parameters??{});
+  for(const h of params.headerParameters?.parameters??[]){if(/token|key|secret|authorization/i.test(h.name??""))h.value="[REDACTED]";}
+  for(const k of ["jsonBody","body","sendBody"]){if(/key|token|secret/i.test(JSON.stringify(params[k]??"")))delete params[k];}
+  console.log("WF07_LIVE_SAFE_PARAMS",JSON.stringify({name:n.name,parameters:params,credentials:n.credentials??{}}));
+ }
+}
