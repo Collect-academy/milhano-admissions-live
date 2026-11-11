@@ -14,15 +14,20 @@
         "httpMethod": "POST",
         "path": "milhano-sofia-postcall-reconcile",
         "authentication": "headerAuth",
-        "responseMode": "onReceived",
         "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "U6zTAsBVSnOj3lGY",
+          "name": "Supabase | Sofia Scheduler"
+        }
       }
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "https://api.elevenlabs.io/v1/convai/agents/agent_6401m3yvs1rcfbya7hk1qb2bxp8v",
         "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -32,7 +37,6 @@
             }
           ]
         },
-        "sendBody": false,
         "options": {
           "response": {
             "response": {
@@ -40,8 +44,7 @@
             }
           },
           "timeout": 30000
-        },
-        "genericAuthType": "httpHeaderAuth"
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
@@ -62,7 +65,6 @@
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "={{ 'https://mhfncmxlpwzyuupxjlxo.supabase.co/rest/v1/milhano_ai_pending_call_reconciliation?select=conversation_id,created_at&conversation_id=eq.' + encodeURIComponent($('Validate | Official Event and Conversation').first().json.conversation_id) + '&limit=1' }}",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "supabaseApi",
@@ -75,7 +77,6 @@
             }
           ]
         },
-        "sendBody": false,
         "options": {
           "response": {
             "response": {
@@ -118,9 +119,9 @@
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://api.elevenlabs.io/v1/convai/conversations/{{$json.conversation_id}}",
         "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -130,7 +131,6 @@
             }
           ]
         },
-        "sendBody": false,
         "options": {
           "response": {
             "response": {
@@ -138,8 +138,7 @@
             }
           },
           "timeout": 30000
-        },
-        "genericAuthType": "httpHeaderAuth"
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
