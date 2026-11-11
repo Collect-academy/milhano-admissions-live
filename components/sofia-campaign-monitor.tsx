@@ -179,7 +179,7 @@ export function SofiaCampaignMonitor({
         <thead><tr>
           <th>Campaña</th><th>Estado real</th><th>Leads</th><th>Solicitudes</th>
           <th>Sin resultado final</th><th>Contestaron</th>
-          <th>Opted in</th><th>Not opted in</th><th>Pendientes de opt-in</th><th>Finalizados</th><th>Revisión</th><th>Control</th>
+          <th>Opted in</th><th>Opted out</th><th>Pendientes de opt-in</th><th>Finalizados</th><th>Revisión</th><th>Control</th>
         </tr></thead>
         <tbody>{rows.map(c=><tr key={c.id}>
           <td>
@@ -232,7 +232,7 @@ export function SofiaCampaignMonitor({
               </p>
               <p className="subtitle">
                 Opted in = aceptación explícita registrada o llamada real iniciada (la llamada requiere autorización).
-                Not opted in = rechazo explícito del permiso. Sin respuesta permanece pendiente, no se considera rechazo.
+                Opted out = rechazo explícito del permiso. Sin respuesta permanece pendiente, no se considera rechazo.
                 La hora exacta del clic solo se conoce cuando hay evento del proveedor.
               </p>
               <div className="sofia-tracking-filters">
@@ -242,7 +242,7 @@ export function SofiaCampaignMonitor({
                   onChange={e=>setApprovalFilter(e.target.value)}>
                   <option value="all">Todos</option>
                   <option value="confirmed">Opted in</option>
-                  <option value="declined">Not opted in (rechazo)</option>
+                  <option value="declined">Opted out (rechazo)</option>
                   <option value="pending">Pendiente de opt-in</option>
                   <option value="missing">Sin opt-in confirmado</option>
                 </select>
@@ -262,7 +262,7 @@ export function SofiaCampaignMonitor({
                     {m.excluded_reason?<small>{m.excluded_reason}</small>:null}</td>
                   <td>{m.attempts_total}</td>
                   <td>{m.opt_in_status==="opted_in"?(m.opt_in_evidence==="explicit_event"?"Opted in · evento":"Opted in · llamada")
-                    :m.opt_in_status==="not_opted_in"?"Not opted in · rechazó"
+                    :m.opt_in_status==="not_opted_in"?"Opted out · rechazó"
                     :m.opt_in_status==="pending"?"Pendiente de aceptar":"Sin solicitud"}</td>
                   <td>{m.connection_outcome==="human"?"Respondió"
                     :m.connection_outcome==="no_answer"?"No contestó"
