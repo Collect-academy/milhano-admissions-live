@@ -1,0 +1,21 @@
+name: Milhano | One-shot WhatsApp outbound audit
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/sofia-whatsapp-delivery-audit.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - name: Compare accepted outbound with provider conversation states
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+          ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+          ELEVENLABS_KEY: ${{ secrets.ELEVENLABS_KEY }}
+        run: node scripts/operations/sofia-whatsapp-delivery-audit-20261111.mjs
