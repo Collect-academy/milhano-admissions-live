@@ -15,6 +15,12 @@ export async function GET(request: Request) {
       const { data, error } = await admin.from("milhano_ai_campaign_member_monitor")
         .select("*").eq("campaign_id",campaignId).order("scheduled_at",{ascending:true}).limit(500);
       if (error) throw new Error(error.message);
+      const ids = [...new Set((data ?? []).map(m=>String(m.conversation_id??"")).filter(Boolean))];
+      const {data:insights,error:insightsError} = ids.length
+        ? await admin.from("milhano_ai_call_insights").select("conversation_id,collected_variables").in("conversation_id",ids).limit(500)
+        : {data:[],error:null};
+      if(insightsError)throw new Error(insightsError.message);
+      const variables = new Map((insights??[]).map(i=>[i.conversation_id,i.collected_variables]));
       const members = (data ?? []).map(m => ({
         member_id:m.member_id,campaign_id:m.campaign_id,ghl_contact_id:m.ghl_contact_id,
         ghl_opportunity_id:m.ghl_opportunity_id,contact_name:m.display_name,opportunity_name:m.display_name,
@@ -32,7 +38,7 @@ export async function GET(request: Request) {
         call_outcome:m.call_outcome,meaningful_conversation:m.meaningful_conversation,qualified:m.qualified,
         call_started_at:m.call_started_at,call_finished_at:m.call_ended_at,
         summary_es:m.summary_es,transcript_summary:m.transcript_summary,
-        collected_variables:null,permission_state:m.permission_state,
+        collected_variables:variables.get(m.conversation_id)??null,permission_state:m.permission_state,
         permission_requested_at:m.permission_requested_at,permission_approved_at:m.permission_approved_at,
         approval_evidence:m.opt_in_status==="opted_in"?"confirmed":
           m.opt_in_status==="not_opted_in"?"declined":"not_confirmed",
@@ -44,9 +50,13 @@ export async function GET(request: Request) {
     const { data, error } = await admin.from("milhano_ai_campaign_monitor")
       .select("*").order("created_at",{ascending:false}).limit(500);
     if(error)throw new Error(error.message);
+    const {data:details,error:detailError}=await admin.from("milhano_ai_campaign_monitor_v1")
+      .select("id,meaningful_contacts,last_member_update_at,next_scheduled_at").limit(500);
+    if(detailError)throw new Error(detailError.message);
+    const extras=new Map((details??[]).map(d=>[d.id,d]));
     const campaigns=(data??[]).map(c=>({
       id:c.id,name:c.name,status:c.engine_status,dry_run:c.dry_run,concurrency_limit:c.concurrency_limit,
-      created_at:c.created_at,updated_at:c.created_at,
+      created_at:c.created_at,updated_at:extras.get(c.id)?.last_member_update_at??c.created_at,
       selected:c.selected,queued:c.queued,in_flight:c.in_flight,
       claimed:c.in_flight-c.awaiting_permission_signal,
       awaiting_authorization_or_result:c.awaiting_permission_signal,
@@ -54,10 +64,10 @@ export async function GET(request: Request) {
       cancelled_members:c.cancelled,in_progress_members:c.outstanding,
       permission_events:0,approvals_confirmed:c.opted_in,
       requests_with_permission_event:0,calls_recorded:c.provider_call_events,
-      answered_contacts:c.answered_calls,meaningful_contacts:0,
+      answered_contacts:c.answered_calls,meaningful_contacts:extras.get(c.id)?.meaningful_contacts??0,
       approval_signal:"observed",
       approval_rate_pct:c.requests_sent>0?Math.round(c.opted_in*1000/c.requests_sent)/10:null,
-      next_scheduled_at:null,last_member_update_at:null,requests_sent:c.requests_sent,
+      next_scheduled_at:extras.get(c.id)?.next_scheduled_at??null,last_member_update_at:extras.get(c.id)?.last_member_update_at??null,requests_sent:c.requests_sent,
       operational_status:c.display_status==="running"?"in_progress":c.display_status,
       opted_in:c.opted_in,not_opted_in:c.not_opted_in,
       pending_opt_in:c.pending_opt_in,not_sent_opt_in:c.not_sent_opt_in
