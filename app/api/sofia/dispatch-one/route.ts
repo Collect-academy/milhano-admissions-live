@@ -51,6 +51,17 @@ export async function POST(request: Request) {
       opp.status!=="open" || !(ELIGIBLE_STAGES as readonly string[]).includes(opp.current_stage) || !opp.phone)
     return NextResponse.json({error:"La oportunidad no está disponible en el pipeline Setter."},{status:409});
 
+  // A prior provider-confirmed authorization is permanent, even across opportunities or batches.
+  // Also hold ambiguous requests for review rather than risking another WhatsApp request.
+  const {data:authorization,error:authorizationError}=await admin
+    .from("milhano_ai_contact_authorization_status")
+    .select("authorization_status")
+    .eq("ghl_contact_id",contactId).maybeSingle();
+  if(authorizationError)return NextResponse.json({error:"No se pudo verificar el historial del contacto."},{status:503});
+  if(authorization && authorization.authorization_status!=="not_sent")
+    return NextResponse.json({error:
+      "Este contacto ya tiene una autorización enviada, reservada o por verificar. No se enviará otra solicitud."},{status:409});
+
   const approvedTest = opportunityId===TEST_OPP && contactId===TEST_CONTACT;
   if (!approvedTest) {
     const [sameSetter,closer,previous,campaigns] = await Promise.all([
@@ -66,7 +77,7 @@ export async function POST(request: Request) {
     ]);
     if (sameSetter.error||closer.error||previous.error||campaigns.error)
       return NextResponse.json({error:"No se pudieron comprobar los bloqueos del contacto."},{status:503});
-    if ((sameSetter.data?.length??0)!==1 || (closer.data?.length??0)>0 ||
+    if ((sameSetter.data?.length??0)<1 || (closer.data?.length??0)>0 ||
         (previous.data?.length??0)>0 || (campaigns.data?.length??0)>0)
       return NextResponse.json({error:"Este contacto tiene duplicados, campañas previas o seguimiento en Closer."},{status:409});
   }
@@ -76,7 +87,7 @@ export async function POST(request: Request) {
     .select("id").single();
   if (claimError || !claim) {
     if (claimError?.code==="23505") return NextResponse.json({
-      error:"Esta oportunidad ya tiene una solicitud registrada desde el picker. No se reenviará.",
+      error:"Este contacto ya tiene una solicitud registrada. No se reenviará.",
     },{status:409});
     return NextResponse.json({error:"No se pudo reservar el envío. No se llamó desde este endpoint."},{status:503});
   }
