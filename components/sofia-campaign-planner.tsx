@@ -44,7 +44,7 @@ function buildSchedule(windows:WindowInput[],count:number) {
 const fmt=(v:string)=>new Date(v).toLocaleString("es-MX",{timeZone:"America/Merida",dateStyle:"short",timeStyle:"short"});
 const stageLabels:Record<string,string>={"New Lead":"Nuevo lead","No answer - Day 1":"Sin respuesta D1","No answer - Day 2":"Sin respuesta D2","No answer - Day 3":"Sin respuesta D3","Never Answered / Nurturing A":"Sin respuesta / nutrición"};
 export function SofiaCampaignPlanner({candidates,canPlan,dispatchEnabled}:{candidates:SofiaCandidate[];campaigns:SofiaCampaign[];canPlan:boolean;dispatchEnabled:boolean}) {
- const [stage,setStage]=useState("all"),[sort,setSort]=useState<"asc"|"desc">("asc");
+ const [stage,setStage]=useState("all"),[authorizationFilter,setAuthorizationFilter]=useState("not_sent"),[sort,setSort]=useState<"asc"|"desc">("asc");
  const [from,setFrom]=useState(""),[to,setTo]=useState(""),[search,setSearch]=useState("");
  const [selected,setSelected]=useState<string[]>([]);
  const [requestedCount,setRequestedCount]=useState("20");
@@ -53,10 +53,11 @@ export function SofiaCampaignPlanner({candidates,canPlan,dispatchEnabled}:{candi
  const [busy,setBusy]=useState(false),[status,setStatus]=useState<{ok:boolean;message:string}|null>(null);
  const filtered=useMemo(()=>candidates.filter(c=>
    (stage==="all"||c.stage===stage) &&
+   (authorizationFilter==="all"||c.authorizationStatus===authorizationFilter) &&
    (!from||c.createdAt.slice(0,10)>=from) &&
    (!to||c.createdAt.slice(0,10)<=to) &&
    (!search||[c.name,c.opportunityId,c.phoneLast4].join(" ").toLowerCase().includes(search.toLowerCase()))
- ).sort((a,b)=>sort==="asc"?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt)),[candidates,stage,sort,from,to,search]);
+ ).sort((a,b)=>sort==="asc"?a.createdAt.localeCompare(b.createdAt):b.createdAt.localeCompare(a.createdAt)),[candidates,stage,authorizationFilter,sort,from,to,search]);
  const candidateById=new Map(candidates.map(c=>[c.opportunityId,c]));
  const chosen=selected.map(id=>candidateById.get(id)).filter((c):c is SofiaCandidate=>Boolean(c));
  const [manualSending,setManualSending]=useState(false);
@@ -148,8 +149,22 @@ export function SofiaCampaignPlanner({candidates,canPlan,dispatchEnabled}:{candi
  return <div className="sofia-planner">
   <section className="panel">
    <div className="sofia-panel-title"><h2>1. ¿A quiénes enviaremos la autorización?</h2><span className="sofia-count">{chosen.length} seleccionadas</span></div>
-   <p className="subtitle">Seleccionar contactos no envía nada. Para probar con uno, selecciónalo y usa «Enviar 1 autorización ahora». Para crear un lote mayor, continúa con la programación de abajo.</p>
+   <p className="subtitle">Cada contacto recibe la solicitud de autorización una sola vez, aunque tenga varias oportunidades o cambie de etapa en GHL. Por defecto se muestran solamente contactos sin solicitud previa. Las autorizaciones enviadas quedan registradas internamente y no se reenvían.</p>
+   <div className="sofia-selection-actions">
+     <span><strong>{candidates.filter(c=>c.authorizationStatus==="not_sent").length}</strong> sin enviar</span>
+     <span><strong>{candidates.filter(c=>c.authorizationStatus==="sent").length}</strong> autorización enviada</span>
+     <span><strong>{candidates.filter(c=>c.authorizationStatus==="reserved").length}</strong> reservados en lote</span>
+     <span><strong>{candidates.filter(c=>c.authorizationStatus==="needs_review").length}</strong> por revisar</span>
+     <button type="button" className="secondary-button" onClick={()=>window.location.reload()}>Actualizar estado</button>
+   </div>
    <div className="sofia-filters">
+    <label>Autorización IA<select value={authorizationFilter} onChange={e=>setAuthorizationFilter(e.target.value)}>
+     <option value="not_sent">Sin enviar · disponibles</option>
+     <option value="sent">Autorización enviada</option>
+     <option value="reserved">Reservados en lote</option>
+     <option value="needs_review">Envío por verificar</option>
+     <option value="all">Todos los estados</option>
+    </select></label>
     <label>Etapa<select value={stage} onChange={e=>setStage(e.target.value)}><option value="all">Todas</option>{Object.entries(stageLabels).map(([key,v])=><option key={key} value={key}>{v}</option>)}</select></label>
     <label>Fecha desde<input type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label>
     <label>Fecha hasta<input type="date" value={to} onChange={e=>setTo(e.target.value)}/></label>
@@ -166,12 +181,15 @@ export function SofiaCampaignPlanner({candidates,canPlan,dispatchEnabled}:{candi
     <span>{filtered.length} resultados · {filtered.filter(x=>x.eligible).length} elegibles</span>
    </div>
    <div className="sofia-scroll"><table className="sofia-table"><thead><tr>
-    <th>Selección</th><th>Contacto</th><th>Etapa</th><th>Oportunidad creada</th><th>Estado</th>
+    <th>Selección</th><th>Contacto</th><th>Etapa</th><th>Autorización IA</th><th>Oportunidad creada</th><th>Estado</th>
    </tr></thead><tbody>{filtered.slice(0,1000).map(c=><tr key={c.opportunityId}>
     <td><input type="checkbox" checked={selected.includes(c.opportunityId)} disabled={!c.eligible}
      onChange={e=>setSelected(prev=>e.target.checked?[...prev,c.opportunityId]:prev.filter(x=>x!==c.opportunityId))}/></td>
     <td><strong>{c.name}</strong><small>Tel. ····{c.phoneLast4} · {c.opportunityId}</small></td>
-    <td>{stageLabels[c.stage]??c.stage}</td><td>{c.createdAt?fmt(c.createdAt):"—"}</td>
+    <td>{stageLabels[c.stage]??c.stage}</td>
+    <td>{c.authorizationStatus==="sent"?"Enviada":c.authorizationStatus==="reserved"?"Reservado":c.authorizationStatus==="needs_review"?"Por verificar":"Sin enviar"}
+      {c.authorizationSentAt?<small>Primera vez: {fmt(c.authorizationSentAt)}</small>:null}</td>
+    <td>{c.createdAt?fmt(c.createdAt):"—"}</td>
     <td><span className={c.eligible?"sofia-ok":"sofia-blocked"}>{c.eligible?"Elegible preliminar":c.exclusion}</span></td>
    </tr>)}</tbody></table></div>
    {filtered.length>1000?<p className="subtitle">Se muestran los primeros 1,000 registros. Refina filtros para seleccionar el resto.</p>:null}
