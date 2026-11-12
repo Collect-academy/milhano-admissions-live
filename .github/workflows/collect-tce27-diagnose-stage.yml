@@ -1,0 +1,20 @@
+name: Collect TCE27 | Diagnose stage read
+on:
+  push:
+    branches: [ops/tce27-n8n-collect-only-20261110]
+    paths: [.github/workflows/collect-tce27-diagnose-stage.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    if: "github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(collect): diagnose read-only stage and cleanup'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: node --check ops/tce27/diagnose-hype-read.mjs
+      - env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node ops/tce27/diagnose-hype-read.mjs
