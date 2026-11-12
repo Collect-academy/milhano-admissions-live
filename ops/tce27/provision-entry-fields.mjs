@@ -1,75 +1,53 @@
-import {readFileSync} from "node:fs";
-import {gunzipSync} from "node:zlib";
-const id="L8GWSUQP7DK90Ad0";
-const origin="https://collectacademy.app.n8n.cloud/api/v1";
-const key=process.env.N8N_API_KEY;
-if(!key)throw Error("Missing existing N8N_API_KEY");
-const packed=readFileSync("ops/tce27/collect-wf02.json.gz.b64","utf8").trim();
-const base=JSON.parse(gunzipSync(Buffer.from(packed,"base64")).toString("utf8"));
-const names=base.nodes.map(n=>n.name);
-function ensure(ok,msg){if(!ok)throw Error(msg);}
-async function api(method,path,body){
- const response=await fetch(origin+path,{method,headers:{"X-N8N-API-KEY":key,"Accept":"application/json",...(body?{"Content-Type":"application/json"}:{})},...(body?{body:JSON.stringify(body)}:{})});
- const txt=await response.text();let data={};
- try{data=JSON.parse(txt)}catch{data={detail:"Invalid JSON"}}
- if(!response.ok)throw Error(method+" "+path+" HTTP "+response.status+" "+JSON.stringify(data).slice(0,350));
- return data;
+import { randomUUID, randomBytes } from 'node:crypto';
+const HOST='https://collectacademy.app.n8n.cloud', API=HOST+'/api/v1', LOC='ojR4ZB7H3KiuY5kESilq';
+const KEY=process.env.N8N_API_KEY;
+if(!KEY)throw Error('N8N_API_KEY missing');
+const FIELDS=['TCE27 | Retreat Entry Date','TCE27 | Webinar Entry Date'];
+const nonce=randomBytes(24).toString('hex'), hook='tce27-field-setup-'+randomBytes(18).toString('hex');
+const gh={httpHeaderAuth:{id:'xdPGXIbW6yrWua0s',name:'Collect GHL API'}};
+const mk=(id,name,type,version,parameters,position,more={})=>({id,name,type,typeVersion:version,position,parameters,...more});
+const hn=(method,url,more={})=>({method,url,authentication:'genericCredentialType',genericAuthType:'httpHeaderAuth',sendHeaders:true,headerParameters:{parameters:[{name:'Version',value:'v3'},{name:'Accept',value:'application/json'}]},options:{timeout:20000},...more});
+const nodes=[
+mk('1','Webhook | Field Setup','n8n-nodes-base.webhook',2,{httpMethod:'POST',path:hook,responseMode:'responseNode',options:{}},[240,300],{webhookId:randomUUID()}),
+mk('2','Code | Authorize','n8n-nodes-base.code',2,{mode:'runOnceForAllItems',jsCode:"const p=$input.first().json.body||{};if(p.nonce!=="+JSON.stringify(nonce)+"||p.action!=='create'||!"+JSON.stringify(FIELDS)+".includes(p.name))throw Error('Unauthorized');return [{json:{name:p.name}}];"},[460,300]),
+mk('3','GHL | Get Fields','n8n-nodes-base.httpRequest',4.2,hn('GET','https://services.leadconnectorhq.com/locations/'+LOC+'/customFields',{sendQuery:true,queryParameters:{parameters:[{name:'model',value:'opportunity'}]}}),[700,300],{credentials:gh}),
+mk('4','Code | Existing','n8n-nodes-base.code',2,{mode:'runOnceForAllItems',jsCode:"const name=$('Code | Authorize').first().json.name;const a=$input.first().json.customFields;if(!Array.isArray(a))throw Error('No GHL customFields');const hits=a.filter(x=>x.name===name&&x.model==='opportunity');if(hits.length>1||hits.length&&hits[0].dataType!=='DATE')throw Error('Field conflict');return [{json:{name,exists:hits.length===1,id:hits[0]?.id||null,key:hits[0]?.fieldKey||null}}];"},[910,300]),
+mk('5','IF | Already Exists','n8n-nodes-base.if',2.2,{conditions:{options:{caseSensitive:true,leftValue:'',typeValidation:'strict',version:2},combinator:'and',conditions:[{id:randomUUID(),leftValue:'={{ $json.exists }}',rightValue:true,operator:{type:'boolean',operation:'true'}}]}},[1130,300]),
+mk('6','Code | Existing Result','n8n-nodes-base.code',2,{mode:'runOnceForAllItems',jsCode:"const x=$input.first().json;return [{json:{ok:true,created:false,field:x.name,fieldId:x.id,fieldKey:x.key}}];"},[1340,160]),
+mk('7','GHL | Create Field','n8n-nodes-base.httpRequest',4.2,hn('POST','https://services.leadconnectorhq.com/locations/'+LOC+'/customFields',{sendBody:true,specifyBody:'json',jsonBody:"={{ JSON.stringify({name:$json.name,dataType:'DATE',model:'opportunity'}) }}"}),[1340,400],{credentials:gh}),
+mk('8','Code | Created Result','n8n-nodes-base.code',2,{mode:'runOnceForAllItems',jsCode:"const f=$input.first().json.customField;if(!f?.id||f.dataType!=='DATE'||f.model!=='opportunity')throw Error('GHL did not confirm');return [{json:{ok:true,created:true,field:$('Code | Authorize').first().json.name,fieldId:f.id,fieldKey:f.fieldKey}}];"},[1560,400]),
+mk('9','Respond | Done','n8n-nodes-base.respondToWebhook',1.1,{respondWith:'json',responseBody:'={{ JSON.stringify($json) }}',options:{}},[1760,290])];
+const link=(s)=>({main:[[{node:s,type:'main',index:0}]]});
+const wf={name:'TCE27 | 00 | Provision Entry Fields | One Time',nodes,settings:{executionOrder:'v1'},connections:{
+'Webhook | Field Setup':link('Code | Authorize'),'Code | Authorize':link('GHL | Get Fields'),'GHL | Get Fields':link('Code | Existing'),'Code | Existing':link('IF | Already Exists'),
+'IF | Already Exists':{main:[[{node:'Code | Existing Result',type:'main',index:0}],[{node:'GHL | Create Field',type:'main',index:0}]]},
+'Code | Existing Result':link('Respond | Done'),'GHL | Create Field':link('Code | Created Result'),'Code | Created Result':link('Respond | Done')}};
+async function api(method,route,body){
+ const r=await fetch(API+route,{method,headers:{'X-N8N-API-KEY':KEY,'Accept':'application/json',...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
+ const s=await r.text();let j;try{j=JSON.parse(s)}catch{j={raw:s.slice(0,400)}}
+ if(!r.ok)throw Error(method+' '+route+' HTTP '+r.status+' '+JSON.stringify(j).slice(0,400));return j;
 }
-const live=await api("GET","/workflows/"+id);
-ensure(live.id===id && live.name===base.name && live.active===true,"Identity mismatch / inactive target");
-ensure(live.nodes.length===base.nodes.length || live.nodes.length===base.nodes.length-1,"Unexpected node count");
-ensure(live.nodes.every(n=>names.includes(n.name)),"Unexpected foreign node");
-ensure(live.nodes.find(n=>n.name==="Webhook | TCE27 Public Capture").parameters.path==="tce27-public-miniform-v1","Webhook mismatch");
-ensure(live.nodes.filter(n=>n.credentials).every(n=>Object.values(n.credentials).every(c=>c.id==="xdPGXIbW6yrWua0s")),"Foreign GHL credential");
-const already=!live.nodes.some(n=>n.name==="GHL | Add Tag");
-if(already){console.log("ALREADY_UPDATED",JSON.stringify({id,active:live.active}));process.exit(0)}
-ensure(live.nodes.find(n=>n.name==="Code | Normalize & Config").parameters.jsCode===base.nodes.find(n=>n.name==="Code | Normalize & Config").parameters.jsCode,"Unexpected live config drift");
-const next=structuredClone(base);
-next.nodes=next.nodes.filter(n=>n.name!=="GHL | Add Tag");
-next.connections["GHL | Upsert Contact"].main[0][0].node="GHL | Search Opportunity";
-delete next.connections["GHL | Add Tag"];
-const normal=next.nodes.find(n=>n.name==="Code | Normalize & Config");
-let js=normal.parameters.jsCode;
-const oldTag=" tag:funnel==='retreat'?'tce27_retreat_public_lead':'tce27_webinar_registered',\n";
-ensure(js.includes(oldTag),"Legacy tag mapping missing");
-js=js.replace(oldTag,"");
-const pattern=/const short=v=>[^\n]+\nconst opportunityName=[^\n]+;/;
-ensure(pattern.test(js),"Legacy opportunity title mapping missing");
-const title=[
-"// La oportunidad es la fuente de entrada a las comms. NO se crean tags.",
-"// Priorizamos IDs precisos de Meta Ads; tracking completo en la nota de GHL.",
-"const short=(v,max)=>String(v||'-').replace(/[|\\n\\r]/g,' ').slice(0,max);",
-"const bits=[funnel==='retreat'?'TCE27':'WEBINAR MX 2026',",
-" 'CID='+short(attr.campaign_id||attr.utm_campaign_id,40),",
-" 'ASID='+short(attr.adset_id||attr.utm_adset_id,40),",
-" 'ADID='+short(attr.ad_id||attr.utm_ad_id,40),",
-" 'S='+short(attr.utm_source,22),",
-" 'M='+short(attr.utm_medium,15),",
-" 'C='+short(attr.utm_campaign||attr.campaign_name,40),",
-" 'CTA='+short(attr.cta_position,20),",
-" 'N='+short(name,42)];",
-"let opportunityName=bits.join(' | ');",
-"if(opportunityName.length>250){",
-" // Mantener IDs y nombre; comprimir campos descriptivos si es preciso.",
-" bits[6]='C='+short(attr.utm_campaign||attr.campaign_name,12);",
-" bits[7]='CTA='+short(attr.cta_position,12);",
-" bits[8]='N='+short(name,28);",
-" opportunityName=bits.join(' | ').slice(0,250);",
-"}"
-].join("\n");
-js=js.replace(pattern,title);
-normal.parameters.jsCode=js;
-next.nodes.find(n=>n.name==="GHL | Attribution Note").onError="continueRegularOutput";
-for(const n of next.nodes.filter(n=>n.type==="n8n-nodes-base.code"))new Function(n.parameters.jsCode);
-ensure(!JSON.stringify(next).includes("tce27_retreat_public_lead"),"Tag remains");
-ensure(next.nodes.filter(n=>n.credentials).length===4,"Credential node mismatch");
-ensure(js.includes("ojR4ZB7H3KiuY5kESilq") && js.includes("Lp51AslVPg5iqVnBBGTa") && js.includes("0af21d93-2c84-4154-a166-cd59117511ec"),"Collect IDs mismatch");
-console.log("PREFLIGHT_OK",JSON.stringify({id,tag_removed:true,credential:"Collect GHL API",other_workflows_modified:0}));
-const payload={name:next.name,nodes:next.nodes,connections:next.connections,settings:next.settings};
-await api("PUT","/workflows/"+id,payload);
-await api("POST","/workflows/"+id+"/publish");
-const check=await api("GET","/workflows/"+id);
-ensure(check.active===true && check.nodes.length===next.nodes.length,"Saved workflow not active");
-ensure(!check.nodes.some(n=>n.name==="GHL | Add Tag"),"Tag step still exists after publishing");
-ensure(check.nodes.find(n=>n.name==="Code | Normalize & Config").parameters.jsCode===js,"Unexpected persisted code");
-console.log("UPDATED_AND_PUBLISHED",JSON.stringify({id,active:true,nodes:check.nodes.length,tag_removed:true,trigger_in_ghl:"Opportunity Created",other_workflows_modified:0}));
+let id=null,active=false;
+try{
+ const w=await api('POST','/workflows',wf);id=w.id;if(!id)throw Error('Cannot create workflow');
+ await api('POST','/workflows/'+id+'/publish');active=true;
+ await new Promise(r=>setTimeout(r,2200));
+ const confirmed=[];
+ for(const name of FIELDS){let result=null;
+  for(let i=0;i<4;i++){
+   const r=await fetch(HOST+'/webhook/'+hook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',name,nonce})});
+   const s=await r.text();if(r.status===404&&i<3){await new Promise(x=>setTimeout(x,1800));continue}
+   try{result=JSON.parse(s)}catch{throw Error('Invalid response '+r.status+' '+s.slice(0,300))}
+   if(!r.ok||!result.ok||!result.fieldId)throw Error('Field '+name+' failed: '+JSON.stringify(result).slice(0,400));
+   break;
+  }
+  if(!result)throw Error('No response for field '+name);
+  confirmed.push({name,id:result.fieldId,key:result.fieldKey,created:result.created});
+ }
+ console.log('ENTRY_FIELDS_CONFIRMED '+JSON.stringify({location:LOC,fields:confirmed,contactsModified:0,opportunitiesModified:0,ghlWorkflowsModified:0}));
+}finally{
+ if(id){
+  if(active){try{await api('POST','/workflows/'+id+'/unpublish')}catch(e){try{await api('POST','/workflows/'+id+'/deactivate')}catch(e2){console.error('UNPUBLISH_FAILED '+id+' '+e2.message)}}}
+  try{await api('DELETE','/workflows/'+id);console.log('FIELD_SETUP_WORKFLOW_REMOVED '+id)}catch(e){console.error('DELETE_FAILED '+id+' '+e.message)}
+ }
+}
