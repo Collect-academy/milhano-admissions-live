@@ -1,0 +1,25 @@
+name: Collect TCE27 | Provision Entry Fields
+on:
+  push:
+    branches: [ops/tce27-n8n-collect-only-20261110]
+    paths: [.github/workflows/collect-tce27-entry-fields.yml]
+permissions:
+  contents: read
+concurrency:
+  group: collect-tce27-entry-fields-once
+  cancel-in-progress: false
+jobs:
+  provision:
+    if: "github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(collect): provision TCE27 entry fields in GHL'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check isolated script syntax
+        run: node --check ops/tce27/provision-entry-fields.mjs
+      - name: Create ONLY two opportunity DATE fields (no contacts, no sends)
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node ops/tce27/provision-entry-fields.mjs
