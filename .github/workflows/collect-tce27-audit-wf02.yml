@@ -1,0 +1,21 @@
+name: Collect TCE27 | Audit WF02 readiness
+on:
+  push:
+    branches: [ops/tce27-n8n-collect-only-20261110]
+    paths: [.github/workflows/collect-tce27-audit-wf02.yml]
+permissions:
+  contents: read
+jobs:
+  audit:
+    if: "github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(collect): read-only audit WF02 webhook state'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - run: node --check ops/tce27/audit-wf02-published.mjs
+      - name: Read-only n8n API
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node ops/tce27/audit-wf02-published.mjs
