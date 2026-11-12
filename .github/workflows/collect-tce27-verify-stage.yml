@@ -1,0 +1,22 @@
+name: Collect TCE27 | Verify hype stage readonly
+on:
+  push:
+    branches: [ops/tce27-n8n-collect-only-20261110]
+    paths: [.github/workflows/collect-tce27-verify-stage.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    if: "github.repository == 'Collect-academy/milhano-admissions-live' && github.event.head_commit.message == 'ops(collect): check real TCE27 hype stage ID'"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Check syntax
+        run: node --check ops/tce27/read-hype-stage.mjs
+      - name: Read GHL stage ID without modifying GHL
+        env:
+          N8N_API_KEY: ${{ secrets.N8N_API_KEY }}
+        run: node ops/tce27/read-hype-stage.mjs
