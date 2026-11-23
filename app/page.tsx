@@ -87,10 +87,16 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
     `${payload.booking_breakdown.trial_days.total} Trial Day appointments created/booked inside the selected period. Each appointment counts separately, including siblings sharing one contact.`,
     `${payload.booking_breakdown.trial_days.total} citas de Pasadía creadas/agendadas dentro del periodo seleccionado. Cada cita cuenta por separado, incluso entre hermanos que comparten contacto.`,
   );
+  const trialScheduledTooltip = tr(
+    locale,
+    "Pasadía appointments on the official Pasadía calendar taking place in the selected period (Mérida). Excludes cancelled appointments and the Retroalimentación calendar. A booking may have been created outside the period.",
+    "Citas del calendario oficial de Pasadía que se realizarán en el periodo seleccionado (Mérida). Excluye canceladas y el calendario de Retroalimentación. La reserva pudo crearse en otro periodo.",
+  );
   const cascadeTooltips = {
     responded_leads: responseTooltip,
     school_tours_booked: tourBookingTooltip,
     trial_days_booked: trialBookingTooltip,
+    trial_days_scheduled: trialScheduledTooltip,
   };
 
   const generalConversionMetrics = [
@@ -166,10 +172,13 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
           metricTooltips={{
             school_tours_booked: tourBookingTooltip,
             trial_days_booked: trialBookingTooltip,
+            trial_days_scheduled: trialScheduledTooltip,
           }}
           range={range}
           metricSubtexts={{ school_tours_booked: schoolTourBreakdownText, trial_days_booked: trialDayBreakdownText }}
-          note={tr(locale, "Booked = appointment creation date · Attended = scheduled date + attendance outcome · Closed = real close-event date", "Booked = fecha de creación de la cita · Attended = fecha programada + resultado de asistencia · Closed = fecha real del cierre")}
+          note={tr(locale,
+            "Booked = date the appointment was created · Scheduled = day it takes place (excluding cancelled) · Attended = scheduled day + attendance recorded. Pasadía Scheduled uses the official Pasadía calendar; existing Booked/Attended classifications are unchanged and may include Retroalimentación.",
+            "Booked = fecha en que se creó la cita · Scheduled = día programado para realizarla (sin canceladas) · Attended = fecha programada + asistencia registrada. Pasadía Scheduled usa el calendario oficial de Pasadía; Booked/Attended conservan su clasificación histórica, que puede incluir Retroalimentación.")}
         />
       </div>
     </>
