@@ -61,7 +61,7 @@
 2. Modificar sólo las rutas y RPC necesarias; conservar IDs de pipeline/calendario y overrides.
 3. Preparar migraciones aditivas e idempotencia/rollback explícitos; primero validar lecturas y permisos.
 4. Ejecutar npm ci, npx tsc --noEmit --incremental false y npm run build. Probar conteos sobre fechas conocidas (incluido límite de rango y citas de hermanos).
-5. Revisar los cambios en una rama/PR; tras aprobar, desplegar en Vercel y verificar UI con usuario autorizado.
+5. Abrir rama/PR; la comprobación automática .github/workflows/dashboard-ci.yml ejecuta TypeScript y build para cambios app/components/lib. No fusionar si falla. Tras aprobar, desplegar en Vercel y verificar UI con usuario autorizado.
 6. **Actualizar CHANGELOG.md siempre.** Actualizar el mapa técnico si hay nuevas rutas, funciones o dependencias; dejar las pruebas y el resultado del despliegue.
 
 **Seguridad:** Nunca guardar API keys, contraseñas, datos personales de alumnos, JWT o audio/transcripciones en README, cambios, logs, archivos de ejemplo o commits. Ver riesgos conocidos y controles de revisión en docs/ARCHITECTURE.md.
