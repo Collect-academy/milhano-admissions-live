@@ -2,6 +2,20 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-23 — V2/Agentes: separación completa de calendarios Pasadía y Retroalimentación
+
+**Estado al abrir el cambio:** rama `feature/v2-separar-calendarios-pasadia-retro-20261123` y migración aditiva SQL aplicada; PR, CI y Vercel deben verificarse antes de producción.
+
+- **Objetivo:** eliminar citas de Retroalimentación de **todas** las scorecards de Pasadía y ofrecer **Retroalimentación Booked, Scheduled y Attended**, con sus desgloses clicables.
+- **Calendarios:** Pasadía `a0bvCaXgCdVwSrgPELza`, Retroalimentación `Vkw8NTh2ag1QyEzu962b`, clasificados exclusivamente por `calendar_id`. No modificar ni reclasificar citas históricas en GHL.
+- **Modelo:** nueva función `milhano_get_calendar_appointment_rows_v1` SECURITY INVOKER y service_role-only. Reusa `vw_milhano_appointment_events_v22` con overrides y vinculación de hermanos; recupera citas del periodo por `booked_date`, `scheduled_date` o agenda de hoy. Frontend comparte una única normalización para General, Closer, Agentes, drilldowns y agenda de hoy.
+- **UI:** V2 General y Closer Auto y sección de citas de Agentes con seis scorecards. `/v2/leads` presenta `Agendada el`, `Programada para` y el criterio temporal explícito para cada calendario. `Pasadías Hoy` deja de mezclar Retroalimentación y aparece `Retroalimentación Hoy`.
+- **Sin cambios:** modelo original de oportunidades, stage timings, RPCs SQL de V2/Agentes, Manual EOD, pipelines GHL, n8n, ElevenLabs, Sofía y pagos.
+- **Fixture SQL del 1 al 23 de noviembre 2026:** Pasadía `6/6/2`; Retroalimentación `4/4/2` (Booked/Scheduled/Attended). 32 citas totales entre los dos calendarios, 32 appointment_id únicos; lectura SQL noviembre ≈130 ms. Permisos EXECUTE anon=false, authenticated=false, service_role=true.
+- **Archivos:** `lib/admissions-calendar-metrics.ts`, `lib/admissions-v2.ts`, `lib/agent-analytics.ts`, `app/page.tsx`, `app/v2/leads/page.tsx`, `components/admissions-v2-cascade.tsx`, `components/agent-conversion-funnel.tsx`, migración SQL, README.md, AGENTS.md, docs/ARCHITECTURE.md y CHANGELOG.md.
+- **Despliegue y validaciones pendientes al abrir PR:** GitHub Actions TypeScript/Next build, Vercel Preview, comparación de 6 scorecards vs. 6 drilldowns y smoke test autorizado. 
+- **Rollback:** revertir frontend y los documentos en GitHub. El RPC nuevo es aditivo sin efectos de escritura y puede permanecer sin usarse hasta eliminación controlada.
+
 ## 2026-11-23 — V2: Pasadía Scheduled + documentación de arquitectura
 
 **Estado:** PR #2 fusionado a main el 2026-11-23 (squash commit 3ca6cd74e8ca6304ae410a2093795c61d548eae8); migración SQL aditiva ya aplicada a Supabase. GitHub Actions validó TypeScript y build, y Vercel Preview reportó éxito. La verificación final de la UI autenticada es independiente del build y sigue pendiente.

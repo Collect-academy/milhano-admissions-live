@@ -46,14 +46,24 @@
 7. **No tocar n8n sin necesidad demostrada.** Los cambios de scorecard que reutilizan datos de citas existentes no requieren modificar el workflow.
 8. **Pruebas y documentación en el mismo cambio.** Build de Next/TypeScript, pruebas SQL de conteo vs detalle, seguridad/RLS, regresión de V2/Agentes y revisión de Vercel.
 
-## V2 — Contrato de Pasadía (2026-11-23)
+## V2 — Contrato de calendarios (2026-11-23)
 
-- **Pasadía Booked:** regla heredada de V2, filtra por date_added en Mérida; se mantiene sin cambios.
-- **Pasadía Scheduled:** **nueva** scorecard de Closer, calendario oficial Pasadía (a0bvCaXgCdVwSrgPELza), filtra por scheduled_date dentro del periodo, excluye canceladas. Incluye reservas hechas en otros periodos.
-- **Pasadía Attended:** regla heredada de V2, scheduled_date + outcome showed/completed/show/attended; se mantiene sin cambios.
-- **Advertencia conocida:** en la vista actual de citas, la agenda Retroalimentación también aparece como canonical_type=trial_day. Por compatibilidad, Booked/Attended la incluyen; Scheduled **la excluye**. No se debe exigir que los tres conteos formen un embudo de la misma cohorte.
-- **Drilldowns:** /v2/leads presenta columnas distintas «Agendada el (Mérida)» y «Programada para (Mérida)», sin mostrar una «Fecha del hito» ambigua para citas.
-- **Read model nuevo:** RPC milhano_get_trial_days_scheduled_v1, restringido a service_role; migración versionada en supabase/migrations.
+**Cambio vigente:** Pasadía y Retroalimentación se separan completamente en scorecards Auto/GHL de V2 General y Closer, y en la zona Closer de Agentes. Ya no se clasifican por `appointment_type=trial_day` solamente; se utiliza el **calendar_id de GHL**.
+
+| Calendario | calendar_id | Scorecards |
+|---|---|---|
+| Pasadía | `a0bvCaXgCdVwSrgPELza` | `trial_days_booked`, `trial_days_scheduled`, `trial_days_showed` |
+| Retroalimentación | `Vkw8NTh2ag1QyEzu962b` | `feedback_booked`, `feedback_scheduled`, `feedback_attended` |
+
+- **Booked:** fecha local Mérida en que se creó la cita (`date_added`); se preserva incluso si luego cambia el outcome.
+- **Scheduled:** fecha local para cuando está programada la cita (`scheduled_date`); se excluyen `cancelled` y `canceled`.
+- **Attended:** fecha programada en el periodo + estado `showed/completed/show/attended`.
+- **Unidad:** `appointment_id`, con la atribución a alumno/opportunity de `vw_milhano_appointment_events_v22`, overrides y exclusiones vigentes.
+- **Drilldowns:** `/v2/leads` muestra `Agendada el (Mérida)` y `Programada para (Mérida)` y el calendario correcto. Conteo = citas del mismo modelo de datos.
+- **EOD Manual:** conserva los totales históricos reportados; NO existe clasificación retroactiva fiable por calendario a partir de números agregados. Tampoco se altera el SQL de Agentes usado para productividad.
+- **Agenda de hoy:** `Pasadías Hoy` solo considera el calendario Pasadía; se agrega `Retroalimentación Hoy`, ambos sin canceladas.
+- **Modelo auxiliar:** RPC `milhano_get_calendar_appointment_rows_v1(date,date,text)`, `SECURITY INVOKER`, `service_role` únicamente, alimenta V2/Agentes y los seis drilldowns. Fuente SQL en `supabase/migrations/20261123_milhano_calendar_split_pasadia_retro_v1.sql`.
+- **Persistencia histórica:** la vista GHL todavía puede etiquetar Retroalimentación como `trial_day`; **no** se mutan citas de origen ni se alteran workflows n8n para resolverlo, pues la separación usa `calendar_id`.
 
 ## Desarrollo y despliegue
 

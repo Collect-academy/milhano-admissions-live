@@ -65,21 +65,20 @@ ElevenLabs «Sofía» utiliza WhatsApp Calling y workflows n8n para permisos, in
 - **Attended:** scheduled_date en rango y status en showed/completed/show/attended.
 - Los tres indicadores NO son el mismo conjunto ni necesariamente forman una progresión monotónica dentro de un solo intervalo.
 
-**Calendarios:**
-- School Tour oficial: t1zZRpZ6fyGt09fWUjur.
-- Pasadía oficial: a0bvCaXgCdVwSrgPELza.
-- Retroalimentación: Vkw8NTh2ag1QyEzu962b.
-- Problema confirmado: en milhano_ghl_appointments, las 5 citas de Retroalimentación registradas a la fecha tienen appointment_type=trial_day; vw_milhano_appointment_events_v22 las conserva en canonical_type=trial_day. Las métricas existentes Pasadía Booked/Attended cuentan esa clasificación heredada, y **no se cambian aquí**.
-- Nueva «Pasadía Scheduled» del 2026-11-23 SOLO cuenta el calendario oficial Pasadía, por diseño. Su consulta/IDs y desglose vienen del mismo RPC nuevo: milhano_get_trial_days_scheduled_v1(date,date,text), SECURITY INVOKER y service_role-only.
-- Supabase migration versionada en supabase/migrations/20261123_milhano_trial_days_scheduled_v1.sql; no se modifica el RPC original que calcula V2.
-- La scorecard de Scheduled solo se inserta en la cascada Auto de Closer, después de Pasadía Booked. La cascada General y los datos Manual siguen como estaban.
-- El drilldown /v2/leads usa etiquetas explícitas «Agendada el (Mérida)» y «Programada para (Mérida)» para las citas. Para Scheduled, periodo = Programada para; para Booked, periodo = Agendada el. «Fecha del hito» se reserva a eventos no-cita.
+**Calendarios y separación (2026-11-23):**
 
-**Prueba de referencia 2026-11-01 a 2026-11-23 (registros auditados):**
-- Booked (legado): 10, de las cuales 6 calendario Pasadía y 4 Retroalimentación.
-- Scheduled (nuevo): 6 citas Pasadía, 0 canceladas, 0 sin opportunity, 6 IDs únicos.
-- Attended (legado): 3, de las cuales 2 calendario Pasadía y 1 Retroalimentación.
-- Estas cifras cambian con el estado de GHL; son fixture orientativo, no dato congelado.
+- School Tour oficial: `t1zZRpZ6fyGt09fWUjur` (no modificado).
+- Pasadía oficial: `a0bvCaXgCdVwSrgPELza`.
+- Retroalimentación: `Vkw8NTh2ag1QyEzu962b`.
+- En GHL, algunas citas de Retroalimentación siguen con `appointment_type=trial_day`. Esto **ya no debe contaminar Pasadía** en las scorecards; se filtra por `calendar_id` en un nuevo read model **sin modificar** `vw_milhano_appointment_events_v22`, los registros de GHL ni n8n.
+- **Seis métricas independientes:** `trial_days_booked / trial_days_scheduled / trial_days_showed` para Pasadía; `feedback_booked / feedback_scheduled / feedback_attended` para Retroalimentación.
+- **Booked** filtra `booked_date` en Mérida; **Scheduled** filtra `scheduled_date` y estado distinto de canceled/cancelled; **Attended** filtra `scheduled_date` y estado positivo. Cada cita cuenta una vez por su `appointment_id`.
+- **Modelo común:** `public.milhano_get_calendar_appointment_rows_v1(date,date,text)` SECURITY INVOKER, acceso solo service_role. Fuente `supabase/migrations/20261123_milhano_calendar_split_pasadia_retro_v1.sql`.
+- **Capa de código:** `lib/admissions-calendar-metrics.ts` paginada, con utilidades `calendarMetricSummary`, `calendarMetricRows` y `calendarRowsAsLeads`. `lib/admissions-v2.ts` añade scorecards de calendario al JSON oficial sin modificar la función SQL oficial; `lib/agent-analytics.ts` conserva School Tours y el criterio de selección de agente del RPC existente, pero utiliza el mismo read model para ambos calendarios.
+- **Paneles:** General Auto y Closer Auto en V2 muestran Pasadía y Retroalimentación por separado; Agentes/Cinthia repite las seis cifras mediante el mismo modelo y enlaza los mismos drilldowns. Setter conserva su atribución de productividad sin cambios; Manual EOD agregado no permite separar citas por calendario y permanece intacto.
+- **Agenda hoy:** `Pasadías Hoy` se corrige para no incluir Retroalimentación, y se agrega `Retroalimentación Hoy`.
+- **Base de comparación SQL 1–23 nov 2026 al momento de revisar:** Pasadía Booked 6 / Scheduled 6 / Attended 2; Retroalimentación 4 / 4 / 2. Los outcomes pueden cambiar al sincronizar GHL, por lo que son cifras de fixture, no objetivos fijos.
+- **Semántica importante:** Booked, Scheduled y Attended pueden comprender citas distintas del mismo mes. No calcular tasas de conversión entre esos totales sin cohortes por appointment_id.
 
 ### 4.3 Tiempos / atribución
 

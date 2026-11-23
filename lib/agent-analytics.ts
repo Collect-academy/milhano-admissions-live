@@ -2,6 +2,7 @@ import "server-only";
 
 import type { DateRange } from "@/lib/date-range";
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
+import { calendarMetricSummary, getCalendarAppointmentRows } from "@/lib/admissions-calendar-metrics";
 
 const SETTER_PIPELINE_ID = "GYqHbZyWUxxc3K03efVT";
 const CLOSER_PIPELINE_ID = "z1FEJfbtOHusjdwe40Ko";
@@ -77,7 +78,11 @@ export type AgentCloserMetrics = {
   school_tours_booked: number;
   school_tours_attended: number;
   trial_days_booked: number;
+  trial_days_scheduled: number;
   trial_days_attended: number;
+  feedback_booked: number;
+  feedback_scheduled: number;
+  feedback_attended: number;
 };
 
 type LocalParts = {
@@ -346,21 +351,30 @@ export async function getAgentCloserMetrics(
   agentId: string,
 ): Promise<AgentCloserMetrics> {
   const admin = createSupabaseAdmin();
-  const result = await admin.rpc("milhano_get_agent_closer_metrics", {
-    p_start: range.start,
-    p_end: range.end,
-    p_agent_id: agentId,
-  });
+  // The existing RPC remains authoritative for School Tours and Cinthia scope.
+  // The same separate calendar model as V2 drives the six appointment metrics.
+  const [result, rows] = await Promise.all([
+    admin.rpc("milhano_get_agent_closer_metrics", {
+      p_start: range.start,
+      p_end: range.end,
+      p_agent_id: agentId,
+    }),
+    getCalendarAppointmentRows(range.start, range.end),
+  ]);
   if (result.error) {
     throw new Error(`No se pudieron cargar las métricas Closer de Agents: ${result.error.message}`);
   }
-
   const row = ((result.data ?? [])[0] ?? {}) as Record<string, unknown>;
+  const { pasadia, retroalimentacion } = calendarMetricSummary(rows, range.start, range.end);
+  const allowed = agentId.trim() === "" || agentId === "77kxc0w2hMphBCnyl9Fe";
   return {
     school_tours_booked: numeric(row.school_tours_booked),
     school_tours_attended: numeric(row.school_tours_attended),
-    trial_days_booked: numeric(row.trial_days_booked),
-    trial_days_attended: numeric(row.trial_days_attended),
+    trial_days_booked: allowed ? pasadia.booked : 0,
+    trial_days_scheduled: allowed ? pasadia.scheduled : 0,
+    trial_days_attended: allowed ? pasadia.attended : 0,
+    feedback_booked: allowed ? retroalimentacion.booked : 0,
+    feedback_scheduled: allowed ? retroalimentacion.scheduled : 0,
+    feedback_attended: allowed ? retroalimentacion.attended : 0,
   };
 }
-
