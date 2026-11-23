@@ -26,7 +26,7 @@
 
 - Extensiones de métricas: RPC separado SECURITY INVOKER, STABLE, permisos de solo service_role. Reutilizar la vista canónica para que conteo y drilldown compartan el mismo universo de citas.
 - Frontend: lectura server-only desde createSupabaseAdmin; tipado en lib/admissions-v2.ts; la UI no debe recibir claves. Preferir llamadas en paralelo cuando no dependan entre sí.
-- Un commit/PR autocontenido por cambio; prueba de TypeScript/build, fixtures SQL, conteos por scope, fechas límite y casos de hermanos/estado cancelled.
+- Un commit/PR autocontenido por cambio; .github/workflows/dashboard-ci.yml ejecuta npm ci, TypeScript y build para cambios del dashboard. También verificar fixtures SQL, conteos por scope, fechas límite y casos de hermanos/estado cancelled.
 - Verificar permisos con has_function_privilege('anon'...) / authenticated / service_role, nunca asumir.
 - No ejecutar pruebas de llamada real ni disparar workflows con efectos secundarios sin autorización.
 - No actualizar ramas desprotegidas directamente si existe un flujo de PR seguro.
