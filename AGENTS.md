@@ -16,7 +16,7 @@
 - V2 Auto/GHL y Manual/EOD son fuentes diferentes, seleccionables en UI. No mezclar. Setter usa corte 14:30 Mérida; Closer citas reales.
 - Agentes usa funciones de atribución y overrides propios. No recalcular productividad desde owner actual del contacto; primero Audit Logs reales.
 - Citas: usar vw_milhano_appointment_events_v22, preservar filtros, exclusions, date_added overrides, appointment_status overrides y asignación de hermanos a metric_opportunity_id.
-- School Tour Scheduled usa su calendario oficial; Pasadía Scheduled usa únicamente el calendario Pasadía. **Retroalimentación está actualmente clasificada trial_day:** no alterar Booked/Attended sin un proyecto de reconciliación y aprobación específicos.
+- School Tour Scheduled usa su calendario oficial. **Pasadía y Retroalimentación tienen indicadores Booked/Scheduled/Attended separados por calendar_id**; aunque GHL etiquete Retroalimentación como trial_day, nunca agregarla a Pasadía en V2/Agentes. No cambiar las citas originales ni la lógica de n8n para clasificar reportes.
 - No confundir «Booked» (fecha creada) con «Scheduled» (fecha de la visita), ni «Attended» (outcome positivo por fecha programada).
 - No inventar llamadas WhatsApp humanas. Stage_change real o booking son evidencia de gestión como límite superior.
 - GHL/n8n/ElevenLabs/WhatsApp Calling de Sofía NO deben romperse ni migrarse por un cambio de dashboard. Evaluar cualquier operación que pueda tener efectos indirectos.
@@ -24,7 +24,7 @@
 
 ## Patrón de implementación
 
-- Extensiones de métricas: RPC separado SECURITY INVOKER, STABLE, permisos de solo service_role. Reutilizar la vista canónica para que conteo y drilldown compartan el mismo universo de citas.
+- Extensiones de métricas: RPC separado SECURITY INVOKER, STABLE, permisos solo service_role. **Clasificar Pasadía/Retroalimentación por calendar_id** y reutilizar la vista canónica para que conteo, agenda de hoy y drilldown compartan citas. Nunca deducir calendario solo de appointment_type.
 - Frontend: lectura server-only desde createSupabaseAdmin; tipado en lib/admissions-v2.ts; la UI no debe recibir claves. Preferir llamadas en paralelo cuando no dependan entre sí.
 - Un commit/PR autocontenido por cambio; .github/workflows/dashboard-ci.yml ejecuta instalación compatible con el lockfile heredado, TypeScript y build para cambios del dashboard. También verificar fixtures SQL, conteos por scope, fechas límite y casos de hermanos/estado cancelled.
 - Verificar permisos con has_function_privilege('anon'...) / authenticated / service_role, nunca asumir.
