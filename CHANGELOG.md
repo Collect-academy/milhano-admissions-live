@@ -4,7 +4,7 @@ Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, dat
 
 ## 2026-11-23 — V2: Pasadía Scheduled + documentación de arquitectura
 
-**Estado:** código en rama feature/v2-pasadia-scheduled-docs-20261123 (PR pendiente de revisión/merge); migración SQL aditiva ya aplicada a Supabase. Despliegue de la interfaz en producción no confirmado al crear esta entrada.
+**Estado:** PR #2 fusionado a main el 2026-11-23 (squash commit 3ca6cd74e8ca6304ae410a2093795c61d548eae8); migración SQL aditiva ya aplicada a Supabase. GitHub Actions validó TypeScript y build, y Vercel Preview reportó éxito. La verificación final de la UI autenticada es independiente del build y sigue pendiente.
 
 - **Objetivo:** distinguir Pasadía Booked (fecha de registro) de Pasadía Scheduled (fecha de visita) y mantener Pasadía Attended sin cambios.
 - **UI:** añadir scorecard «Pasadía Scheduled» solo a la cascada automática de Closer, inmediatamente después de Booked. Drilldown por appointment_id y fechas Agendada el / Programada para, con explicación del criterio del periodo. V2 General, Manual EOD y Agentes mantienen conteos y contratos.
@@ -14,7 +14,7 @@ Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, dat
 - **Prueba SQL 01–23 nov 2026:** Booked legado=10; Scheduled nuevo=6 citas únicas sin fechas nulas; Attended legado=3. Para Scheduled: septiembre=11, octubre=8, noviembre 01–23=6; Setter scope=0. EXPLAIN ANALYZE nov 01–23 ≈77 ms (solo consulta BD). Roles anon/auth: EXECUTE false, service_role true.
 - **CI añadido:** .github/workflows/dashboard-ci.yml ejecutará npm install --package-lock=false, TypeScript y producción Next.js para PRs con cambios app/components/lib y pushes a main. Mantiene controles independientes de workflows de Sofía.
 - **Incidencia CI heredada:** npm ci falló porque package-lock.json no contiene dependencias ya declaradas en package.json (pdf-lib/postgres/qrcode, etc.). Se cambió el check al instalador ya usado por Sofía: npm install --no-audit --no-fund --package-lock=false. Conciliar el lockfile después en un PR independiente.
-- **Pruebas pendientes:** resultado de CI del PR, Vercel Preview, revisión de UI y comparación post-merge.
+- **Pruebas verificadas:** TypeScript y Next.js build del PR aprobados, Vercel Preview éxito, conteos SQL y permisos confirmados. **Pendiente:** smoke test de UI autenticada y contraste final de métricas tras despliegue.
 - **Rollback:** revertir commit/PR frontend. La función nueva es aditiva y puede quedar sin uso; su eliminación debe planearse separadamente, verificando dependencias.
 
 **Archivos:** README.md, AGENTS.md, CHANGELOG.md, docs/ARCHITECTURE.md, lib/admissions-v2.ts, app/page.tsx, app/v2/leads/page.tsx, components/admissions-v2-cascade.tsx, supabase/migrations/20261123_milhano_trial_days_scheduled_v1.sql, .github/workflows/dashboard-ci.yml.
