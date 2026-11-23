@@ -23,6 +23,7 @@ function metricLabel(metric: string, locale: "en" | "es") {
     school_tours_scheduled: ["School Tour Scheduled", "School Tour Programado"],
     school_tours_attended: ["Tour Attended", "Tour Asistido"],
     trial_days_booked: ["Pasadía Booked", "Pasadía Agendada"],
+    trial_days_scheduled: ["Pasadía Scheduled", "Pasadía Programada"],
     trial_days_showed: ["Pasadía Attended", "Pasadía Asistida"],
     closed: ["Closed", "Inscritos / Closed"],
     no_answer: ["No Answer", "No Answer"],
@@ -42,21 +43,41 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
   const scope: Scope = rawScope === "setter" || rawScope === "closer" ? rawScope : "general";
   const leads = await getAdmissionsV2MetricLeads(metric, scope, range.start, range.end);
   const eventMetric = isAdmissionsV2EventMetric(metric);
-  const appointmentMetric = ["school_tours_booked", "school_tours_scheduled", "school_tours_attended", "trial_days_booked", "trial_days_showed"].includes(metric);
+  const appointmentMetric = ["school_tours_booked", "school_tours_scheduled", "school_tours_attended", "trial_days_booked", "trial_days_scheduled", "trial_days_showed"].includes(metric);
   const showContactTiming = ["unique_contacted_leads", "responded_leads", "no_answer"].includes(metric);
   const ids = showContactTiming ? leads.map((lead) => lead.ghl_opportunity_id) : [];
   const managementRows = showContactTiming ? await getManagementEvidenceRows(ids) : [];
   const managementByOpportunity = new Map(managementRows.map((item) => [item.ghl_opportunity_id, item]));
   const columnCount = (appointmentMetric ? 12 : eventMetric ? 11 : 9) + (showContactTiming ? 2 : 0);
+  // For appointments, show both real dates and explain which one filters the period.
+  // No synthetic "milestone date" is used for appointment metrics.
+  const periodExplanation =
+    metric === "trial_days_scheduled"
+      ? tr(locale,
+          "Only official Pasadía-calendar appointments scheduled to take place during the selected dates (Mérida), excluding cancelled. Each child/appointment has its own row; bookings made in previous periods can appear. Retroalimentación is not counted.",
+          "Solo citas del calendario oficial de Pasadía programadas para realizarse durante las fechas seleccionadas (Mérida), sin canceladas. Cada cita/alumno aparece por separado; puede haberse reservado en un periodo anterior. No incluye Retroalimentación.")
+      : metric === "trial_days_booked" || metric === "school_tours_booked"
+        ? tr(locale,
+            "The period filters the 'Booked on' date, not the day of the visit. 'Scheduled for' shows when the appointment takes place. Existing historical booking rules are preserved.",
+            "El periodo filtra 'Agendada el', no el día de la visita. 'Programada para' indica cuándo se realizará. Se conservan las reglas históricas de agendamiento.")
+        : metric === "trial_days_showed" || metric === "school_tours_attended"
+          ? tr(locale,
+              "The period filters 'Scheduled for' and requires an attended/completed outcome. 'Booked on' is shown separately.",
+              "El periodo filtra 'Programada para' y exige asistencia registrada. 'Agendada el' se muestra por separado.")
+          : metric === "school_tours_scheduled"
+            ? tr(locale,
+                "School Tours scheduled within the selected dates (Mérida), excluding cancelled. 'Booked on' may be outside the period.",
+                "School Tours programados dentro del periodo seleccionado (Mérida), sin cancelados. 'Agendada el' puede ser de otro periodo.")
+            : tr(locale,
+                "Milestone events whose event timestamp falls inside the selected period.",
+                "Eventos cuyo hito ocurrió dentro del periodo seleccionado.");
 
   return (
     <DashboardLayout
       eyebrow={`Admissions V2 · ${scope === "general" ? "General" : scope === "setter" ? "Setter" : "Closer"}`}
       title={metricLabel(metric, locale)}
       subtitle={eventMetric
-        ? tr(locale,
-            "Appointment / milestone events whose event date falls inside the selected period. Each appointment is counted separately.",
-            "Citas / hitos cuya fecha de evento cae dentro del periodo seleccionado. Cada cita se cuenta por separado.")
+        ? periodExplanation
         : tr(locale,
             "Opportunities included in this milestone under the selected cascade logic.",
             "Opportunities incluidas en este hito según la lógica de la cascada seleccionada.")}
@@ -68,7 +89,7 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
         </Link>
         <Link className="secondary-button" href={`/analisis-leads?${dateRangeQuery(range)}&scope=${scope}&metric=${
           metric === "school_tours_booked" || metric === "school_tours_attended" ? "st_wait" :
-          metric === "trial_days_booked" || metric === "trial_days_showed" ? "trial_wait" :
+          metric === "trial_days_booked" || metric === "trial_days_scheduled" || metric === "trial_days_showed" ? "trial_wait" :
           metric === "closed" ? "trial_to_close" : "first_management"
         }`}>
           {tr(locale,"Explore stage timings →","Analizar tiempos del hito →")}
