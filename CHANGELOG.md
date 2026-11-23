@@ -12,10 +12,11 @@ Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, dat
 - **Sin tocar:** milhano_get_admissions_v2_payload (RPC SQL), milhano_get_v2_closer_metric_events, Agentes, EOD, GHL, workflows n8n y ElevenLabs.
 - **Advertencia / decisión explícita:** la vista original etiqueta calendario Retroalimentación como trial_day. Booked y Attended históricos incluyen también Retroalimentación; Scheduled se limita al calendario real Pasadía. Pendiente de análisis y eventual reconciliación como cambio separado.
 - **Prueba SQL 01–23 nov 2026:** Booked legado=10; Scheduled nuevo=6 citas únicas sin fechas nulas; Attended legado=3. Para Scheduled: septiembre=11, octubre=8, noviembre 01–23=6; Setter scope=0. EXPLAIN ANALYZE nov 01–23 ≈77 ms (solo consulta BD). Roles anon/auth: EXECUTE false, service_role true.
-- **Pruebas pendientes:** TypeScript/build completo, CI de rama, Vercel Preview, revisión de UI y comparación post-merge.
+- **CI añadido:** .github/workflows/dashboard-ci.yml ejecutará npm ci, TypeScript y producción Next.js para PRs con cambios app/components/lib y pushes a main. Mantiene controles independientes de workflows de Sofía.
+- **Pruebas pendientes:** resultado de CI del PR, Vercel Preview, revisión de UI y comparación post-merge.
 - **Rollback:** revertir commit/PR frontend. La función nueva es aditiva y puede quedar sin uso; su eliminación debe planearse separadamente, verificando dependencias.
 
-**Archivos:** README.md, AGENTS.md, CHANGELOG.md, docs/ARCHITECTURE.md, lib/admissions-v2.ts, app/page.tsx, app/v2/leads/page.tsx, components/admissions-v2-cascade.tsx, supabase/migrations/20261123_milhano_trial_days_scheduled_v1.sql.
+**Archivos:** README.md, AGENTS.md, CHANGELOG.md, docs/ARCHITECTURE.md, lib/admissions-v2.ts, app/page.tsx, app/v2/leads/page.tsx, components/admissions-v2-cascade.tsx, supabase/migrations/20261123_milhano_trial_days_scheduled_v1.sql, .github/workflows/dashboard-ci.yml.
 
 ## 2026-11-11 — Checkpoint de código previo (referencia, no reconstrucción exhaustiva)
 
