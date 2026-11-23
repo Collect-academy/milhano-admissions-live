@@ -92,11 +92,35 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
     "Pasadía appointments on the official Pasadía calendar taking place in the selected period (Mérida). Excludes cancelled appointments and the Retroalimentación calendar. A booking may have been created outside the period.",
     "Citas del calendario oficial de Pasadía que se realizarán en el periodo seleccionado (Mérida). Excluye canceladas y el calendario de Retroalimentación. La reserva pudo crearse en otro periodo.",
   );
+  const trialAttendedTooltip = tr(
+    locale,
+    "Only attended appointments on the Pasadía calendar with a scheduled date inside the selected period.",
+    "Solo citas asistidas del calendario Pasadía cuya fecha programada está dentro del periodo.",
+  );
+  const feedbackBookingTooltip = tr(
+    locale,
+    "Retroalimentación appointments created during the selected period, regardless of when they are scheduled.",
+    "Citas del calendario Retroalimentación creadas dentro del periodo, aunque se realicen en otra fecha.",
+  );
+  const feedbackScheduledTooltip = tr(
+    locale,
+    "Retroalimentación appointments scheduled inside the selected period, excluding cancelled appointments.",
+    "Citas del calendario Retroalimentación programadas dentro del periodo, sin canceladas.",
+  );
+  const feedbackAttendedTooltip = tr(
+    locale,
+    "Attended Retroalimentación appointments whose scheduled date is inside the selected period.",
+    "Citas asistidas de Retroalimentación cuya fecha programada está dentro del periodo.",
+  );
   const cascadeTooltips = {
     responded_leads: responseTooltip,
     school_tours_booked: tourBookingTooltip,
     trial_days_booked: trialBookingTooltip,
     trial_days_scheduled: trialScheduledTooltip,
+    trial_days_showed: trialAttendedTooltip,
+    feedback_booked: feedbackBookingTooltip,
+    feedback_scheduled: feedbackScheduledTooltip,
+    feedback_attended: feedbackAttendedTooltip,
   };
 
   const generalConversionMetrics = [
@@ -123,6 +147,12 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
     `${payload.booking_breakdown.trial_days.cohort} este ciclo · ${payload.booking_breakdown.trial_days.external} anteriores`,
   );
 
+  const feedbackBreakdownText = tr(
+    locale,
+    `${payload.booking_breakdown.retroalimentacion.cohort} this cycle · ${payload.booking_breakdown.retroalimentacion.external} previous cycles`,
+    `${payload.booking_breakdown.retroalimentacion.cohort} este ciclo · ${payload.booking_breakdown.retroalimentacion.external} anteriores`,
+  );
+
   const automaticCascades = (
     <>
       <AdmissionsV2Cascade
@@ -132,7 +162,11 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         metrics={payload.general}
         metricTooltips={cascadeTooltips}
         conversionMetrics={generalConversionMetrics}
-        metricSubtexts={{ school_tours_booked: schoolTourBreakdownText, trial_days_booked: trialDayBreakdownText }}
+        metricSubtexts={{
+          school_tours_booked: schoolTourBreakdownText,
+          trial_days_booked: trialDayBreakdownText,
+          feedback_booked: feedbackBreakdownText,
+        }}
         range={range}
         note={tr(locale, "Setter = 2:30 PM Mérida operational cohort · Closer = real events in the selected period", "Setter = cohorte operativa con corte 2:30 p. m. Mérida · Closer = eventos reales del periodo")}
       />
@@ -173,12 +207,20 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
             school_tours_booked: tourBookingTooltip,
             trial_days_booked: trialBookingTooltip,
             trial_days_scheduled: trialScheduledTooltip,
+            trial_days_showed: trialAttendedTooltip,
+            feedback_booked: feedbackBookingTooltip,
+            feedback_scheduled: feedbackScheduledTooltip,
+            feedback_attended: feedbackAttendedTooltip,
           }}
           range={range}
-          metricSubtexts={{ school_tours_booked: schoolTourBreakdownText, trial_days_booked: trialDayBreakdownText }}
+          metricSubtexts={{
+          school_tours_booked: schoolTourBreakdownText,
+          trial_days_booked: trialDayBreakdownText,
+          feedback_booked: feedbackBreakdownText,
+        }}
           note={tr(locale,
-            "Booked = date the appointment was created · Scheduled = day it takes place (excluding cancelled) · Attended = scheduled day + attendance recorded. Pasadía Scheduled uses the official Pasadía calendar; existing Booked/Attended classifications are unchanged and may include Retroalimentación.",
-            "Booked = fecha en que se creó la cita · Scheduled = día programado para realizarla (sin canceladas) · Attended = fecha programada + asistencia registrada. Pasadía Scheduled usa el calendario oficial de Pasadía; Booked/Attended conservan su clasificación histórica, que puede incluir Retroalimentación.")}
+            "Booked = appointment creation date · Scheduled = appointment date (excluding cancelled) · Attended = scheduled date with positive attendance. Pasadía and Retroalimentación are counted separately by GHL calendar.",
+            "Booked = fecha en que se creó la cita · Scheduled = fecha programada (sin canceladas) · Attended = fecha programada con asistencia. Pasadía y Retroalimentación se cuentan por separado según su calendario real de GHL.")}
         />
       </div>
     </>
@@ -214,7 +256,7 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
           range={range}
         />
       </div>
-      <p className="v2-manual-period-note">EOD enviados/validados en el periodo: <strong>{number(payload.manual.reported_days)}</strong></p>
+      <p className="v2-manual-period-note">EOD enviados/validados en el periodo: <strong>{number(payload.manual.reported_days)}</strong>. {tr(locale,"Manual EOD retains the advisor's original totals; aggregate reports cannot be split by calendar retroactively.","EOD manual conserva los totales reportados originalmente: un reporte agregado no se puede separar retroactivamente por calendario.")}</p>
     </>
   );
 
@@ -299,7 +341,8 @@ export default async function AdmissionsV2Page({ searchParams }: { searchParams:
         </div>
         <div className="kpi-grid ghl-support-grid">
           <KpiCard icon={CalendarDays} label="School Tours Hoy" locale={locale} value={number(payload.today.school_tours_today)} helper="Citas GHL no canceladas" />
-          <KpiCard icon={CalendarDays} label="Pasadías Hoy" locale={locale} value={number(payload.today.trial_days_today)} helper="Calendario Pasadía" />
+          <KpiCard icon={CalendarDays} label="Pasadías Hoy" locale={locale} value={number(payload.today.trial_days_today)} helper="Solo Pasadía · no canceladas" />
+          <KpiCard icon={CalendarDays} label="Retroalimentación Hoy" locale={locale} value={number(payload.today.retroalimentacion_today)} helper="Solo Retroalimentación · no canceladas" />
           <KpiCard icon={stageMapReady ? CircleCheckBig : DatabaseZap} label="Stage IDs V2" locale={locale} value={`${payload.stage_map.resolved_stage_ids}/${payload.stage_map.expected_stage_rows}`} helper={stageMapReady ? "Mapeo resuelto" : "Ejecuta Full Reconciliation"} />
         </div>
       </section>
