@@ -63,15 +63,43 @@ export function AgentConversionFunnel({
     },
     {
       metricKey: "trial_days_booked",
-      label: tr(locale, "Trial Day Booked", "Pasadía Booked"),
+      label: tr(locale, "Pasadía Booked", "Pasadía Booked"),
       value: closerMetrics.trial_days_booked,
       Icon: Route,
       asyncTone: false,
     },
     {
+      metricKey: "trial_days_scheduled",
+      label: tr(locale, "Pasadía Scheduled", "Pasadía Scheduled"),
+      value: closerMetrics.trial_days_scheduled,
+      Icon: Route,
+      asyncTone: false,
+    },
+    {
       metricKey: "trial_days_showed",
-      label: tr(locale, "Trial Day Attended", "Pasadía Attended"),
+      label: tr(locale, "Pasadía Attended", "Pasadía Attended"),
       value: closerMetrics.trial_days_attended,
+      Icon: School,
+      asyncTone: true,
+    },
+    {
+      metricKey: "feedback_booked",
+      label: tr(locale, "Retroalimentación Booked", "Retroalimentación Booked"),
+      value: closerMetrics.feedback_booked,
+      Icon: Route,
+      asyncTone: false,
+    },
+    {
+      metricKey: "feedback_scheduled",
+      label: tr(locale, "Retroalimentación Scheduled", "Retroalimentación Scheduled"),
+      value: closerMetrics.feedback_scheduled,
+      Icon: Route,
+      asyncTone: false,
+    },
+    {
+      metricKey: "feedback_attended",
+      label: tr(locale, "Retroalimentación Attended", "Retroalimentación Attended"),
+      value: closerMetrics.feedback_attended,
       Icon: School,
       asyncTone: true,
     },
@@ -133,8 +161,8 @@ export function AgentConversionFunnel({
           <p className="panel-note">
             {tr(
               locale,
-              "These four scorecards use the exact same backend values and drill-downs as V2 Summary. Team and Cinthia show the period totals; other individual setters show zero because these outcomes belong to the Closer view.",
-              "Estas cuatro scorecards usan exactamente los mismos valores y drill-downs que V2 Summary. Team y Cinthia muestran los totales del periodo; los demás setters individuales muestran cero porque estos outcomes pertenecen a la vista de Closer.",
+              "Appointment scorecards use the same calendar-specific counts and drill-downs as V2 Summary. Pasadía and Retroalimentación are separate. Team and Cinthia show totals; other individual setters show zero.",
+              "Las scorecards de citas usan los mismos conteos y desgloses por calendario que V2 Summary. Pasadía y Retroalimentación van separadas. Equipo y Cinthia muestran totales; otros setters individuales muestran cero.",
             )}
           </p>
         </div>
