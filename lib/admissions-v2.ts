@@ -1,6 +1,12 @@
 import "server-only";
 
 import { createSupabaseAdmin } from "@/lib/supabase-admin";
+import {
+  calendarMetricSummary,
+  calendarRowsAsLeads,
+  getCalendarAppointmentRows,
+  isCalendarAppointmentMetric,
+} from "@/lib/admissions-calendar-metrics";
 
 export const ADMISSIONS_V2_CUTOVER = "2026-09-01";
 
@@ -46,6 +52,7 @@ export type AdmissionsV2Payload = {
   booking_breakdown: {
     school_tours: { total: number; cohort: number; external: number };
     trial_days: { total: number; cohort: number; external: number; scheduled?: number };
+    retroalimentacion: { total: number; cohort: number; external: number; scheduled: number };
   };
   response_breakdown: {
     total: number;
@@ -67,6 +74,7 @@ export type AdmissionsV2Payload = {
   today: {
     school_tours_today: number;
     trial_days_today: number;
+    retroalimentacion_today: number;
   };
   manual: {
     new_leads: number;
@@ -121,6 +129,9 @@ const ADMISSIONS_V2_EVENT_METRICS = new Set([
   "trial_days_booked",
   "trial_days_scheduled",
   "trial_days_showed",
+  "feedback_booked",
+  "feedback_scheduled",
+  "feedback_attended",
   "closed",
 ]);
 
@@ -161,41 +172,64 @@ export async function getAdmissionsV2Payload(
 ): Promise<AdmissionsV2Payload> {
   const effective = clampV2Range(start, end);
   const supabase = createSupabaseAdmin();
-  // Separate read-only RPC: never change the official V2/Agentes counters.
-  // Count the same appointment IDs that the new drilldown will display.
-  const [result, scheduled] = await Promise.all([
+  // Preserve V2's official non-calendar milestones and Manual EOD.
+  // Calendar-specific metrics are overlaid from one independent read-only RPC.
+  const [result, rows] = await Promise.all([
     supabase.rpc("milhano_get_admissions_v2_payload", {
       p_start: effective.start,
       p_end: effective.end,
     }),
-    supabase.rpc("milhano_get_trial_days_scheduled_v1", {
-      p_start: effective.start,
-      p_end: effective.end,
-      p_scope: "closer",
-    }),
+    getCalendarAppointmentRows(effective.start, effective.end),
   ]);
-
   if (result.error) {
     throw new Error(`Unable to load Admissions V2: ${result.error.message}`);
   }
-  if (scheduled.error) {
-    throw new Error(`Unable to load scheduled Pasadías: ${scheduled.error.message}`);
+  const payload = normalizeNumericValues(result.data) as AdmissionsV2Payload;
+  const { pasadia, retroalimentacion } = calendarMetricSummary(
+    rows, effective.start, effective.end,
+  );
+
+  const updateValue = (metrics: V2CascadeMetric[], key: string, value: number) => {
+    const target = metrics.find((metric) => metric.metric_key === key);
+    if (!target) throw new Error(`Admissions V2 is missing ${key}`);
+    target.value = value;
+  };
+  const insertAfter = (metrics: V2CascadeMetric[], after: string, metric: V2CascadeMetric) => {
+    if (metrics.some((existing) => existing.metric_key === metric.metric_key)) {
+      throw new Error(`Duplicate Admissions V2 calendar metric: ${metric.metric_key}`);
+    }
+    const index = metrics.findIndex((item) => item.metric_key === after);
+    if (index < 0) throw new Error(`Admissions V2 is missing ${after}`);
+    metrics.splice(index + 1, 0, metric);
+  };
+  for (const metrics of [payload.general, payload.closer.funnel]) {
+    updateValue(metrics, "trial_days_booked", pasadia.booked);
+    updateValue(metrics, "trial_days_showed", pasadia.attended);
+    insertAfter(metrics, "trial_days_booked", {
+      metric_key: "trial_days_scheduled", label: "Pasadía Scheduled", value: pasadia.scheduled,
+    });
+    insertAfter(metrics, "trial_days_showed", {
+      metric_key: "feedback_booked", label: "Retroalimentación Booked", value: retroalimentacion.booked,
+    });
+    insertAfter(metrics, "feedback_booked", {
+      metric_key: "feedback_scheduled", label: "Retroalimentación Scheduled", value: retroalimentacion.scheduled,
+    });
+    insertAfter(metrics, "feedback_scheduled", {
+      metric_key: "feedback_attended", label: "Retroalimentación Attended", value: retroalimentacion.attended,
+    });
   }
 
-  const payload = normalizeNumericValues(result.data) as AdmissionsV2Payload;
-  const bookedIndex = payload.closer.funnel.findIndex(
-    (item) => item.metric_key === "trial_days_booked",
-  );
-  if (bookedIndex < 0) {
-    throw new Error("Admissions V2 closer funnel has no Pasadía Booked milestone.");
-  }
-  const scheduledCount = (scheduled.data ?? []).length;
-  payload.closer.funnel.splice(bookedIndex + 1, 0, {
-    metric_key: "trial_days_scheduled",
-    label: "Pasadía Scheduled",
-    value: scheduledCount,
-  });
-  payload.booking_breakdown.trial_days.scheduled = scheduledCount;
+  payload.booking_breakdown.trial_days = {
+    total: pasadia.booked, cohort: pasadia.cohort,
+    external: pasadia.external, scheduled: pasadia.scheduled,
+  };
+  payload.booking_breakdown.retroalimentacion = {
+    total: retroalimentacion.booked, cohort: retroalimentacion.cohort,
+    external: retroalimentacion.external, scheduled: retroalimentacion.scheduled,
+  };
+  // Do not classify a feedback session as a Pasadía in today's agenda.
+  payload.today.trial_days_today = pasadia.today;
+  payload.today.retroalimentacion_today = retroalimentacion.today;
   return payload;
 }
 
@@ -208,19 +242,20 @@ export async function getAdmissionsV2MetricLeads(
   const effective = clampV2Range(start, end);
   const supabase = createSupabaseAdmin();
 
+  // The same calendar rows drive scorecards and drilldowns in V2 and Agentes.
+  if (isCalendarAppointmentMetric(metricKey)) {
+    if (scope === "setter") return [];
+    const appointments = await getCalendarAppointmentRows(effective.start, effective.end);
+    return calendarRowsAsLeads(appointments, metricKey, effective.start, effective.end);
+  }
+
   if (isAdmissionsV2EventMetric(metricKey)) {
-    const result = metricKey === "trial_days_scheduled"
-      ? await supabase.rpc("milhano_get_trial_days_scheduled_v1", {
-          p_scope: scope,
-          p_start: effective.start,
-          p_end: effective.end,
-        })
-      : await supabase.rpc("milhano_get_v2_closer_metric_events", {
-          p_metric_key: metricKey,
-          p_scope: scope,
-          p_start: effective.start,
-          p_end: effective.end,
-        });
+    const result = await supabase.rpc("milhano_get_v2_closer_metric_events", {
+      p_metric_key: metricKey,
+      p_scope: scope,
+      p_start: effective.start,
+      p_end: effective.end,
+    });
 
     if (result.error) {
       throw new Error(`Unable to load V2 metric events: ${result.error.message}`);
