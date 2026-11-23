@@ -4,7 +4,7 @@ Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, dat
 
 ## 2026-11-23 — V2/Agentes: separación completa de calendarios Pasadía y Retroalimentación
 
-**Estado al abrir el cambio:** rama `feature/v2-separar-calendarios-pasadia-retro-20261123` y migración aditiva SQL aplicada; PR, CI y Vercel deben verificarse antes de producción.
+**Estado final:** PR #3 fusionado a `main` (squash commit `36a40346dc118e85cffe902c8d2b459abe6de1ce`); migración aditiva SQL aplicada. CI del PR validó TypeScript y build Next.js; Vercel Preview y despliegue de producción del commit fueron satisfactorios. Comprobación manual de interfaz autenticada pendiente.
 
 - **Objetivo:** eliminar citas de Retroalimentación de **todas** las scorecards de Pasadía y ofrecer **Retroalimentación Booked, Scheduled y Attended**, con sus desgloses clicables.
 - **Calendarios:** Pasadía `a0bvCaXgCdVwSrgPELza`, Retroalimentación `Vkw8NTh2ag1QyEzu962b`, clasificados exclusivamente por `calendar_id`. No modificar ni reclasificar citas históricas en GHL.
@@ -13,7 +13,7 @@ Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, dat
 - **Sin cambios:** modelo original de oportunidades, stage timings, RPCs SQL de V2/Agentes, Manual EOD, pipelines GHL, n8n, ElevenLabs, Sofía y pagos.
 - **Fixture SQL del 1 al 23 de noviembre 2026:** Pasadía `6/6/2`; Retroalimentación `4/4/2` (Booked/Scheduled/Attended). 32 citas totales entre los dos calendarios, 32 appointment_id únicos; lectura SQL noviembre ≈130 ms. Permisos EXECUTE anon=false, authenticated=false, service_role=true.
 - **Archivos:** `lib/admissions-calendar-metrics.ts`, `lib/admissions-v2.ts`, `lib/agent-analytics.ts`, `app/page.tsx`, `app/v2/leads/page.tsx`, `components/admissions-v2-cascade.tsx`, `components/agent-conversion-funnel.tsx`, migración SQL, README.md, AGENTS.md, docs/ARCHITECTURE.md y CHANGELOG.md.
-- **Despliegue y validaciones pendientes al abrir PR:** GitHub Actions TypeScript/Next build, Vercel Preview, comparación de 6 scorecards vs. 6 drilldowns y smoke test autorizado. 
+- **Verificación automática:** TypeScript y build Next.js aprobados en PR; Vercel Preview y despliegue de `main` exitosos. **Verificación SQL:** conteos por calendario en sep/oct/nov coinciden con el total combinado anterior de Booked; los seis drilldowns filtran los mismos registros que sus scorecards. **Pendiente:** comprobación visual autenticada de los seis enlaces. 
 - **Rollback:** revertir frontend y los documentos en GitHub. El RPC nuevo es aditivo sin efectos de escritura y puede permanecer sin usarse hasta eliminación controlada.
 
 ## 2026-11-23 — V2: Pasadía Scheduled + documentación de arquitectura
