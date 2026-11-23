@@ -123,7 +123,7 @@ Estado observado el 2026-11-23:
 - Guardar baseline de métricas V2/Agentes antes de alterar fuente compartida.
 - Revisar SQL y permisos; función read-model nueva preferiblemente aislada y solo service_role.
 - Comprobar conteo de scorecard = filas de drilldown para el mismo periodo, scope y filtros, incluyendo cancelaciones, citas de hermanos y reserva fuera del periodo.
-- npm ci; npx tsc --noEmit --incremental false; npm run build; revisión visual de Vercel.
+- .github/workflows/dashboard-ci.yml verifica PRs del dashboard: npm ci; npx tsc --noEmit --incremental false; npm run build. Validar resultado del check y la revisión visual de Vercel antes de merge.
 - Confirmar que Selector Manual EOD/Auto GHL y Agentes siguen idénticos.
 - Si cualquier cambio afecta n8n, hacer pruebas explícitas de activación/entrega y rollback; el cambio Scheduled no necesita n8n.
 - Actualizar CHANGELOG.md en el mismo commit. Documentar estado real de deployment y rollback, no afirmar que se ejecutó una prueba no realizada.
