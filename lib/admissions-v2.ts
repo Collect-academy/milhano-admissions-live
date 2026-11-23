@@ -45,7 +45,7 @@ export type AdmissionsV2Payload = {
   };
   booking_breakdown: {
     school_tours: { total: number; cohort: number; external: number };
-    trial_days: { total: number; cohort: number; external: number };
+    trial_days: { total: number; cohort: number; external: number; scheduled?: number };
   };
   response_breakdown: {
     total: number;
@@ -119,6 +119,7 @@ const ADMISSIONS_V2_EVENT_METRICS = new Set([
   "school_tours_scheduled",
   "school_tours_attended",
   "trial_days_booked",
+  "trial_days_scheduled",
   "trial_days_showed",
   "closed",
 ]);
@@ -160,16 +161,42 @@ export async function getAdmissionsV2Payload(
 ): Promise<AdmissionsV2Payload> {
   const effective = clampV2Range(start, end);
   const supabase = createSupabaseAdmin();
-  const result = await supabase.rpc("milhano_get_admissions_v2_payload", {
-    p_start: effective.start,
-    p_end: effective.end,
-  });
+  // Separate read-only RPC: never change the official V2/Agentes counters.
+  // Count the same appointment IDs that the new drilldown will display.
+  const [result, scheduled] = await Promise.all([
+    supabase.rpc("milhano_get_admissions_v2_payload", {
+      p_start: effective.start,
+      p_end: effective.end,
+    }),
+    supabase.rpc("milhano_get_trial_days_scheduled_v1", {
+      p_start: effective.start,
+      p_end: effective.end,
+      p_scope: "closer",
+    }),
+  ]);
 
   if (result.error) {
     throw new Error(`Unable to load Admissions V2: ${result.error.message}`);
   }
+  if (scheduled.error) {
+    throw new Error(`Unable to load scheduled Pasadías: ${scheduled.error.message}`);
+  }
 
-  return normalizeNumericValues(result.data) as AdmissionsV2Payload;
+  const payload = normalizeNumericValues(result.data) as AdmissionsV2Payload;
+  const bookedIndex = payload.closer.funnel.findIndex(
+    (item) => item.metric_key === "trial_days_booked",
+  );
+  if (bookedIndex < 0) {
+    throw new Error("Admissions V2 closer funnel has no Pasadía Booked milestone.");
+  }
+  const scheduledCount = (scheduled.data ?? []).length;
+  payload.closer.funnel.splice(bookedIndex + 1, 0, {
+    metric_key: "trial_days_scheduled",
+    label: "Pasadía Scheduled",
+    value: scheduledCount,
+  });
+  payload.booking_breakdown.trial_days.scheduled = scheduledCount;
+  return payload;
 }
 
 export async function getAdmissionsV2MetricLeads(
@@ -182,12 +209,18 @@ export async function getAdmissionsV2MetricLeads(
   const supabase = createSupabaseAdmin();
 
   if (isAdmissionsV2EventMetric(metricKey)) {
-    const result = await supabase.rpc("milhano_get_v2_closer_metric_events", {
-      p_metric_key: metricKey,
-      p_scope: scope,
-      p_start: effective.start,
-      p_end: effective.end,
-    });
+    const result = metricKey === "trial_days_scheduled"
+      ? await supabase.rpc("milhano_get_trial_days_scheduled_v1", {
+          p_scope: scope,
+          p_start: effective.start,
+          p_end: effective.end,
+        })
+      : await supabase.rpc("milhano_get_v2_closer_metric_events", {
+          p_metric_key: metricKey,
+          p_scope: scope,
+          p_start: effective.start,
+          p_end: effective.end,
+        });
 
     if (result.error) {
       throw new Error(`Unable to load V2 metric events: ${result.error.message}`);
