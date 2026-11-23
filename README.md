@@ -60,7 +60,7 @@
 1. Trabajar desde HEAD de main y comparar con cambios externos. Nunca aplicar un ZIP viejo encima de main.
 2. Modificar sólo las rutas y RPC necesarias; conservar IDs de pipeline/calendario y overrides.
 3. Preparar migraciones aditivas e idempotencia/rollback explícitos; primero validar lecturas y permisos.
-4. Ejecutar npm ci, npx tsc --noEmit --incremental false y npm run build. Probar conteos sobre fechas conocidas (incluido límite de rango y citas de hermanos).
+4. Ejecutar npm install --no-audit --no-fund --package-lock=false, npx tsc --noEmit --incremental false y npm run build. El lockfile actual está desincronizado; no usar npm ci hasta reconciliarlo como cambio separado. Probar conteos sobre fechas conocidas (incluido límite de rango y citas de hermanos).
 5. Abrir rama/PR; la comprobación automática .github/workflows/dashboard-ci.yml ejecuta TypeScript y build para cambios app/components/lib. No fusionar si falla. Tras aprobar, desplegar en Vercel y verificar UI con usuario autorizado.
 6. **Actualizar CHANGELOG.md siempre.** Actualizar el mapa técnico si hay nuevas rutas, funciones o dependencias; dejar las pruebas y el resultado del despliegue.
 
