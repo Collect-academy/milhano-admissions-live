@@ -25,6 +25,9 @@ function metricLabel(metric: string, locale: "en" | "es") {
     trial_days_booked: ["Pasadía Booked", "Pasadía Agendada"],
     trial_days_scheduled: ["Pasadía Scheduled", "Pasadía Programada"],
     trial_days_showed: ["Pasadía Attended", "Pasadía Asistida"],
+    feedback_booked: ["Retroalimentación Booked", "Retroalimentación Agendada"],
+    feedback_scheduled: ["Retroalimentación Scheduled", "Retroalimentación Programada"],
+    feedback_attended: ["Retroalimentación Attended", "Retroalimentación Asistida"],
     closed: ["Closed", "Inscritos / Closed"],
     no_answer: ["No Answer", "No Answer"],
     disqualified: ["Disqualified", "Descalificados"],
@@ -43,7 +46,11 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
   const scope: Scope = rawScope === "setter" || rawScope === "closer" ? rawScope : "general";
   const leads = await getAdmissionsV2MetricLeads(metric, scope, range.start, range.end);
   const eventMetric = isAdmissionsV2EventMetric(metric);
-  const appointmentMetric = ["school_tours_booked", "school_tours_scheduled", "school_tours_attended", "trial_days_booked", "trial_days_scheduled", "trial_days_showed"].includes(metric);
+  const appointmentMetric = [
+    "school_tours_booked", "school_tours_scheduled", "school_tours_attended",
+    "trial_days_booked", "trial_days_scheduled", "trial_days_showed",
+    "feedback_booked", "feedback_scheduled", "feedback_attended",
+  ].includes(metric);
   const showContactTiming = ["unique_contacted_leads", "responded_leads", "no_answer"].includes(metric);
   const ids = showContactTiming ? leads.map((lead) => lead.ghl_opportunity_id) : [];
   const managementRows = showContactTiming ? await getManagementEvidenceRows(ids) : [];
@@ -52,25 +59,45 @@ export default async function V2MetricLeadsPage({ searchParams }: { searchParams
   // For appointments, show both real dates and explain which one filters the period.
   // No synthetic "milestone date" is used for appointment metrics.
   const periodExplanation =
-    metric === "trial_days_scheduled"
+    metric === "feedback_booked"
       ? tr(locale,
-          "Only official Pasadía-calendar appointments scheduled to take place during the selected dates (Mérida), excluding cancelled. Each child/appointment has its own row; bookings made in previous periods can appear. Retroalimentación is not counted.",
-          "Solo citas del calendario oficial de Pasadía programadas para realizarse durante las fechas seleccionadas (Mérida), sin canceladas. Cada cita/alumno aparece por separado; puede haberse reservado en un periodo anterior. No incluye Retroalimentación.")
-      : metric === "trial_days_booked" || metric === "school_tours_booked"
+          "Retroalimentación appointments BOOKED within the selected period (Mérida). Visit dates may be different.",
+          "Citas de Retroalimentación AGENDADAS dentro del periodo (Mérida); pueden realizarse en otra fecha.")
+      : metric === "feedback_scheduled"
         ? tr(locale,
-            "The period filters the 'Booked on' date, not the day of the visit. 'Scheduled for' shows when the appointment takes place. Existing historical booking rules are preserved.",
-            "El periodo filtra 'Agendada el', no el día de la visita. 'Programada para' indica cuándo se realizará. Se conservan las reglas históricas de agendamiento.")
-        : metric === "trial_days_showed" || metric === "school_tours_attended"
+            "Retroalimentación appointments SCHEDULED within the selected period (Mérida), excluding cancellations.",
+            "Citas de Retroalimentación PROGRAMADAS para el periodo (Mérida), sin canceladas.")
+        : metric === "feedback_attended"
           ? tr(locale,
-              "The period filters 'Scheduled for' and requires an attended/completed outcome. 'Booked on' is shown separately.",
-              "El periodo filtra 'Programada para' y exige asistencia registrada. 'Agendada el' se muestra por separado.")
-          : metric === "school_tours_scheduled"
+              "Retroalimentación appointments ATTENDED during their scheduled date in the selected period (Mérida).",
+              "Citas de Retroalimentación ASISTIDAS cuya fecha programada está dentro del periodo (Mérida).")
+          : metric === "trial_days_scheduled"
             ? tr(locale,
-                "School Tours scheduled within the selected dates (Mérida), excluding cancelled. 'Booked on' may be outside the period.",
-                "School Tours programados dentro del periodo seleccionado (Mérida), sin cancelados. 'Agendada el' puede ser de otro periodo.")
-            : tr(locale,
-                "Milestone events whose event timestamp falls inside the selected period.",
-                "Eventos cuyo hito ocurrió dentro del periodo seleccionado.");
+                "Only official Pasadía appointments scheduled in the selected period (Mérida), excluding cancelled. Bookings from earlier periods may appear; no Retroalimentación.",
+                "Solo citas del calendario Pasadía programadas para el periodo (Mérida), sin canceladas. Pueden haberse agendado antes; no incluye Retroalimentación.")
+            : metric === "trial_days_booked"
+              ? tr(locale,
+                  "Only official Pasadía appointments booked in the selected period, regardless of visit date; Retroalimentación is counted separately.",
+                  "Solo citas del calendario Pasadía agendadas dentro del periodo, independientemente de la fecha de visita; Retroalimentación se cuenta aparte.")
+              : metric === "trial_days_showed"
+                ? tr(locale,
+                    "Only attended appointments from the Pasadía calendar, based on scheduled date inside the selected period.",
+                    "Solo citas asistidas del calendario Pasadía cuya fecha programada está dentro del periodo.")
+                : metric === "school_tours_booked"
+                  ? tr(locale,
+                      "The period filters the School Tour booking date, not when the tour takes place.",
+                      "El periodo filtra la fecha en que se agendó School Tour, no cuándo se realizará.")
+                  : metric === "school_tours_attended"
+                    ? tr(locale,
+                        "The period filters the scheduled School Tour date and requires recorded attendance.",
+                        "El periodo filtra la fecha programada del School Tour y exige asistencia registrada.")
+                    : metric === "school_tours_scheduled"
+                      ? tr(locale,
+                          "School Tours scheduled within the selected dates (Mérida), excluding cancelled. Booked on may be outside the period.",
+                          "School Tours programados dentro del periodo (Mérida), sin cancelados. Agendada el puede ser de otro periodo.")
+                      : tr(locale,
+                          "Milestone events whose timestamp falls inside the selected period.",
+                          "Eventos cuyo hito ocurrió dentro del periodo seleccionado.");
 
   return (
     <DashboardLayout
