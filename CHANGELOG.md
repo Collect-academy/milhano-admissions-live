@@ -2,6 +2,12 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-25 — Open House: reducción de consultas y egress
+
+- Sustituye polling 5 s por actualización manual, con aviso persistente, última actualización y estado de cambios guardados. Guardar no consulta de nuevo la lista completa. Sync GHL sigue siendo manual y recarga por solicitud del operador.
+- Solo el 27/11/2026, 06:00–16:00 Mérida (fin exclusivo), ticks de 30 min en pestaña visible, sin superposición, sin recuperar ticks perdidos, y apagado definitivo a las 16:00. Hasta 20 consultas automáticas por dispositivo. Verificados 8 casos de calendario y los 20 ticks; CI/preview de esta revisión pendientes.
+- Archivos: components/open-house-dashboard.tsx, lib/open-house-refresh.ts, README.md, docs/ARCHITECTURE.md, CHANGELOG.md. Sin cambios SQL, n8n, GHL ni otros módulos. Rollback: revertir commit de frontend.
+
 ## 2026-11-25 — Open House: check-in, lista y Kanban (rama de revisión)
 
 - Validación SQL: 149 contactos, 82 reservas únicas y 86 citas; fixture 6 familias 2/2/2, corrección, cambio de bloque, duplicados, QR con reloj de prueba aislado, merge preservando asistencia y claim de bienvenida. Fixtures revertidos; cero asistencias/auditorías/outbox de prueba. RPCs sin EXECUTE anon/authenticated. CI y prueba UI real todavía pendientes.
