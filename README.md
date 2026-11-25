@@ -31,7 +31,9 @@
 | /eod | Declaraciones EOD, historial y validación | app/eod/actions.ts, lib/eod-manual.ts |
 | /sofia | Indicadores y campañas de Sofía | lib/sofia-analytics.ts, app/api/sofia |
 | /alumnos | Expedientes y Formatos 1–5 | lib/student-records.ts, app/alumnos/actions.ts |
-| /after-school | Talleres y registros | lib/after-school, tablas as26_* |
+| /open-house | Recepción, asistencia y Kanban | Schema privado openhouse, RPC service-only milhano_oh_v1 |
+| /open-house/registro | Check-in público por QR | API server-only, solo coincidencia con WhatsApp/correo y verificación adicional |
+| /after-school | Talleres y registros (oculto del menú, recuperable) | lib/after-school, tablas as26_* |
 | /boletos | Boletaje y pagos | lib/ticketing, esquema ticketing, Stripe |
 | /sistema, /reconciliation, /logs | Salud, conciliaciones y auditoría | lib/system-health.ts, lib/reconciliation.ts |
 
@@ -75,3 +77,10 @@
 6. **Actualizar CHANGELOG.md siempre.** Actualizar el mapa técnico si hay nuevas rutas, funciones o dependencias; dejar las pruebas y el resultado del despliegue.
 
 **Seguridad:** Nunca guardar API keys, contraseñas, datos personales de alumnos, JWT o audio/transcripciones en README, cambios, logs, archivos de ejemplo o commits. Ver riesgos conocidos y controles de revisión en docs/ARCHITECTURE.md.
+
+### Open House: integración directa
+
+- Botón de sincronización exclusivo de administradores: Vercel consulta GHL por HTTPS con el token de lectura en Vault vía DATABASE_URL (alternativamente OPEN_HOUSE_GHL_READ_TOKEN server-only), verifica paginación y cruces, y actualiza el modelo sin tocar asistencia, correcciones ni otros pipelines. Sin cron automático y sin n8n.
+- Bienvenida: configurar OPEN_HOUSE_GHL_WELCOME_WEBHOOK_URL (trigger Inbound Webhook de GHL dedicado al evento), encontrar contacto existente por teléfono/email, validar DND y deduplicar por attendance_id; no crear contacto automáticamente ni modificar otros pipelines. Desactivado si falta URL. submitted = webhook aceptado, no WhatsApp entregado. review/dispatching requieren revisión manual, nunca reintento ciego.
+
+- Actualización del listado Open House: manual por defecto; solo el 27/11/2026, cada 30 minutos entre 06:00 y 16:00 Mérida (apagado a las 16:00), en pestaña visible. El aviso y botón Actualizar permiten ver cambios de otros dispositivos y los registros recién guardados sin polling continuo.

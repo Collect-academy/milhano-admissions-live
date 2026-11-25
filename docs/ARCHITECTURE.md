@@ -126,3 +126,14 @@ Estado observado el 2026-11-23:
 - Confirmar que Selector Manual EOD/Auto GHL y Agentes siguen idénticos.
 - Si cualquier cambio afecta n8n, hacer pruebas explícitas de activación/entrega y rollback; el cambio Scheduled no necesita n8n.
 - Actualizar CHANGELOG.md en el mismo commit. Documentar estado real de deployment y rollback, no afirmar que se ejecutó una prueba no realizada.
+
+
+## Open House — 2026-11-27 (implementación propuesta 2026-11-25)
+
+- Rutas /open-house (staff autenticado; admin o membresía openhouse.staff), /open-house/registro (pública únicamente el 27, 07:00–15:30 Mérida), APIs exactas /api/open-house/staff y /api/open-house/public.
+- Schema privado openhouse: una familia por contacto GHL/evento, citas múltiples y horarios originales, asistencia y horario real separados, asignación equilibrada por bloque serializada con advisory lock, auditoría y outbox idempotente. Importación inicial de openhouse_import.source_snapshots; no sobrescribe asistencia. RPC public.milhano_oh_v1 SECURITY INVOKER, solo service_role; RLS y sin acceso anon/authenticated a tablas. No logs de PII en repositorio.
+- Lookup público requiere teléfono/email exacto, devuelve nombre enmascarado; nombre solo no enumera familias. Confirmación exige nombre completo coincidente o teléfono y correo exactos. Límites DB global e IP HMAC. Staff puede corregir y registrar walk-ins; no muta GHL.
+- Outbox registra notificaciones; envío opcional vía webhook GHL dedicado configurado en OPEN_HOUSE_GHL_WELCOME_WEBHOOK_URL; DND y sin contacto bloqueados, claim atómico y sin reintento ambiguo. submitted significa aceptación del webhook, no entrega de WhatsApp; sin n8n para lookup, asistencia, distribución y actualización. Sincronización manual desde Vercel por HTTPS directo a GHL; token de lectura obtenido de Vault vía DATABASE_URL o variable privada. Validación de paginación y conjunto de contactos antes de merge. No sobrescribe asistencia ni correcciones. No cambiar pg_net.
+- After School oculto del menú sin borrar rutas, datos ni automatizaciones. Ricardo permitido por membresía; alta de otros operadores explícita por admin. Revisar permisos y pruebas antes de merge.
+
+- **Actualización Open House (2026-11-25):** manual por defecto, al abrir la vista o pulsar Actualizar; sincronizar GHL explícitamente también recarga. Guardar asistencia no vuelve a solicitar la lista completa. Únicamente el 27/11/2026, agenda de 06:00 a 15:30 cada media hora, apagado a las 16:00 (America/Merida); no consultas en pestaña oculta, durante edición/guardado, ni solicitudes de actualización simultáneas. Sin cron, SQL ni n8n nuevos.

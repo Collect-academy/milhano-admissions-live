@@ -2,6 +2,21 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-25 — Open House: reducción de consultas y egress
+
+- Sustituye polling 5 s por actualización manual, con aviso persistente, última actualización y estado de cambios guardados. Guardar no consulta de nuevo la lista completa. Sync GHL sigue siendo manual y recarga por solicitud del operador.
+- Solo el 27/11/2026, 06:00–16:00 Mérida (fin exclusivo), ticks de 30 min en pestaña visible, sin superposición, sin recuperar ticks perdidos, y apagado definitivo a las 16:00. Hasta 20 consultas automáticas por dispositivo. Verificados 8 casos de calendario y los 20 ticks; CI/preview de esta revisión pendientes.
+- Archivos: components/open-house-dashboard.tsx, lib/open-house-refresh.ts, README.md, docs/ARCHITECTURE.md, CHANGELOG.md. Sin cambios SQL, n8n, GHL ni otros módulos. Rollback: revertir commit de frontend.
+
+## 2026-11-25 — Open House: check-in, lista y Kanban (rama de revisión)
+
+- Validación SQL: 149 contactos, 82 reservas únicas y 86 citas; fixture 6 familias 2/2/2, corrección, cambio de bloque, duplicados, QR con reloj de prueba aislado, merge preservando asistencia y claim de bienvenida. Fixtures revertidos; cero asistencias/auditorías/outbox de prueba. RPCs sin EXECUTE anon/authenticated. CI y prueba UI real todavía pendientes.
+- QR PNG descargable desde el dashboard; usar URL de producción definitiva.
+- Nuevo módulo /open-house y /open-house/registro; registro público limitado a evento, coincidencias enmascaradas y verificación adicional, staff autorizado, lista, búsqueda, edición, walk-ins, estadísticas, distribución por bloque y polling 5 s.
+- Migración aditiva: schema openhouse, RPC service-only, importación desde snapshots privados, lock transaccional, auditoría y outbox. No modificar CRM, V2, Sofía, n8n, After School ni pg_net. After School queda accesible por ruta, oculto del menú.
+- Integración: botón admin de sync directo GHL (Vault o env privada), actualización transaccional; bienvenida opcional por webhook GHL dedicado, claim atómico y estado submitted/review, sin envíos reales todavía. Decisiones pendientes: configurar y probar el workflow de bienvenida, revisar cuentas de operadores, prueba autenticada y del QR en preview, CI y prueba integral. Sin envíos reales. No afirmar despliegue hasta verificar.
+- Rollback: revertir PR; conservar datos de asistencia/auditoría y desactivar acceso a nuevas rutas, no borrar tablas con datos.
+
 ## 2026-11-23 — V2/Agentes: separación completa de calendarios Pasadía y Retroalimentación
 
 **Estado final:** PR #3 fusionado a `main` (squash commit `36a40346dc118e85cffe902c8d2b459abe6de1ce`); migración aditiva SQL aplicada. CI del PR validó TypeScript y build Next.js; Vercel Preview y despliegue de producción del commit fueron satisfactorios. Comprobación manual de interfaz autenticada pendiente.

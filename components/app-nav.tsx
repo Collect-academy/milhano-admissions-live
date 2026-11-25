@@ -19,7 +19,7 @@ const primaryLinks = [
   { href: "/sistema", en: "System", es: "Sistema" },
 ];
 
-const afterSchoolLink = { href: "/after-school", en: "After School", es: "After School" };
+const openHouseLink = { href: "/open-house", en: "Open House", es: "Open House" };
 
 export function AppNav({ locale, showStudents = false, showLeadership = false }: { locale: Locale; showStudents?: boolean; showLeadership?: boolean }) {
   const pathname = usePathname();
@@ -27,7 +27,7 @@ export function AppNav({ locale, showStudents = false, showLeadership = false }:
     ...primaryLinks,
     ...(showLeadership ? [{ href: "/direccion", en: "Leadership", es: "Dirección" }] : []),
     ...(showStudents ? [{ href: "/alumnos", en: "Students", es: "Alumnos" }] : []),
-    afterSchoolLink,
+    openHouseLink,
   ];
 
   return (
