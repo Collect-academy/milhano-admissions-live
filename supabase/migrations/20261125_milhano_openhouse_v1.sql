@@ -50,7 +50,7 @@ do $$ begin
  end if;
 end $$;
 create or replace function public.milhano_oh_v1(p_action text,p_payload jsonb default '{}'::jsonb,p_actor text default null) returns jsonb
-language plpgsql security invoker set search_path='' as $
+language plpgsql security invoker set search_path='' as $$
 #variable_conflict use_variable
 declare
  ev constant date := '2026-11-27';
@@ -82,6 +82,8 @@ declare
      return jsonb_build_object('families',coalesce((select jsonb_agg(to_jsonb(ff)||jsonb_build_object('notification_status',ob.status) order by ff.name) from openhouse.families ff left join openhouse.outbox ob on ob.family_id=ff.id where ff.event_key=ev),'[]'::jsonb));
    end if;
  end if;
+ if not is_public and p_payload ? 'coordinator' and (p_payload->>'coordinator' is null or not((p_payload->>'coordinator')=any(coords))) then return jsonb_build_object('error','Coordinación inválida.'); end if;
+ if not is_public and p_payload ? 'slot' and (p_payload->>'slot' is null or not((p_payload->>'slot')=any(slots))) then return jsonb_build_object('error','Horario inválido.'); end if;
  -- Serialize all event writes: duplicate clicks and concurrent allocations share one transaction lock.
  perform pg_advisory_xact_lock(hashtextextended('milhano-openhouse-2026-11-27',0));
  if p_action='create' then
