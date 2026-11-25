@@ -146,7 +146,7 @@ declare
  select * into f from openhouse.families where id=fid;
  insert into openhouse.audit(family_id,actor,action,before_value,after_value) values(fid,case when is_public then 'qr' else p_actor end,p_action,oldf,to_jsonb(f));
  return case when is_public then jsonb_build_object('ok',true) else jsonb_build_object('ok',true,'family_id',fid) end;
- end $;
+ end $$;
 
 revoke all on function public.milhano_oh_v1(text,jsonb,text) from public,anon,authenticated;
 grant execute on function public.milhano_oh_v1(text,jsonb,text) to service_role;
