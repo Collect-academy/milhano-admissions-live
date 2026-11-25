@@ -2,6 +2,13 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-25 — Open House: check-in, lista y Kanban (rama de revisión)
+
+- Nuevo módulo /open-house y /open-house/registro; registro público limitado a evento, coincidencias enmascaradas y verificación adicional, staff autorizado, lista, búsqueda, edición, walk-ins, estadísticas, distribución por bloque y polling 5 s.
+- Migración aditiva: schema openhouse, RPC service-only, importación desde snapshots privados, lock transaccional, auditoría y outbox. No modificar CRM, V2, Sofía, n8n, After School ni pg_net. After School queda accesible por ruta, oculto del menú.
+- Decisiones pendientes: activar bienvenida GHL y actualización de reservas, revisar cuentas de operadores, prueba autenticada y del QR en preview, CI y prueba integral. Sin envíos reales. No afirmar despliegue hasta verificar.
+- Rollback: revertir PR; conservar datos de asistencia/auditoría y desactivar acceso a nuevas rutas, no borrar tablas con datos.
+
 ## 2026-11-23 — V2/Agentes: separación completa de calendarios Pasadía y Retroalimentación
 
 **Estado final:** PR #3 fusionado a `main` (squash commit `36a40346dc118e85cffe902c8d2b459abe6de1ce`); migración aditiva SQL aplicada. CI del PR validó TypeScript y build Next.js; Vercel Preview y despliegue de producción del commit fueron satisfactorios. Comprobación manual de interfaz autenticada pendiente.

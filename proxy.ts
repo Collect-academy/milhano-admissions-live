@@ -53,7 +53,9 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/api/after-school/register") ||
     pathname.startsWith("/api/after-school/availability");
 
-  if (isPublicAfterSchoolRoute || isPublicTicketingRoute) {
+  const isPublicOpenHouseRoute = pathname === "/open-house/registro" || pathname === "/api/open-house/public";
+
+  if (isPublicAfterSchoolRoute || isPublicTicketingRoute || isPublicOpenHouseRoute) {
     return NextResponse.next();
   }
 

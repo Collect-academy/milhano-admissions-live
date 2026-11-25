@@ -31,7 +31,9 @@
 | /eod | Declaraciones EOD, historial y validación | app/eod/actions.ts, lib/eod-manual.ts |
 | /sofia | Indicadores y campañas de Sofía | lib/sofia-analytics.ts, app/api/sofia |
 | /alumnos | Expedientes y Formatos 1–5 | lib/student-records.ts, app/alumnos/actions.ts |
-| /after-school | Talleres y registros | lib/after-school, tablas as26_* |
+| /open-house | Recepción, asistencia y Kanban | Schema privado openhouse, RPC service-only milhano_oh_v1 |
+| /open-house/registro | Check-in público por QR | API server-only, solo coincidencia con WhatsApp/correo y verificación adicional |
+| /after-school | Talleres y registros (oculto del menú, recuperable) | lib/after-school, tablas as26_* |
 | /boletos | Boletaje y pagos | lib/ticketing, esquema ticketing, Stripe |
 | /sistema, /reconciliation, /logs | Salud, conciliaciones y auditoría | lib/system-health.ts, lib/reconciliation.ts |
 

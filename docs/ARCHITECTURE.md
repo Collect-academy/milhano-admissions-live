@@ -126,3 +126,12 @@ Estado observado el 2026-11-23:
 - Confirmar que Selector Manual EOD/Auto GHL y Agentes siguen idénticos.
 - Si cualquier cambio afecta n8n, hacer pruebas explícitas de activación/entrega y rollback; el cambio Scheduled no necesita n8n.
 - Actualizar CHANGELOG.md en el mismo commit. Documentar estado real de deployment y rollback, no afirmar que se ejecutó una prueba no realizada.
+
+
+## Open House — 2026-11-27 (implementación propuesta 2026-11-25)
+
+- Rutas /open-house (staff autenticado; admin o membresía openhouse.staff), /open-house/registro (pública únicamente el 27, 07:00–15:30 Mérida), APIs exactas /api/open-house/staff y /api/open-house/public.
+- Schema privado openhouse: una familia por contacto GHL/evento, citas múltiples y horarios originales, asistencia y horario real separados, asignación equilibrada por bloque serializada con advisory lock, auditoría y outbox idempotente. Importación inicial de openhouse_import.source_snapshots; no sobrescribe asistencia. RPC public.milhano_oh_v1 SECURITY INVOKER, solo service_role; RLS y sin acceso anon/authenticated a tablas. No logs de PII en repositorio.
+- Lookup público requiere teléfono/email exacto, devuelve nombre enmascarado; nombre solo no enumera familias. Confirmación exige nombre completo coincidente o teléfono y correo exactos. Límites DB global e IP HMAC. Staff puede corregir y registrar walk-ins; no muta GHL.
+- Outbox registra notificaciones; no envía aún, DND y sin contacto bloqueados. Integración futura con workflow GHL dedicado (requiere credencial/trigger autorizado e idempotencia); sin n8n para lookup, asistencia, distribución, polling. Sincronización inicial estática, próxima actualización directa backend pendiente. No cambiar pg_net.
+- After School oculto del menú sin borrar rutas, datos ni automatizaciones. Ricardo permitido por membresía; alta de otros operadores explícita por admin. Revisar permisos y pruebas antes de merge.
