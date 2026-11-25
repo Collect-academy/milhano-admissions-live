@@ -6,7 +6,7 @@ Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, dat
 
 - Nuevo módulo /open-house y /open-house/registro; registro público limitado a evento, coincidencias enmascaradas y verificación adicional, staff autorizado, lista, búsqueda, edición, walk-ins, estadísticas, distribución por bloque y polling 5 s.
 - Migración aditiva: schema openhouse, RPC service-only, importación desde snapshots privados, lock transaccional, auditoría y outbox. No modificar CRM, V2, Sofía, n8n, After School ni pg_net. After School queda accesible por ruta, oculto del menú.
-- Decisiones pendientes: activar bienvenida GHL y actualización de reservas, revisar cuentas de operadores, prueba autenticada y del QR en preview, CI y prueba integral. Sin envíos reales. No afirmar despliegue hasta verificar.
+- Integración: botón admin de sync directo GHL (Vault o env privada), actualización transaccional; bienvenida opcional por webhook GHL dedicado, claim atómico y estado submitted/review, sin envíos reales todavía. Decisiones pendientes: configurar y probar el workflow de bienvenida, revisar cuentas de operadores, prueba autenticada y del QR en preview, CI y prueba integral. Sin envíos reales. No afirmar despliegue hasta verificar.
 - Rollback: revertir PR; conservar datos de asistencia/auditoría y desactivar acceso a nuevas rutas, no borrar tablas con datos.
 
 ## 2026-11-23 — V2/Agentes: separación completa de calendarios Pasadía y Retroalimentación

@@ -77,3 +77,8 @@
 6. **Actualizar CHANGELOG.md siempre.** Actualizar el mapa técnico si hay nuevas rutas, funciones o dependencias; dejar las pruebas y el resultado del despliegue.
 
 **Seguridad:** Nunca guardar API keys, contraseñas, datos personales de alumnos, JWT o audio/transcripciones en README, cambios, logs, archivos de ejemplo o commits. Ver riesgos conocidos y controles de revisión en docs/ARCHITECTURE.md.
+
+### Open House: integración directa
+
+- Botón de sincronización exclusivo de administradores: Vercel consulta GHL por HTTPS con el token de lectura en Vault vía DATABASE_URL (alternativamente OPEN_HOUSE_GHL_READ_TOKEN server-only), verifica paginación y cruces, y actualiza el modelo sin tocar asistencia, correcciones ni otros pipelines. Sin cron automático y sin n8n.
+- Bienvenida: configurar OPEN_HOUSE_GHL_WELCOME_WEBHOOK_URL (trigger Inbound Webhook de GHL dedicado al evento), encontrar contacto existente por teléfono/email, validar DND y deduplicar por attendance_id; no crear contacto automáticamente ni modificar otros pipelines. Desactivado si falta URL. submitted = webhook aceptado, no WhatsApp entregado. review/dispatching requieren revisión manual, nunca reintento ciego.
