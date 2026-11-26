@@ -2,6 +2,10 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-26 — Pasadía: WhatsApp inmediatamente después del calendario
+
+- Reordena campos y añade selección visible de familia verificada, botón Buscar familia y autollenado de tutor/correo. Conserva privacidad y captura manual. Sin SQL adicional ni n8n. PR anterior estaba en preview; fusionar a producción tras CI. iOS 12.5.7 requiere validación física.
+
 ## 2026-11-26 — Open House: autofill verificado y formularios compatibles con Safari antiguo
 
 - Prueba de scripts reales con DOM/XHR simulados aprobada: autollenado, calendario diciembre/enero, cupo lleno, UUID de servidor, confirmación de reserva y QR preview. Ajuste para no duplicar consulta al perder foco del teléfono.
