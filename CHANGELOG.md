@@ -4,6 +4,7 @@ Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, dat
 
 ## 2026-11-26 — Open House: autofill verificado y formularios compatibles con Safari antiguo
 
+- Prueba de scripts reales con DOM/XHR simulados aprobada: autollenado, calendario diciembre/enero, cupo lleno, UUID de servidor, confirmación de reserva y QR preview. Ajuste para no duplicar consulta al perder foco del teléfono.
 - HTML autónomo y JS ES5/XHR en las dos rutas públicas, calendario HTML table, tamaño de inputs móvil 16px, UUID server-side, sin dependencia de React, AbortController, Intl ni crypto.randomUUID cliente. Mantiene endpoints y QR. Recuperación por WhatsApp tras ingreso verificado mediante cookie firmada; fallback nombre exacto+teléfono de familia presente; manual siempre posible. Pruebas SQL aprobadas y revertidas: teléfono solo denegado, sesión correcta, teléfono incorrecto, nombre correcto/incorrecto. Migración aplicada. CI y prueba de dispositivos físicos pendientes. No n8n/GHL adicionales. Rollback: revertir frontend; conservar datos y RPC privada.
 
 ## 2026-11-26 — Open House: detector ligero validado en lugar de Broadcast
