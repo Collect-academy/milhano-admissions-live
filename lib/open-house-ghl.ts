@@ -78,7 +78,7 @@ export async function dispatchOpenHouseWelcome(id:string,retryActor:string|null=
    return (await r.json()).opportunity as Obj;
   };
   const current=await request("GET");
-  const matches=(o:Obj|undefined)=>o?.id===claim.data.opportunityId&&o.pipelineId===pipeline&&o.contactId===claim.data.contactId;
+  const matches=(o:Obj|undefined):o is Obj=>!!o&&o.id===claim.data.opportunityId&&o.pipelineId===pipeline&&o.contactId===claim.data.contactId;
   if(!matches(current)){status="blocked";detail="La oportunidad no coincide con contacto/pipeline.";}
   else if(current.pipelineStageId===attended){status="submitted";detail="Ya estaba en Asistido; no se volvió a escribir.";}
   else if(current.status!=="open"||!earlyStages.has(current.pipelineStageId)){status="blocked";detail="Stage avanzado, desconocido o cerrado; no se regresó.";}
