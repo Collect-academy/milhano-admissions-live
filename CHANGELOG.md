@@ -2,6 +2,10 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-26 — Pasadía: selección por WhatsApp y validación final de cupos
+
+- Coincidencias por 10 dígitos sin nombre adicional; única autoselección, múltiples radio, datos enmascarados sin sesión, uso real server-side al reservar; edición manual. RPC service-only nueva y pruebas SQL de match, no divulgación, teléfono incorrecto, guardado, idempotencia y cupo lleno revertidas. Se elimina botón Actualizar cupos; recarga al rechazo de cupo/fecha y aviso, reintento visible solo si consulta inicial falla. Sin cambios a cupos, GHL, Sofía, n8n. Operador confirmó calendario iOS 12.5.7 previo; retest UI pendiente. Rollback frontend; conservar reservas y RPC.
+
 ## 2026-11-26 — Pasadía: WhatsApp inmediatamente después del calendario
 
 - Reordena campos y añade selección visible de familia verificada, botón Buscar familia y autollenado de tutor/correo. Conserva privacidad y captura manual. Sin SQL adicional ni n8n. PR anterior estaba en preview; fusionar a producción tras CI. iOS 12.5.7 requiere validación física.
