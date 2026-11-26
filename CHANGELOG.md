@@ -2,6 +2,11 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-26 — Open House: cambios reactivos e impresión por coordinación
+
+- Botón Actualizar separado a la derecha, indicador de conexión. Realtime privado solo el viernes 06:00–16:00; cambios de familias/outbox agrupados por transacción, sin PII; debounce y pausa en pestañas ocultas/edición, respaldo de 30 min y manual fuera de ventana. Permisos restringidos a admin/staff activo, sin exponer schema openhouse. Migración aplicada; pruebas SQL de permisos para maestros, usuario desconocido y anónimo. Prueba de entrega WebSocket real pendiente en ventana del evento; CI pendiente.
+- Recorrido conserva rondas y separación; vista general permanente e impresión individual por José Lugo, Miguel y Aurora con roster propio. No cambia fechas, pasadías, GHL, Sofía ni n8n. Rollback: revertir frontend y retirar exclusivamente triggers/policy/helper de señal OH; conservar datos.
+
 ## 2026-11-26 — Open House: pasadías, recorrido y stage Asistido
 
 - Agenda pública y staff, 11 grados y cupos 2/1, reglas de fecha, idempotencia, privacidad, cancelación/bloqueo admin, QR independiente. GHL calendar leído 26/11 sin citas de dic/ene; reserva local, no inserción GHL, sin polling. SQL aplicado y fixtures: restricciones primaria/sec/prepa, enero, capacidad 1 y 2, retry idempotente, cancelación libera, bloqueo, acceso no autorizado; revertidos, cero reservas reales iniciales.
