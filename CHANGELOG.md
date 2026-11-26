@@ -2,6 +2,12 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-26 — Open House: verificación pública previa al evento
+
+- SQL aditivo aplicado en producción: permite lookup y validación QR el 26/11, pero no guarda asistencia ni activa WhatsApp; el 27/11 conserva ventana real 07:00–15:30 Mérida. Verificado con un registro de cada uno de los cinco bloques y transacción revertida. Mantiene RPC service-only y privacidad.
+- Actualización puntual GHL → Supabase: 159 oportunidades, 158 contactos únicos, 87 con reserva, 91 citas, sin conflictos manuales; oportunidad TEST en Agendado vinculada por ID exacto (existe otra oportunidad de prueba). No modificar GHL ni n8n. El futuro cambio a Asistido requiere implementación/permiso de escritura y validación de oportunidad única.
+- Sin modificación de URL o QR. Rollback: restaurar guard de fecha previo si necesario; la excepción vence automáticamente.
+
 ## 2026-11-25 — Open House: reducción de consultas y egress
 
 - Sustituye polling 5 s por actualización manual, con aviso persistente, última actualización y estado de cambios guardados. Guardar no consulta de nuevo la lista completa. Sync GHL sigue siendo manual y recarga por solicitud del operador.

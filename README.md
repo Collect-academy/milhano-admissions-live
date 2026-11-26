@@ -84,3 +84,5 @@
 - Bienvenida: configurar OPEN_HOUSE_GHL_WELCOME_WEBHOOK_URL (trigger Inbound Webhook de GHL dedicado al evento), encontrar contacto existente por teléfono/email, validar DND y deduplicar por attendance_id; no crear contacto automáticamente ni modificar otros pipelines. Desactivado si falta URL. submitted = webhook aceptado, no WhatsApp entregado. review/dispatching requieren revisión manual, nunca reintento ciego.
 
 - Actualización del listado Open House: manual por defecto; solo el 27/11/2026, cada 30 minutos entre 06:00 y 16:00 Mérida (apagado a las 16:00), en pestaña visible. El aviso y botón Actualizar permiten ver cambios de otros dispositivos y los registros recién guardados sin polling continuo.
+
+- 26/11/2026: búsqueda QR abierta en modo prueba hasta medianoche Mérida. Verificación correcta devuelve aviso preview_verified (sin guardar ni enviar). El 27/11 de 07:00 a 15:30 vuelve al registro real automáticamente; URL permanente sin cambios.

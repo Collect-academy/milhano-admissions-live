@@ -137,3 +137,5 @@ Estado observado el 2026-11-23:
 - After School oculto del menú sin borrar rutas, datos ni automatizaciones. Ricardo permitido por membresía; alta de otros operadores explícita por admin. Revisar permisos y pruebas antes de merge.
 
 - **Actualización Open House (2026-11-25):** manual por defecto, al abrir la vista o pulsar Actualizar; sincronizar GHL explícitamente también recarga. Guardar asistencia no vuelve a solicitar la lista completa. Únicamente el 27/11/2026, agenda de 06:00 a 15:30 cada media hora, apagado a las 16:00 (America/Merida); no consultas en pestaña oculta, durante edición/guardado, ni solicitudes de actualización simultáneas. Sin cron, SQL ni n8n nuevos.
+
+- Excepción temporal aplicada 26/11: QR lookup y verificación en producción habilitados un día antes; confirmación válida devuelve preview_verified sin escritura de asistencia/outbox/auditoría ni despacho. Mantiene rate limits y protección de identidad. La excepción expira por fecha en DB; no requiere cron. No cambia ventana real del 27/11. Sin cambio de stage todavía.
