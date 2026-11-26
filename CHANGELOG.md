@@ -2,6 +2,20 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-26 — Open House: pasadías, recorrido y stage Asistido
+
+- Agenda pública y staff, 11 grados y cupos 2/1, reglas de fecha, idempotencia, privacidad, cancelación/bloqueo admin, QR independiente. GHL calendar leído 26/11 sin citas de dic/ene; reserva local, no inserción GHL, sin polling. SQL aplicado y fixtures: restricciones primaria/sec/prepa, enero, capacidad 1 y 2, retry idempotente, cancelación libera, bloqueo, acceso no autorizado; revertidos, cero reservas reales iniciales.
+- Recorrido: rotación sin cruces, 8–10 minutos, transición ajustable, estación 7 conjunta sin duración fija; lista por coordinador e impresión/PDF. No consultas nuevas.
+- Stage Asistido: reemplaza webhook por backend HTTPS PUT y RPC outbox service-only; solo pipeline OH, early stages, verify identity, DND y duplicados, test exacto previo al evento, retry manual admin. No movimiento real durante desarrollo; permiso de escritura y workflow por verificar con TEST. No cambios a Sofía, otros pipelines, n8n ni permisos pg_net.
+- CI inicial detectó TS18048 en el guard de oportunidad GHL; corregido con type predicate explícito, sin alterar lógica. Revalidación pendiente.
+- Archivos: app/open-house/pasadia y pasadias, app/api/open-house/pasadia y pasadias, lib/open-house-trial*, lib/open-house-rotation.ts, componentes booking/admin/rotation, dashboard, proxy, lib/open-house-ghl.ts, API staff y dos migraciones. CI/preview y UI autenticada pendientes. Rollback: revertir frontend; preservar reservas/outbox, no borrar información.
+
+## 2026-11-26 — Open House: verificación pública previa al evento
+
+- SQL aditivo aplicado en producción: permite lookup y validación QR el 26/11, pero no guarda asistencia ni activa WhatsApp; el 27/11 conserva ventana real 07:00–15:30 Mérida. Verificado con un registro de cada uno de los cinco bloques y transacción revertida. Mantiene RPC service-only y privacidad.
+- Actualización puntual GHL → Supabase: 159 oportunidades, 158 contactos únicos, 87 con reserva, 91 citas, sin conflictos manuales; oportunidad TEST en Agendado vinculada por ID exacto (existe otra oportunidad de prueba). No modificar GHL ni n8n. El futuro cambio a Asistido requiere implementación/permiso de escritura y validación de oportunidad única.
+- Sin modificación de URL o QR. Rollback: restaurar guard de fecha previo si necesario; la excepción vence automáticamente.
+
 ## 2026-11-25 — Open House: reducción de consultas y egress
 
 - Sustituye polling 5 s por actualización manual, con aviso persistente, última actualización y estado de cambios guardados. Guardar no consulta de nuevo la lista completa. Sync GHL sigue siendo manual y recarga por solicitud del operador.
