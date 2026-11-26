@@ -2,6 +2,24 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-26 — Pasadía: WhatsApp inmediatamente después del calendario
+
+- Reordena campos y añade selección visible de familia verificada, botón Buscar familia y autollenado de tutor/correo. Conserva privacidad y captura manual. Sin SQL adicional ni n8n. PR anterior estaba en preview; fusionar a producción tras CI. iOS 12.5.7 requiere validación física.
+
+## 2026-11-26 — Open House: autofill verificado y formularios compatibles con Safari antiguo
+
+- Prueba de scripts reales con DOM/XHR simulados aprobada: autollenado, calendario diciembre/enero, cupo lleno, UUID de servidor, confirmación de reserva y QR preview. Ajuste para no duplicar consulta al perder foco del teléfono.
+- HTML autónomo y JS ES5/XHR en las dos rutas públicas, calendario HTML table, tamaño de inputs móvil 16px, UUID server-side, sin dependencia de React, AbortController, Intl ni crypto.randomUUID cliente. Mantiene endpoints y QR. Recuperación por WhatsApp tras ingreso verificado mediante cookie firmada; fallback nombre exacto+teléfono de familia presente; manual siempre posible. Pruebas SQL aprobadas y revertidas: teléfono solo denegado, sesión correcta, teléfono incorrecto, nombre correcto/incorrecto. Migración aplicada. CI y prueba de dispositivos físicos pendientes. No n8n/GHL adicionales. Rollback: revertir frontend; conservar datos y RPC privada.
+
+## 2026-11-26 — Open House: detector ligero validado en lugar de Broadcast
+
+- Prueba DB Broadcast falló porque realtime.messages no tenía partición para la fecha (23514). Sin cambiar configuración global: retirado acceso/policy exclusiva OH y sustituido trigger por contador privado por transacción. Pruebas del contador con 4 cambios (incremento 1), autorización maestros y rechazo desconocido aprobadas, rollback fixtures. RPC service-only. GET staff?revision=1 cada 30 s visible solo en ventana del evento, lista completa por cambio/guardado y respaldo cada 30 min. Sin execs n8n ni cambios en GHL/Sofía. CI y prueba UI pendientes.
+
+## 2026-11-26 — Open House: cambios reactivos e impresión por coordinación
+
+- Botón Actualizar separado a la derecha, indicador de conexión. Realtime privado solo el viernes 06:00–16:00; cambios de familias/outbox agrupados por transacción, sin PII; debounce y pausa en pestañas ocultas/edición, respaldo de 30 min y manual fuera de ventana. Permisos restringidos a admin/staff activo, sin exponer schema openhouse. Migración aplicada; pruebas SQL de permisos para maestros, usuario desconocido y anónimo. Prueba de entrega WebSocket real pendiente en ventana del evento; CI pendiente.
+- Recorrido conserva rondas y separación; vista general permanente e impresión individual por José Lugo, Miguel y Aurora con roster propio. No cambia fechas, pasadías, GHL, Sofía ni n8n. Rollback: revertir frontend y retirar exclusivamente triggers/policy/helper de señal OH; conservar datos.
+
 ## 2026-11-26 — Open House: pasadías, recorrido y stage Asistido
 
 - Agenda pública y staff, 11 grados y cupos 2/1, reglas de fecha, idempotencia, privacidad, cancelación/bloqueo admin, QR independiente. GHL calendar leído 26/11 sin citas de dic/ene; reserva local, no inserción GHL, sin polling. SQL aplicado y fixtures: restricciones primaria/sec/prepa, enero, capacidad 1 y 2, retry idempotente, cancelación libera, bloqueo, acceso no autorizado; revertidos, cero reservas reales iniciales.
