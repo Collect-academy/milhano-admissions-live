@@ -11,11 +11,12 @@ export async function POST(request: Request) {
     if (!request.headers.get("origin") || new URL(request.headers.get("origin")!).host!==new URL(request.url).host) return reply({error:"Origen no autorizado.",code:"forbidden"});
     const actor=await openHouseActor(); if(!actor) return reply({error:"No autorizado",code:"forbidden"});
     const b=await request.json();
-    if(!["update","create"].includes(b.action)||!b.payload||typeof b.payload!=="object") return reply({error:"Operación inválida."});
+    if(!["update","create","retry_stage"].includes(b.action)||!b.payload||typeof b.payload!=="object") return reply({error:"Operación inválida."});
     const p=b.payload;
+    if(b.action==="retry_stage"){if(actor.role!=="admin")return reply({error:"Solo administración puede reintentar.",code:"forbidden"});const id=String(p.id??"");if(!/^[0-9a-f-]{36}$/i.test(id))return reply({error:"Registro inválido"});return reply({ok:true,stage_sync:await dispatchOpenHouseWelcome(id,actor.id)});}
     if (["actual_adults","actual_children"].some(k=>p[k]!=null&&(!Number.isInteger(p[k])||p[k]<0||p[k]>30))) return reply({error:"Número de asistentes inválido."});
     const data=await oh(b.action,p,actor.id);
-    if(data.ok&&data.family_id)await dispatchOpenHouseWelcome(data.family_id).catch(()=>{});
+    if(data.ok&&data.family_id&& (p.attendance==="present"||b.action==="create")) data.stage_sync=await dispatchOpenHouseWelcome(data.family_id).catch(()=>({status:"review"}));
     return reply(data);
   } catch {return NextResponse.json({error:"No se pudo guardar el cambio."},{status:503});}
 }
