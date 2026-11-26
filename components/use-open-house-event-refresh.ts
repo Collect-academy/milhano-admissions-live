@@ -1,9 +1,7 @@
 "use client";
 import {useCallback,useEffect,useRef,useState} from "react";
-import {createSupabaseBrowserClient} from "@/lib/supabase/client";
 import {isOpenHouseRefreshWindow,openHouseWindowBoundary} from "@/lib/open-house-refresh";
 type Connection="off"|"connecting"|"live"|"manual";
-const topic="milhano:openhouse:2026-11-27:changes";
 export function useOpenHouseEventRefresh(refresh:()=>Promise<boolean>,blocked:boolean){
  const [connection,setConnection]=useState<Connection>("off");
  const pending=useRef(false),last=useRef(0),running=useRef(false),blockedRef=useRef(blocked),timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
@@ -13,7 +11,8 @@ export function useOpenHouseEventRefresh(refresh:()=>Promise<boolean>,blocked:bo
    timer.current=undefined;
    if(running.current||blockedRef.current||!pending.current||!isOpenHouseRefreshWindow(Date.now())||document.visibilityState!=="visible")return;
    pending.current=false;running.current=true;last.current=Date.now();
-   try{await refresh();}finally{running.current=false;schedule();}
+   let ok=false;
+   try{ok=await refresh();}finally{running.current=false;if(!ok){pending.current=true;}else schedule();}
   },Math.max(1200,5000-(Date.now()-last.current)));
  },[refresh]);
  const request=useCallback(()=>{
@@ -22,48 +21,44 @@ export function useOpenHouseEventRefresh(refresh:()=>Promise<boolean>,blocked:bo
  },[drain]);
  useEffect(()=>{blockedRef.current=blocked;if(!blocked)drain();},[blocked,drain]);
  useEffect(()=>{
-  let disposed=false,generation=0,boundary:ReturnType<typeof setTimeout>|undefined;
-  let client:ReturnType<typeof createSupabaseBrowserClient>|undefined;
-  let channel:ReturnType<ReturnType<typeof createSupabaseBrowserClient>["channel"]>|undefined;
+  let disposed=false,active=false,seen:string|null=null,probing=false;
+  let boundary:ReturnType<typeof setTimeout>|undefined,probeTimer:ReturnType<typeof setTimeout>|undefined;
+  let controller:AbortController|undefined;
+  const eligible=()=>!disposed&&isOpenHouseRefreshWindow(Date.now())&&document.visibilityState==="visible";
   function stop(){
-   generation++;
-   if(channel&&client)void client.removeChannel(channel).catch(()=>{});
-   channel=undefined;
+   active=false;seen=null;
+   if(probeTimer!==undefined){clearTimeout(probeTimer);probeTimer=undefined;}
+   controller?.abort();controller=undefined;
+   if(timer.current!==undefined){clearTimeout(timer.current);timer.current=undefined;}
+  }
+  function nextProbe(){if(eligible()&&active&&probeTimer===undefined)probeTimer=setTimeout(()=>{probeTimer=undefined;void probe();},30000);}
+  async function probe(){
+   if(!eligible()||!active)return;
+   if(probing||blockedRef.current){nextProbe();return;}
+   probing=true;const own=new AbortController();controller=own;
+   const timeout=setTimeout(()=>own.abort(),8000);
+   try{
+    const r=await fetch("/api/open-house/staff?revision=1",{cache:"no-store",signal:own.signal});
+    const data=await r.json();
+    if(!r.ok||typeof data.revision!=="string")throw new Error("Revision unavailable");
+    if(!eligible()||!active||own.signal.aborted)return;
+    setConnection("live");
+    if(seen!==data.revision){seen=data.revision;request();}
+    else if(pending.current)drain();
+   }catch{if(eligible()&&active&&!own.signal.aborted)setConnection("manual");}
+   finally{clearTimeout(timeout);probing=false;if(controller===own)controller=undefined;nextProbe();}
   }
   function reconcile(){
    if(disposed)return;
    if(boundary!==undefined)clearTimeout(boundary);
    const now=Date.now(),next=openHouseWindowBoundary(now);
    if(next!==null)boundary=setTimeout(reconcile,Math.min(Math.max(1,next-now),2147483647));
-   if(!isOpenHouseRefreshWindow(now)||document.visibilityState!=="visible"){
-    stop();setConnection("off");
-    if(timer.current!==undefined){clearTimeout(timer.current);timer.current=undefined;}
-    if(!isOpenHouseRefreshWindow(now))pending.current=false;
-    return;
-   }
-   if(channel){drain();return;}
-   setConnection("connecting");
-   const id=++generation;
-   try{
-    client??=createSupabaseBrowserClient();
-    const active=client;
-    const ch=active.channel(topic,{config:{private:true}});
-    channel=ch;
-    ch.on("broadcast",{event:"changed"},()=>{if(!disposed&&id===generation)request();});
-    void active.realtime.setAuth().then(()=>{
-     if(disposed||id!==generation)return;
-     ch.subscribe(status=>{
-      if(disposed||id!==generation)return;
-      if(status==="SUBSCRIBED"){setConnection("live");request();}
-      else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"||status==="CLOSED")setConnection("manual");
-     });
-    }).catch(()=>{if(!disposed&&id===generation)setConnection("manual");});
-   }catch{setConnection("manual");}
-   drain();
+   if(!eligible()){stop();setConnection("off");if(!isOpenHouseRefreshWindow(now))pending.current=false;return;}
+   if(!active){active=true;setConnection("connecting");void probe();}
+   else drain();
   }
-  document.addEventListener("visibilitychange",reconcile);
-  reconcile();
-  return()=>{disposed=true;stop();document.removeEventListener("visibilitychange",reconcile);if(boundary!==undefined)clearTimeout(boundary);if(timer.current!==undefined){clearTimeout(timer.current);timer.current=undefined;}};
+  document.addEventListener("visibilitychange",reconcile);reconcile();
+  return()=>{disposed=true;stop();document.removeEventListener("visibilitychange",reconcile);if(boundary!==undefined)clearTimeout(boundary);};
  },[request,drain]);
  return {connection,request};
 }

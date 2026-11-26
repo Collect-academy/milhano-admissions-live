@@ -2,6 +2,10 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-26 — Open House: detector ligero validado en lugar de Broadcast
+
+- Prueba DB Broadcast falló porque realtime.messages no tenía partición para la fecha (23514). Sin cambiar configuración global: retirado acceso/policy exclusiva OH y sustituido trigger por contador privado por transacción. Pruebas del contador con 4 cambios (incremento 1), autorización maestros y rechazo desconocido aprobadas, rollback fixtures. RPC service-only. GET staff?revision=1 cada 30 s visible solo en ventana del evento, lista completa por cambio/guardado y respaldo cada 30 min. Sin execs n8n ni cambios en GHL/Sofía. CI y prueba UI pendientes.
+
 ## 2026-11-26 — Open House: cambios reactivos e impresión por coordinación
 
 - Botón Actualizar separado a la derecha, indicador de conexión. Realtime privado solo el viernes 06:00–16:00; cambios de familias/outbox agrupados por transacción, sin PII; debounce y pausa en pestañas ocultas/edición, respaldo de 30 min y manual fuera de ventana. Permisos restringidos a admin/staff activo, sin exponer schema openhouse. Migración aplicada; pruebas SQL de permisos para maestros, usuario desconocido y anónimo. Prueba de entrega WebSocket real pendiente en ventana del evento; CI pendiente.

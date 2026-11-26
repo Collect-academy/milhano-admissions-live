@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { oh, openHouseActor } from "@/lib/open-house";
+import {createSupabaseAdmin} from "@/lib/supabase-admin";
 import {dispatchOpenHouseWelcome} from "@/lib/open-house-ghl";
 export const dynamic = "force-dynamic";
 function reply(data: Record<string,unknown>) { return NextResponse.json(data,{status:data.error?(data.code==="forbidden"?403:400):200,headers:{"Cache-Control":"no-store"}}); }
-export async function GET() {
-  try { const actor=await openHouseActor(); if(!actor) return reply({error:"No autorizado",code:"forbidden"}); return reply(await oh("list",{},actor.id)); } catch {return NextResponse.json({error:"No se pudo cargar la lista."},{status:503});}
+export async function GET(request:Request) {
+  try { const actor=await openHouseActor(); if(!actor) return reply({error:"No autorizado",code:"forbidden"}); if(new URL(request.url).searchParams.get("revision")==="1"){const {data,error}=await createSupabaseAdmin().rpc("milhano_oh_revision_v1",{p_actor:actor.id});if(error)throw error;return reply(data);} return reply(await oh("list",{},actor.id)); } catch {return NextResponse.json({error:"No se pudo cargar la lista."},{status:503});}
 }
 export async function POST(request: Request) {
   try {
