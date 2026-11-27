@@ -16,6 +16,7 @@ export async function POST(request: Request) {
     const p=b.payload;
     if(b.action==="retry_stage"){if(actor.role!=="admin")return reply({error:"Solo administración puede reintentar.",code:"forbidden"});const id=String(p.id??"");if(!/^[0-9a-f-]{36}$/i.test(id))return reply({error:"Registro inválido"});return reply({ok:true,stage_sync:await dispatchOpenHouseWelcome(id,actor.id)});}
     if (["actual_adults","actual_children"].some(k=>p[k]!=null&&(!Number.isInteger(p[k])||p[k]<0||p[k]>30))) return reply({error:"Número de asistentes inválido."});
+    if(p.actual_total!=null&&(!Number.isInteger(p.actual_total)||p.actual_total<1||p.actual_total>100))return reply({error:"Total de asistentes inválido."});
     const data=await oh(b.action,p,actor.id);
     if(data.ok&&data.family_id&& (p.attendance==="present"||b.action==="create")) data.stage_sync=await dispatchOpenHouseWelcome(data.family_id).catch(()=>({status:"review"}));
     return reply(data);

@@ -2,6 +2,11 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-27 — Open House: nombre alternativo, asistentes reales y descarga de recorrido
+
+- Búsqueda exacta por nombre alternativo a teléfono, total real de asistentes 1–100 en QR y edición staff; conteo independiente del desglose y sin doble conteo. SQL aplicado, fixtures de nombre correcto/incorrecto, total 10, rechazo 0, duplicado no sobrescribe y corrección staff revertidos. QR existente y ventana intactos.
+- Descarga ZIP de cuatro PDF nombrados por turno, con horarios y familias por coordinación; pdf-lib existente, ZIP sin dependencias, sin consultas nuevas. Rotación intacta. CI y prueba visual pendientes. Rollback: revertir frontend y restaurar RPC anterior si necesario, conservar columna y asistencias. Sin GHL/n8n adicionales.
+
 ## 2026-11-27 — Open House: confirmación por WhatsApp y retroalimentación
 
 - Simplifica QR a teléfono exacto, nombre completo visible, correo oculto. Una coincidencia seleccionada automáticamente. Pasadía misma presentación, correo real server-only; revoca RPC anterior de datos completos. Mantiene timeframe, dedupe, rate limits y GHL Asistido existentes. Migración aplicada y prueba rollback teléfono correcto/incorrecto, nombre completo, sin correo crudo.
