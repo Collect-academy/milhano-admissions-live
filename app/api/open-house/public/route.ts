@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     if (request.headers.get("origin") && new URL(request.headers.get("origin")!).host !== new URL(request.url).host) return NextResponse.json({error:"Solicitud no válida."},{status:403});
     const b = await request.json();
     if (!["lookup","confirm"].includes(b.action)) return NextResponse.json({error:"Operación inválida."},{status:400});
-    const data = await oh(b.action,{ id:String(b.id??"").slice(0,36), phone:String(b.phone??"").slice(0,25), email:String(b.email??"").slice(0,254), name:String(b.name??"").slice(0,150), bucket:rateBucket(request) });
+    const data = await oh(b.action,{ id:String(b.id??"").slice(0,36), phone:String(b.phone??"").slice(0,25), email:String(b.email??"").slice(0,254), name:String(b.name??"").slice(0,150), ...(b.action==="confirm"&&b.actual_total!=null?{actual_total:b.actual_total}:{}), bucket:rateBucket(request) });
     if(b.action==="confirm"&&data.ok&&!data.already) await dispatchOpenHouseWelcome(String(b.id)).catch(()=>{});
     const response=NextResponse.json(data,{status:data.error ? (data.code==="rate"?429:400) : 200,headers:{"Cache-Control":"no-store"}});
     if(b.action==="confirm"&&(data.ok||data.code==="preview_verified"))attachVerifiedFamily(response,String(b.id??""));
