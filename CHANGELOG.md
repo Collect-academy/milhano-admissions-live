@@ -2,6 +2,11 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-27 — Open House: confirmación por WhatsApp y retroalimentación
+
+- Simplifica QR a teléfono exacto, nombre completo visible, correo oculto. Una coincidencia seleccionada automáticamente. Pasadía misma presentación, correo real server-only; revoca RPC anterior de datos completos. Mantiene timeframe, dedupe, rate limits y GHL Asistido existentes. Migración aplicada y prueba rollback teléfono correcto/incorrecto, nombre completo, sin correo crudo.
+- Nueva agenda retroalimentación separada: ES5, mismas restricciones de fecha/grado, pasadía previa declarada o futura verificada en reservas locales, fecha estrictamente posterior, revalidación/lock/idempotencia, agenda privada y QR. SQL aplicado, pruebas de fechas, misma fecha rechazada incluso modo previa, vínculo a pasadía, retry y autorización aprobadas. Sin horarios ni cupos retro especificados; fecha registrada y hora por confirmar. GHL/n8n sin cambios. Riesgo: teléfono conocido permite check-in/nombre; usuario autorizó simplificación. Rollback: revertir frontend y restaurar RPC previa si necesario, preservar reservas/asistencias. CI y prueba física pendientes.
+
 ## 2026-11-26 — Pasadía: selección por WhatsApp y validación final de cupos
 
 - Coincidencias por 10 dígitos sin nombre adicional; única autoselección, múltiples radio, datos enmascarados sin sesión, uso real server-side al reservar; edición manual. RPC service-only nueva y pruebas SQL de match, no divulgación, teléfono incorrecto, guardado, idempotencia y cupo lleno revertidas. Se elimina botón Actualizar cupos; recarga al rechazo de cupo/fecha y aviso, reintento visible solo si consulta inicial falla. Sin cambios a cupos, GHL, Sofía, n8n. Operador confirmó calendario iOS 12.5.7 previo; retest UI pendiente. Rollback frontend; conservar reservas y RPC.
