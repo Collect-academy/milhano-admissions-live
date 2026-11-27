@@ -2,6 +2,10 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-27 — Retroalimentación: horario real GHL
+
+- Selector de día y hora, lectura directa de calendario oficial y creación por acción explícita de usuario; no n8n. RPC claim/finish con idempotencia, bloqueo de intervalos, estados de sincronización y GHL ID. Rechazo libera, incertidumbre requiere revisión. Contactos existentes solamente, sin cambios de owner/pipeline, notificaciones automáticas desactivadas. Migración aplicada; lectura API verificada, escritura real pendiente. Rollback: revertir interfaz/API sin borrar citas o estados; revisar reservas inciertas manualmente.
+
 ## 2026-11-27 — Open House: nombre alternativo, asistentes reales y descarga de recorrido
 
 - Búsqueda exacta por nombre alternativo a teléfono, total real de asistentes 1–100 en QR y edición staff; conteo independiente del desglose y sin doble conteo. SQL aplicado, fixtures de nombre correcto/incorrecto, total 10, rechazo 0, duplicado no sobrescribe y corrección staff revertidos. QR existente y ventana intactos.

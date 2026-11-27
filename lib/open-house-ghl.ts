@@ -7,7 +7,7 @@ const formFields:Record<string,string>={"cXp0hmItyV6aSLINivKr":"adultos","KuG94C
 const slots=new Set(["07:30","09:00","11:00","12:30","14:00"]);
 const localTime=new Intl.DateTimeFormat("en-GB",{timeZone:"America/Merida",hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
 type Obj=Record<string,any>;
-async function readToken(write=false){
+export async function readToken(write=false){
  if(write&&process.env.OPEN_HOUSE_GHL_WRITE_TOKEN)return process.env.OPEN_HOUSE_GHL_WRITE_TOKEN;
  if(!write&&process.env.OPEN_HOUSE_GHL_READ_TOKEN)return process.env.OPEN_HOUSE_GHL_READ_TOKEN;
  if(!process.env.DATABASE_URL)throw new Error("No está configurada la conexión privada a Vault.");
