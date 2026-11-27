@@ -2,6 +2,10 @@
 
 Registro obligatorio y acumulativo. **Cada commit que cambie comportamiento, datos, SQL, seguridad, integraciones o interfaz debe agregar una entrada**. No borrar entradas anteriores. Versiones antiguas en docs/MILHANO_PROJECT_NOTES.md y CAMBIOS_* son antecedentes, no estado actual.
 
+## 2026-11-27 — Open House: confirmación de asistencia sin enlace anticipado de pasadía
+
+- Solo se retira el enlace Agendar pasadía de la vista de agradecimiento en `app/open-house/registro/route.ts`; el QR de cierre sigue siendo la vía de agendado. Prueba estática: una eliminación exacta, script idéntico. Sin cambios en SQL, APIs, métricas, datos, QR, calendarios, GHL, n8n o Sofía. CI/preview pendientes al crear PR. Rollback: revertir este commit.
+
 ## 2026-11-27 — Retroalimentación: horario real GHL
 
 - Selector de día y hora, lectura directa de calendario oficial y creación por acción explícita de usuario; no n8n. RPC claim/finish con idempotencia, bloqueo de intervalos, estados de sincronización y GHL ID. Rechazo libera, incertidumbre requiere revisión. Contactos existentes solamente, sin cambios de owner/pipeline, notificaciones automáticas desactivadas. Migración aplicada; lectura API verificada, escritura real pendiente. Rollback: revertir interfaz/API sin borrar citas o estados; revisar reservas inciertas manualmente.
